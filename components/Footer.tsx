@@ -9,15 +9,17 @@ import { EmailIcon } from './icons/EmailIcon';
 const Footer: React.FC = () => {
   return (
     <footer className="bg-black py-24 border-t border-white/5 relative overflow-hidden">
-      {/* Background Element */}
-      <div className="absolute bottom-0 right-0 text-[20vw] font-black text-white/[0.02] leading-none pointer-events-none select-none -mb-10 -mr-10 italic">CBL</div>
+      {/* Background Element - Adjusted for mobile visibility */}
+      <div className="absolute bottom-0 right-0 text-[35vw] md:text-[20vw] font-black text-white/[0.02] leading-none pointer-events-none select-none -mb-6 -mr-6 md:-mb-10 md:-mr-10 italic">
+        CBL
+      </div>
       
       <div className="container mx-auto px-6 relative z-10">
         <div className="grid md:grid-cols-12 gap-16 md:gap-8">
-            {/* Col 1: Brand */}
-            <div className="md:col-span-5 space-y-8">
-                <Logo className="scale-125 origin-left" />
-                <p className="text-white/60 text-lg max-w-sm font-light leading-relaxed">
+            {/* Col 1: Brand - Centered on mobile */}
+            <div className="md:col-span-5 flex flex-col items-center text-center md:items-start md:text-left space-y-8">
+                <Logo className="scale-110 md:scale-125 origin-center md:origin-left" />
+                <p className="text-white/60 text-base md:text-lg max-w-sm font-light leading-relaxed">
                     Elevando o padrão da tecnologia no Brasil através de engenharia rigorosa e design de alta performance.
                 </p>
                 <div className="flex space-x-8 pt-4">
@@ -26,34 +28,34 @@ const Footer: React.FC = () => {
                 </div>
             </div>
 
-            {/* Col 2: Navigation */}
-            <div className="md:col-span-3 space-y-8">
-                <h4 className="font-black text-white text-[10px] tracking-[0.4em] uppercase border-b border-white/10 pb-4">Navegação</h4>
-                <nav className="flex flex-col space-y-4">
+            {/* Col 2: Navigation - Centered on mobile */}
+            <div className="md:col-span-3 flex flex-col items-center md:items-start space-y-8">
+                <h4 className="font-black text-white text-[10px] tracking-[0.4em] uppercase border-b border-white/10 pb-4 w-full text-center md:text-left">Navegação</h4>
+                <nav className="flex flex-col items-center md:items-start space-y-4">
                     {['Quem Somos', 'Expertise', 'Diferenciais', 'Contato'].map((item) => (
                       <a key={item} href={`#${item.toLowerCase()}`} className="text-white/40 hover:text-white transition-colors text-sm font-bold uppercase tracking-widest">{item}</a>
                     ))}
                 </nav>
             </div>
 
-            {/* Col 3: Contact Details - ULTRA HIGH CONTRAST */}
-            <div className="md:col-span-4 space-y-8">
-                 <h4 className="font-black text-white text-[10px] tracking-[0.4em] uppercase border-b border-white/10 pb-4">Conectividade</h4>
-                 <div className="space-y-8">
-                    <div className="flex items-center gap-6 group">
+            {/* Col 3: Contact Details - ULTRA HIGH CONTRAST - Centered on mobile */}
+            <div className="md:col-span-4 flex flex-col items-center md:items-start space-y-8">
+                 <h4 className="font-black text-white text-[10px] tracking-[0.4em] uppercase border-b border-white/10 pb-4 w-full text-center md:text-left">Conectividade</h4>
+                 <div className="space-y-8 flex flex-col items-center md:items-start">
+                    <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6 group">
                         <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-red-500 group-hover:bg-red-600 group-hover:text-white transition-all">
                           <PhoneIcon className="scale-125" />
                         </div>
-                        <div className="space-y-1">
+                        <div className="space-y-1 text-center md:text-left">
                             <span className="block font-black text-red-600 text-[9px] uppercase tracking-widest">WhatsApp Comercial</span>
                             <span className="text-white text-xl font-black tracking-tight">(13) 99774-4720</span>
                         </div>
                     </div>
-                    <div className="flex items-center gap-6">
+                    <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6">
                         <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-red-500">
                           <LocationIcon className="scale-125" />
                         </div>
-                        <div className="space-y-1">
+                        <div className="space-y-1 text-center md:text-left">
                             <span className="block font-black text-white/30 text-[9px] uppercase tracking-widest">Escritório Central</span>
                             <span className="text-white text-base font-bold">São Paulo, SP — Brasil</span>
                         </div>
@@ -63,10 +65,10 @@ const Footer: React.FC = () => {
         </div>
 
         <div className="mt-32 pt-10 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
-            <p className="text-[10px] text-white/20 font-black uppercase tracking-[0.3em]">
+            <p className="text-[10px] text-white/20 font-black uppercase tracking-[0.3em] text-center md:text-left">
               &copy; {new Date().getFullYear()} Grupo CBL Soluções Digitais. All Rights Reserved.
             </p>
-            <div className="flex gap-10">
+            <div className="flex flex-wrap justify-center gap-6 md:gap-10">
                 <a href="#" className="text-[9px] text-white/20 hover:text-white font-black uppercase tracking-widest transition-colors">Políticas de Segurança</a>
                 <a href="#" className="text-[9px] text-white/20 hover:text-white font-black uppercase tracking-widest transition-colors">Termos de Atendimento</a>
             </div>

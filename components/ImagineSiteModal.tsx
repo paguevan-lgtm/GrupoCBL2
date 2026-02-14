@@ -14,13 +14,13 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
   const [showBanner, setShowBanner] = useState(true);
   const [formData, setFormData] = useState({
     companyName: '',
-    styleDescription: '',
-    referenceUrl: '',
+    siteType: 'Institucional', // Novo campo
+    customInstructions: '', // Novo campo
     essence: '',
     targetAudience: '',
     toneOfVoice: '', 
     brandColors: '',
-    objectives: '',
+    referenceUrl: '',
   });
   
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -35,6 +35,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
 
   const logs = [
     "Iniciando Protocolo de Draft CBL...",
+    "Configurando Arquitetura Mobile-First...",
     "Sincronizando com Servidores de Engenharia...",
     "Mapeando Essência de Negócio e Público-alvo...",
     "Analisando referências visuais e paleta cromática...",
@@ -108,32 +109,39 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
     const textPart = {
       text: `
         Você é o Senior Lead Developer e Head de Design da CBL Tech.
-        Crie um website institucional de ELITE, extremamente profissional e eficaz.
+        Crie um website de ELITE, profissional e eficaz para o cliente.
         
-        CRÍTICO: O design deve ser ÚNICO e seguir estritamente o ESTILO solicitado pelo usuário.
-        NÃO replique o estilo padrão "dark/hacker" da CBL a menos que explicitamente solicitado no campo de estilo.
+        TIPO DE SITE ESCOLHIDO: ${formData.siteType}
+        
+        CRÍTICO: 
+        1. O layout DEVE SER 100% RESPONSIVO PARA MOBILE. Use classes como 'w-full', 'max-w-full', 'overflow-x-hidden' no body e containers para evitar scroll horizontal indesejado.
+        2. O design deve ser ÚNICO e seguir estritamente o ESTILO solicitado.
+        3. NÃO replique o estilo padrão "dark/hacker" da CBL a menos que explicitamente solicitado.
         
         DADOS DO BRIEFING:
         Empresa: ${formData.companyName}
         Essência do Negócio: ${formData.essence}
         Público-Alvo: ${formData.targetAudience || 'Geral'}
-        Estilo Visual Solicitado: ${formData.toneOfVoice} (Siga rigorosamente esta diretriz visual)
-        Cores da Marca: ${formData.brandColors || 'Harmônicas com o estilo solicitado'}
-        Objetivo: ${formData.objectives || 'Institucional'}
+        Estilo Visual: ${formData.toneOfVoice}
+        Cores da Marca: ${formData.brandColors || 'Harmônicas com o estilo'}
         Referência: ${formData.referenceUrl || 'N/A'}
+        
+        INSTRUÇÕES ESPECÍFICAS DO CLIENTE (OBEDECER RIGOROSAMENTE):
+        ${formData.customInstructions || 'Seguir boas práticas de UX/UI.'}
 
         DIRETRIZES DE DESIGN:
-        - Se o estilo for "Moderno": Use gradientes sutis, sombras suaves, bordas arredondadas, layout clean.
-        - Se o estilo for "Minimalista": Use muito espaço em branco, tipografia helvética/inter, preto e branco.
-        - Se o estilo for "Corporativo": Use azul marinho, cinza, fontes serifadas ou sans-serif sóbrias.
-        - Se o estilo for "Luxo": Use dourado, preto, tipografia com serifa elegante, layout espaçado.
-        - NUNCA use placeholders de texto como "Lorem Ipsum". Escreva copy real e persuasivo baseado na essência da empresa.
-        - Use imagens via URL (Unsplash source) que combinem com o negócio (ex: 'https://source.unsplash.com/random/1200x800/?business,office').
+        - Se for "Loja Virtual/E-commerce": Inclua vitrine de produtos, botões de compra, carrinho (visual).
+        - Se for "Landing Page": Foco total em conversão, CTA claro, seções de prova social.
+        - Se for "Institucional": Foco em "Sobre Nós", "Serviços", credibilidade corporativa.
+        - Se for "Portfólio": Galeria de imagens destaque, layout clean.
+        - Use imagens via URL (Unsplash source) que combinem com o negócio (ex: 'https://source.unsplash.com/random/1200x800/?business').
+        - NUNCA use placeholders "Lorem Ipsum". Escreva copy real e persuasivo.
 
         DIRETRIZES TÉCNICAS:
-        - Código HTML5 semântico e acessível.
-        - CSS via Tailwind CSS (CDN) para estilização completa e responsiva.
-        - JavaScript para interatividade refinada (scroll suave, menu mobile, animações de entrada).
+        - Código HTML5 semântico.
+        - CSS via Tailwind CSS (CDN).
+        - JavaScript para interatividade (menu mobile FUNCIONAL, scroll suave).
+        - Body deve ter 'overflow-x-hidden' para evitar quebra de layout em mobile.
         
         RETORNE APENAS UM JSON PURO:
         {
@@ -170,11 +178,45 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
       
       let previewHtml = files['index.html'] || '';
       
+      // Scripts para corrigir comportamento no iframe
+      const clickBlockerScript = `
+        <script>
+          // Prevenir navegação de links e submits de form dentro do iframe
+          document.addEventListener('click', function(e) {
+            const target = e.target.closest('a, button, input[type="submit"]');
+            if (target) {
+              const href = target.getAttribute('href');
+              // Permite âncoras internas suaves
+              if (href && href.startsWith('#')) {
+                // Comportamento normal de âncora
+                return;
+              }
+              // Bloqueia navegação externa ou reload
+              e.preventDefault();
+              console.log('Navegação simulada bloqueada no preview.');
+              
+              // Feedback visual de clique
+              target.style.transform = 'scale(0.95)';
+              setTimeout(() => target.style.transform = '', 150);
+            }
+          }, true);
+          
+          // Forçar overflow-x hidden no body
+          document.body.style.overflowX = 'hidden';
+          document.body.style.width = '100%';
+        </script>
+      `;
+
       if (files['theme.css']) {
-        previewHtml = previewHtml.replace('</head>', `<style>${files['theme.css']}</style></head>`);
+        previewHtml = previewHtml.replace('</head>', `<style>body { overflow-x: hidden; max-width: 100vw; } ${files['theme.css']}</style></head>`);
+      } else {
+        previewHtml = previewHtml.replace('</head>', `<style>body { overflow-x: hidden; max-width: 100vw; }</style></head>`);
       }
+      
       if (files['interactions.js']) {
-        previewHtml = previewHtml.replace('</body>', `<script>${files['interactions.js']}</script></body>`);
+        previewHtml = previewHtml.replace('</body>', `${clickBlockerScript}<script>${files['interactions.js']}</script></body>`);
+      } else {
+        previewHtml = previewHtml.replace('</body>', `${clickBlockerScript}</body>`);
       }
       
       setProjectFiles({ ...files, 'index.html': previewHtml });
@@ -212,10 +254,10 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
           <div className="flex-grow flex items-start justify-center p-6 md:p-12 overflow-y-auto custom-scrollbar">
             <div className="w-full max-w-6xl space-y-12">
               <div className="text-center space-y-4">
-                <h2 className="text-5xl md:text-8xl font-black tracking-tighter uppercase italic text-white leading-none">
+                <h2 className="text-4xl md:text-8xl font-black tracking-tighter uppercase italic text-white leading-none">
                   Visualize seu <span className="text-red-600">Site</span>
                 </h2>
-                <p className="text-white/60 text-lg max-w-2xl mx-auto font-light">Briefing estratégico para materialização de interface pela equipe CBL.</p>
+                <p className="text-white/60 text-base md:text-lg max-w-2xl mx-auto font-light">Briefing estratégico para materialização de interface pela equipe CBL.</p>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
@@ -249,17 +291,30 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
                    </div>
                 </div>
 
-                {/* Coluna 2: Estratégia de Negócio */}
+                {/* Coluna 2: Estrutura & Estilo */}
                 <div className="space-y-6 bg-white/5 p-6 rounded-2xl border border-white/10">
-                   <h3 className="text-xs font-black text-white/40 uppercase tracking-[0.3em] border-b border-white/5 pb-4 mb-6">02. Estratégia de Negócio</h3>
+                   <h3 className="text-xs font-black text-white/40 uppercase tracking-[0.3em] border-b border-white/5 pb-4 mb-6">02. Estrutura & Estilo</h3>
+                   
+                   <div>
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Tipo de Site *</label>
+                      <select 
+                        value={formData.siteType}
+                        onChange={(e) => setFormData({...formData, siteType: e.target.value})}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all appearance-none cursor-pointer"
+                      >
+                        <option value="Institucional" className="bg-[#050505]">Site Institucional (Empresa)</option>
+                        <option value="Landing Page" className="bg-[#050505]">Landing Page (Alta Conversão)</option>
+                        <option value="Loja Virtual" className="bg-[#050505]">Loja Virtual / E-commerce</option>
+                        <option value="Portfólio" className="bg-[#050505]">Portfólio Criativo</option>
+                        <option value="Blog" className="bg-[#050505]">Blog / Conteúdo</option>
+                      </select>
+                   </div>
+
                    <div>
                       <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Essência do Negócio *</label>
                       <input type="text" value={formData.essence} onChange={(e) => setFormData({...formData, essence: e.target.value})} placeholder="Ex: Consultoria Financeira" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all placeholder-white/20" />
                    </div>
-                   <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Público-Alvo</label>
-                      <input type="text" value={formData.targetAudience} onChange={(e) => setFormData({...formData, targetAudience: e.target.value})} placeholder="Ex: Pequenas e médias empresas" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all placeholder-white/20" />
-                   </div>
+                   
                    <div>
                       <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Estilo (Ex: Moderno, Minimalista...)</label>
                       <input 
@@ -272,21 +327,27 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
                    </div>
                 </div>
 
-                {/* Coluna 3: Objetivo & Referência */}
+                {/* Coluna 3: Detalhes & Personalização */}
                 <div className="space-y-6 bg-white/5 p-6 rounded-2xl border border-white/10">
-                   <h3 className="text-xs font-black text-white/40 uppercase tracking-[0.3em] border-b border-white/5 pb-4 mb-6">03. Metas & Referências</h3>
+                   <h3 className="text-xs font-black text-white/40 uppercase tracking-[0.3em] border-b border-white/5 pb-4 mb-6">03. Detalhes Específicos</h3>
+                   <div>
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Público-Alvo</label>
+                      <input type="text" value={formData.targetAudience} onChange={(e) => setFormData({...formData, targetAudience: e.target.value})} placeholder="Ex: Pequenas e médias empresas" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all placeholder-white/20" />
+                   </div>
+                   
+                   <div>
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Detalhes do Negócio / Instruções Livres</label>
+                      <textarea 
+                        value={formData.customInstructions} 
+                        onChange={(e) => setFormData({...formData, customInstructions: e.target.value})} 
+                        placeholder="Descreva livremente: Seções obrigatórias, diferenciais do produto, textos específicos ou qualquer regra que a IA deva obedecer..." 
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all h-[130px] resize-none placeholder-white/20 leading-relaxed text-sm"
+                      />
+                   </div>
+
                    <div>
                       <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Referência Externa (URL)</label>
                       <input type="text" value={formData.referenceUrl} onChange={(e) => setFormData({...formData, referenceUrl: e.target.value})} placeholder="https://exemplo.com.br" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all placeholder-white/20" />
-                   </div>
-                   <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Objetivo Principal</label>
-                      <textarea 
-                        value={formData.objectives} 
-                        onChange={(e) => setFormData({...formData, objectives: e.target.value})} 
-                        placeholder="Ex: Aumentar vendas online em 30%" 
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all h-[118px] resize-none placeholder-white/20"
-                      />
                    </div>
                 </div>
               </div>

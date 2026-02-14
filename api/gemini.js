@@ -1,4 +1,3 @@
-// api/gemini.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GeminiClient } from '@gemini/sdk';
 
@@ -8,11 +7,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const client = new GeminiClient({ apiKey: process.env.API_KEY });
     const { prompt } = req.body;
+    const client = new GeminiClient({ apiKey: process.env.API_KEY });
 
     const response = await client.create({
-      model: 'gemini-1',
+      model: 'gemini-3-pro-preview',
       prompt,
     });
 

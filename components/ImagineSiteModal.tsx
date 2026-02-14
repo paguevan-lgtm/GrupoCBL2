@@ -92,7 +92,16 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
     setError(null);
     setBuildLogs(["> Acionando Engenharia Grupo CBL v8.0 (Mobile Ultra-Responsive)..."]);
 
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await fetch('/api/gemini', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt }),
+    });
+    
+    const responseData = await response.json();
+    const responseText = responseData.text || '{}';
+    const files = JSON.parse(responseText) as ProjectFiles;
+
     
     const prompt = `
       Você é um Lead Developer & UI Designer de Elite na CBL Tech.

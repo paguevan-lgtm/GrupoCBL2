@@ -6,11 +6,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@google/genai": "^0.21.0",
+    "@google/genai": "0.22.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

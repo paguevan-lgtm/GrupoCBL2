@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Grupo CBL - Inovação & Tech</title>
     
-    <!-- Tailwind Play CDN -->
+    <!-- Tailwind Play CDN para estilização imediata e robusta -->
     <script src="https://cdn.tailwindcss.com"></script>
     
     <script>
@@ -36,7 +36,7 @@
     <style type="text/tailwindcss">
       @layer base {
         body {
-          @apply bg-[#1A1A1A] text-white antialiased;
+          @apply bg-[#1A1A1A] text-white antialiased overflow-x-hidden;
         }
       }
       @layer components {
@@ -58,6 +58,7 @@
       body {
         --globe-size: 115vw;
         --globe-radius: calc(var(--globe-size) / 2);
+        background-color: #1A1A1A;
       }
       
       @media (min-width: 1024px) {
@@ -97,7 +98,7 @@
         z-index: 0;
       }
 
-      /* Tech Globe Styles */
+      /* Estilos do Globo Tecnológico */
       .tech-globe-container {
         position: absolute;
         inset: 0;
@@ -168,43 +169,4 @@
       }
 
       .globe-wrapper.settle-effect {
-        transition: transform 3s cubic-bezier(0.2, 0.8, 0.2, 1);
-        transform: scale(1);
-      }
-
-      .rotating-elements.is-animating {
-        animation: globe-rotate 100s linear infinite;
-      }
-
-      @keyframes globe-rotate {
-        from { transform: rotateY(30deg) rotateX(-10deg); }
-        to { transform: rotateY(390deg) rotateX(-10deg); }
-      }
-
-      .cta-pulse {
-        animation: pulse-glow 2.5s infinite ease-in-out;
-      }
-
-      @keyframes pulse-glow {
-        0%, 100% { box-shadow: 0 0 15px rgba(229, 62, 62, 0.4); }
-        50% { box-shadow: 0 0 30px rgba(229, 62, 62, 0.7); }
-      }
-    </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@^19.2.4",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "react/": "https://esm.sh/react@^19.2.4/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.41.0",
-    "vite": "https://esm.sh/vite@^7.3.1",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.4"
-  }
-}
-</script>
-</head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
-  </body>
-</html>
+        transition: transform 3s cubic-bezier(0.2, 0.8, 0.

@@ -17,23 +17,32 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
     styleDescription: '',
     referenceUrl: '',
     essence: '',
+    targetAudience: '',
+    toneOfVoice: '',
+    brandColors: '',
+    objectives: '',
   });
+  
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [buildLogs, setBuildLogs] = useState<string[]>([]);
   const [projectFiles, setProjectFiles] = useState<ProjectFiles | null>(null);
   const [error, setError] = useState<{ message: string } | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const logs = [
     "Iniciando Protocolo de Draft CBL...",
     "Sincronizando com Servidores de Engenharia...",
-    "Mapeando Essência de Negócio...",
-    "Processando Referências Visuais...",
-    "Desenhando Interface High-End...",
-    "Compilando Design System Exclusivo...",
-    "Arquitetando Estrutura de Conversão...",
-    "Otimizando Performance e SEO...",
+    "Mapeando Essência de Negócio e Público-alvo...",
+    "Analisando referências visuais e paleta cromática...",
+    "Processando diretrizes de tom de voz...",
+    "Desenhando Interface High-End exclusiva...",
+    "Compilando Design System sob medida...",
+    "Arquitetando Estrutura de Conversão focada em objetivos...",
+    "Otimizando Performance, SEO e Acessibilidade...",
     "Finalizando Auditoria de Qualidade CBL...",
     "Draft Pronto para Revisão do Cliente."
   ];
@@ -53,7 +62,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
       logInterval = window.setInterval(() => {
         setProgress(prev => {
           if (prev >= 98) return prev; 
-          const next = prev + (Math.random() * 2);
+          const next = prev + (Math.random() * 2.5);
           const logThreshold = (currentLogIndex + 1) * (100 / logs.length);
           
           if (next >= logThreshold && currentLogIndex < logs.length) {
@@ -65,7 +74,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
           }
           return next;
         });
-      }, 180);
+      }, 200);
     } else {
       setProgress(0);
       setBuildLogs([]);
@@ -78,42 +87,66 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
     };
   }, [step]);
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = (reader.result as string).split(',')[1];
+        setImageBase64(base64String);
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const generateFullWebsite = async () => {
     setStep('loading');
     setError(null);
     setBuildLogs(["> Conectando ao Núcleo de Engenharia Grupo CBL..."]);
 
-    const prompt = `
-      Você é o Senior Lead Developer e Head de Design da CBL Tech.
-      Crie um website institucional de ELITE, com estética LUXO e TECH.
-      
-      DADOS DO CLIENTE:
-      Empresa: ${formData.companyName}
-      Essência do Negócio: ${formData.essence}
-      Estilo Desejado: ${formData.styleDescription || 'Premium, Dark Mode, Minimalista'}
-      Referência: ${formData.referenceUrl || 'Estilo Moderno High-End'}
+    const textPart = {
+      text: `
+        Você é o Senior Lead Developer e Head de Design da CBL Tech.
+        Crie um website institucional de ELITE, com estética LUXO e TECH.
+        
+        DADOS DO BRIEFING:
+        Empresa: ${formData.companyName}
+        Essência do Negócio: ${formData.essence}
+        Público-Alvo: ${formData.targetAudience || 'Profissionais e empresas de alto padrão'}
+        Tom de Voz: ${formData.toneOfVoice || 'Corporativo, Seguro e Inovador'}
+        Cores Sugeridas: ${formData.brandColors || 'A definir pela engenharia baseada no estilo'}
+        Objetivo Principal: ${formData.objectives || 'Geração de Leads e Autoridade'}
+        Estilo Visual: ${formData.styleDescription || 'Premium, Dark Mode, Minimalista'}
+        Referência (URL): ${formData.referenceUrl || 'N/A'}
 
-      DIRETRIZES OBRIGATÓRIAS:
-      - NUNCA mencione "Inteligência Artificial", "IA" ou "AI" no código ou no texto.
-      - O site deve parecer feito 100% à mão pela equipe de elite CBL.
-      - Use Tailwind CSS (CDN) para um design ultra-moderno.
-      - Seção Hero impactante, Serviços, Sobre e Contato.
-      - Animações fluidas e tipografia refinada (Inter/Lexend).
+        DIRETRIZES TÉCNICAS:
+        - NUNCA mencione ferramentas automatizadas ou robotizadas.
+        - O site deve parecer feito 100% à mão pela nossa equipe de elite.
+        - Use Tailwind CSS (CDN) para um design ultra-moderno.
+        - Seção Hero impactante, Serviços, Sobre, Depoimentos e Contato.
+        - Se houver uma imagem de referência, extraia a paleta de cores e o estilo visual dela.
+        - Animações fluidas e tipografia refinada (Inter/Lexend).
 
-      RETORNE APENAS UM JSON PURO:
-      {
-        "index.html": "código completo",
-        "theme.css": "estilos extras",
-        "interactions.js": "animações"
-      }
-    `;
+        RETORNE APENAS UM JSON PURO:
+        {
+          "index.html": "código completo",
+          "theme.css": "estilos extras",
+          "interactions.js": "animações"
+        }
+      `
+    };
+
+    const contents = imageBase64 
+      ? { parts: [{ inlineData: { mimeType: "image/jpeg", data: imageBase64 } }, textPart] }
+      : { parts: [textPart] };
 
     try {
       const response = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: prompt,
+          contents: contents,
           model: 'gemini-3-pro-preview',
           config: { responseMimeType: 'application/json' }
         })
@@ -159,51 +192,113 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
         <div className="bg-[#0c0c0c] border-b border-white/10 p-4 flex justify-between items-center px-6 shrink-0">
           <div className="flex items-center gap-4">
              <div className="flex gap-1.5">
-               <div className="w-2.5 h-2.5 rounded-full bg-red-500/80"></div>
-               <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80"></div>
-               <div className="w-2.5 h-2.5 rounded-full bg-green-500/80"></div>
+               <div className="w-2.5 h-2.5 rounded-full bg-red-500/80 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div>
+               <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80 shadow-[0_0_8px_rgba(234,179,8,0.5)]"></div>
+               <div className="w-2.5 h-2.5 rounded-full bg-green-500/80 shadow-[0_0_8px_rgba(34,197,94,0.5)]"></div>
              </div>
-             <span className="text-[10px] font-mono text-white/30 tracking-widest uppercase">CBL_ENGINEERING_CORE_V4</span>
+             <span className="text-[10px] font-mono text-white/30 tracking-widest uppercase">CBL_ENGINEERING_CORE_V5</span>
           </div>
           <button onClick={onClose} className="text-white/40 hover:text-white transition-all p-2 rounded-lg"><XIcon /></button>
         </div>
 
         {step === 'form' && (
-          <div className="flex-grow flex items-center justify-center p-8 overflow-y-auto custom-scrollbar">
-            <div className="w-full max-w-5xl space-y-12 py-4">
+          <div className="flex-grow flex items-start justify-center p-6 md:p-12 overflow-y-auto custom-scrollbar">
+            <div className="w-full max-w-6xl space-y-12">
               <div className="text-center space-y-4">
                 <h2 className="text-5xl md:text-8xl font-black tracking-tighter uppercase italic text-white leading-none">
                   Visualize seu <span className="text-red-600">Site</span>
                 </h2>
-                <p className="text-gray-400 text-lg max-w-2xl mx-auto font-light">Tecnologia exclusiva do Grupo CBL para materializar sua visão digital.</p>
+                <p className="text-white/60 text-lg max-w-2xl mx-auto font-light">Briefing estratégico para materialização de interface pela equipe CBL.</p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                {/* Coluna 1: Identidade Visual */}
+                <div className="space-y-6 bg-white/5 p-6 rounded-2xl border border-white/10">
+                   <h3 className="text-xs font-black text-white/40 uppercase tracking-[0.3em] border-b border-white/5 pb-4 mb-6">01. Identidade Visual</h3>
                    <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-1">Nome da Empresa</label>
-                      <input type="text" value={formData.companyName} onChange={(e) => setFormData({...formData, companyName: e.target.value})} placeholder="Ex: Grupo CBL Tech" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-4 text-white focus:border-red-600 outline-none transition-all" />
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Nome da Empresa *</label>
+                      <input type="text" value={formData.companyName} onChange={(e) => setFormData({...formData, companyName: e.target.value})} placeholder="Ex: Grupo CBL Tech" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all placeholder-white/20" />
                    </div>
                    <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-1">Referência (URL)</label>
-                      <input type="text" value={formData.referenceUrl} onChange={(e) => setFormData({...formData, referenceUrl: e.target.value})} placeholder="https://exemplo.com" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-4 text-white focus:border-red-600 outline-none transition-all" />
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Estilo & Cores</label>
+                      <input type="text" value={formData.brandColors} onChange={(e) => setFormData({...formData, brandColors: e.target.value})} placeholder="Ex: Dark, Dourado e Branco" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all placeholder-white/20" />
+                   </div>
+                   <div>
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Referência Visual (Logo/Screenshot)</label>
+                      <div 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="group relative cursor-pointer aspect-video bg-white/5 border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center hover:border-red-600/50 transition-all overflow-hidden"
+                      >
+                        {imagePreview ? (
+                          <img src={imagePreview} className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity" alt="Preview" />
+                        ) : (
+                          <div className="flex flex-col items-center text-center p-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white/20 group-hover:text-red-600 transition-colors mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                            <span className="text-[10px] text-white/30 uppercase font-black tracking-widest">Clique para subir imagem</span>
+                          </div>
+                        )}
+                        <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
+                      </div>
                    </div>
                 </div>
-                <div className="space-y-6">
+
+                {/* Coluna 2: Estratégia de Negócio */}
+                <div className="space-y-6 bg-white/5 p-6 rounded-2xl border border-white/10">
+                   <h3 className="text-xs font-black text-white/40 uppercase tracking-[0.3em] border-b border-white/5 pb-4 mb-6">02. Estratégia de Negócio</h3>
                    <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-1">Essência do Negócio</label>
-                      <input type="text" value={formData.essence} onChange={(e) => setFormData({...formData, essence: e.target.value})} placeholder="Ex: Consultoria em Logística Avançada" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-4 text-white focus:border-red-600 outline-none transition-all" />
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Essência do Negócio *</label>
+                      <input type="text" value={formData.essence} onChange={(e) => setFormData({...formData, essence: e.target.value})} placeholder="Ex: Softwares para Logística" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all placeholder-white/20" />
                    </div>
                    <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-1">Estilo Visual</label>
-                      <input type="text" value={formData.styleDescription} onChange={(e) => setFormData({...formData, styleDescription: e.target.value})} placeholder="Ex: Luxo Minimalista, Dark Mode, Futurista" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-4 text-white focus:border-red-600 outline-none transition-all" />
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Público-Alvo</label>
+                      <input type="text" value={formData.targetAudience} onChange={(e) => setFormData({...formData, targetAudience: e.target.value})} placeholder="Ex: Diretores de Operações" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all placeholder-white/20" />
+                   </div>
+                   <div>
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Tom de Voz</label>
+                      <select 
+                        value={formData.toneOfVoice} 
+                        onChange={(e) => setFormData({...formData, toneOfVoice: e.target.value})}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all appearance-none"
+                      >
+                        <option value="" className="bg-black">Selecione o Tom</option>
+                        <option value="Corporativo e Seguro" className="bg-black">Corporativo e Seguro</option>
+                        <option value="Disruptivo e Moderno" className="bg-black">Disruptivo e Moderno</option>
+                        <option value="Minimalista e Luxuoso" className="bg-black">Minimalista e Luxuoso</option>
+                        <option value="Agressivo e Comercial" className="bg-black">Agressivo e Comercial</option>
+                      </select>
+                   </div>
+                </div>
+
+                {/* Coluna 3: Objetivo & Referência */}
+                <div className="space-y-6 bg-white/5 p-6 rounded-2xl border border-white/10">
+                   <h3 className="text-xs font-black text-white/40 uppercase tracking-[0.3em] border-b border-white/5 pb-4 mb-6">03. Metas & Referências</h3>
+                   <div>
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Referência Externa (URL)</label>
+                      <input type="text" value={formData.referenceUrl} onChange={(e) => setFormData({...formData, referenceUrl: e.target.value})} placeholder="https://apple.com" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all placeholder-white/20" />
+                   </div>
+                   <div>
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Objetivo Principal</label>
+                      <textarea 
+                        value={formData.objectives} 
+                        onChange={(e) => setFormData({...formData, objectives: e.target.value})} 
+                        placeholder="Ex: Captar leads para serviços de R$ 50k+" 
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all h-[118px] resize-none placeholder-white/20"
+                      />
                    </div>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <button onClick={generateFullWebsite} disabled={!formData.companyName || !formData.essence} className="w-full bg-red-600 text-white py-6 rounded-xl font-black uppercase tracking-[0.4em] hover:bg-red-700 transition-all shadow-2xl disabled:opacity-20">Engenhar Draft Agora</button>
-                {error && <p className="text-red-500 font-mono text-xs text-center bg-red-500/10 p-3 rounded-lg border border-red-500/20">{error.message}</p>}
+              <div className="space-y-6">
+                <button 
+                  onClick={generateFullWebsite} 
+                  disabled={!formData.companyName || !formData.essence} 
+                  className="w-full bg-red-600 text-white py-6 rounded-2xl font-black uppercase tracking-[0.4em] hover:bg-red-700 transition-all shadow-[0_20px_40px_rgba(220,38,38,0.3)] disabled:opacity-20 flex items-center justify-center gap-4 group"
+                >
+                  Engenhar Draft de Alta Performance
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+                </button>
+                {error && <p className="text-red-500 font-black text-xs text-center bg-red-500/10 p-4 rounded-xl border border-red-500/20 uppercase tracking-widest animate-shake">{error.message}</p>}
+                <p className="text-white/20 text-center font-mono text-[9px] uppercase tracking-[0.3em]">Briefing sujeito a análise técnica imediata pelo Núcleo CBL.</p>
               </div>
             </div>
           </div>
@@ -211,34 +306,39 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
 
         {step === 'loading' && (
           <div className="flex-grow flex flex-col items-center justify-center p-6 bg-black">
-            <div className="w-full max-w-lg space-y-8">
+            <div className="w-full max-w-lg space-y-10">
                <div className="flex justify-between items-end">
-                  <div className="space-y-1">
-                    <p className="text-white/40 font-mono text-[10px] uppercase tracking-widest">Status da Engenharia</p>
-                    <p className="text-white font-black text-xl italic uppercase tracking-tighter">Processando Projeto...</p>
+                  <div className="space-y-2">
+                    <p className="text-red-600 font-mono text-[10px] uppercase tracking-[0.4em] animate-pulse">Engenharia em Atividade</p>
+                    <p className="text-white font-black text-3xl italic uppercase tracking-tighter">Processando Projeto...</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-red-600 font-mono text-[10px] uppercase tracking-widest">Tempo Decorrido</p>
-                    <p className="text-white font-mono text-xl">{elapsedSeconds}s</p>
+                    <div className="flex flex-col items-end">
+                      <p className="text-white/40 font-mono text-[10px] uppercase tracking-widest mb-1">Decorrido</p>
+                      <p className="text-white font-mono text-2xl leading-none font-bold">{elapsedSeconds}s</p>
+                      <p className="text-white/20 font-mono text-[9px] uppercase mt-2 tracking-widest">Média CBL: 120s</p>
+                    </div>
                   </div>
                </div>
 
-               <div className="bg-[#080808] border border-white/5 rounded-xl p-6 h-64 overflow-y-auto font-mono text-[10px] custom-scrollbar shadow-inner">
+               <div className="bg-[#080808] border border-white/5 rounded-2xl p-8 h-80 overflow-y-auto font-mono text-[10px] custom-scrollbar shadow-inner relative group">
+                  <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-red-600 animate-ping"></div>
                   {buildLogs.map((log, i) => (
-                    <div key={i} className="text-white/20 mb-2 flex gap-3">
-                      <span className="text-red-900/40">[{new Date().toLocaleTimeString()}]</span>
-                      <span className={i === buildLogs.length - 1 ? 'text-white' : ''}>{log}</span>
+                    <div key={i} className="text-white/30 mb-3 flex gap-4 items-start">
+                      <span className="text-red-900/60 flex-shrink-0">[{new Date().toLocaleTimeString()}]</span>
+                      <span className={i === buildLogs.length - 1 ? 'text-white font-bold' : ''}>{log}</span>
                     </div>
                   ))}
+                  <div className="h-4"></div>
                </div>
 
-               <div className="space-y-4">
-                  <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                    <div className="h-full bg-red-600 transition-all duration-300 shadow-[0_0_15px_rgba(220,38,38,0.5)]" style={{ width: `${progress}%` }}></div>
+               <div className="space-y-5">
+                  <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                    <div className="h-full bg-red-600 transition-all duration-500 shadow-[0_0_25px_rgba(220,38,38,0.8)]" style={{ width: `${progress}%` }}></div>
                   </div>
-                  <div className="flex justify-between items-center text-white/30 font-mono text-[10px] uppercase tracking-widest">
-                    <span>CBL_CORE_V4</span>
-                    <span className="animate-pulse">{Math.round(progress)}% Concluído</span>
+                  <div className="flex justify-between items-center text-white/40 font-mono text-[10px] uppercase tracking-[0.4em]">
+                    <span className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span> NÚCLEO_ENG_ATIVO</span>
+                    <span className="animate-pulse text-white">{Math.round(progress)}% Concluído</span>
                   </div>
                </div>
             </div>
@@ -247,29 +347,28 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
 
         {step === 'preview' && projectFiles && (
           <div className="flex-grow flex flex-col h-full overflow-hidden relative">
-            
-            {/* BANNER DE VISUALIZAÇÃO DE ENGENHARIA REFORMULADO */}
             {showBanner && (
-              <div className="bg-[#0c0c0c]/98 backdrop-blur-2xl border-b border-white/10 p-4 px-8 flex flex-col md:flex-row items-center justify-between gap-4 shrink-0 relative z-20 shadow-xl">
+              <div className="bg-[#0c0c0c]/98 backdrop-blur-2xl border-b border-white/10 p-5 px-10 flex flex-col md:flex-row items-center justify-between gap-6 shrink-0 relative z-20 shadow-2xl">
                 <div className="flex flex-col text-center md:text-left">
-                  <span className="text-red-600 font-black text-[10px] uppercase tracking-[0.3em] mb-0.5">Visualização de Engenharia</span>
-                  <span className="text-white font-bold text-sm md:text-base leading-tight">Projeto final profissional, 100% superior em todos os aspectos</span>
-                  <span className="text-gray-500 text-[10px] uppercase font-medium mt-1">Protótipo conceitual em escala real</span>
+                  <div className="flex items-center gap-3 justify-center md:justify-start mb-1">
+                    <span className="text-red-600 font-black text-[10px] uppercase tracking-[0.4em]">Visualização de Engenharia</span>
+                    <span className="bg-red-600/10 text-red-500 text-[8px] px-2 py-0.5 rounded border border-red-600/20 font-black">HIGH-FIDELITY</span>
+                  </div>
+                  <span className="text-white font-black text-lg md:text-xl leading-none italic tracking-tighter">Projeto final profissional, 100% superior em todos os aspectos</span>
+                  <span className="text-white/40 text-[10px] uppercase font-bold mt-2 tracking-[0.2em]">Protótipo conceitual em escala real • Engenharia Grupo CBL</span>
                 </div>
                 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-6">
                   <button 
                     onClick={() => { onClose(); window.location.hash = '#contact'; }} 
-                    className="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-full font-black uppercase text-[10px] transition-all cta-pulse tracking-widest shadow-lg shadow-red-600/30"
+                    className="bg-red-600 hover:bg-red-700 text-white px-10 py-4 rounded-xl font-black uppercase text-xs transition-all cta-pulse tracking-[0.2em] shadow-xl shadow-red-600/40"
                   >
-                    Contratar o site
+                    Contratar Projeto Real
                   </button>
                   
-                  {/* Botão de Fechar Banner para Mobile */}
                   <button 
                     onClick={() => setShowBanner(false)}
-                    className="text-white/30 hover:text-white transition-all p-2 rounded-full border border-white/5 hover:border-white/20"
-                    title="Fechar Banner"
+                    className="text-white/20 hover:text-white transition-all p-3 rounded-full border border-white/5 hover:border-white/10"
                   >
                     <XIcon />
                   </button>
@@ -280,16 +379,16 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
             {!showBanner && (
               <button 
                 onClick={() => setShowBanner(true)}
-                className="absolute top-4 left-4 z-30 bg-red-600 text-white p-3 rounded-full hover:bg-red-700 transition-all shadow-xl"
+                className="absolute top-6 left-6 z-30 bg-red-600 text-white p-4 rounded-2xl hover:bg-red-700 transition-all shadow-2xl border border-white/10"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               </button>
             )}
 
             <iframe 
               ref={iframeRef}
               srcDoc={projectFiles['index.html']}
-              className="w-full h-full border-none bg-white"
+              className="w-full h-full border-none bg-white shadow-inner"
             />
           </div>
         )}

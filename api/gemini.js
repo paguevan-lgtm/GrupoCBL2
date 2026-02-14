@@ -2,29 +2,26 @@
 import { GoogleGenAI } from "@google/genai";
 
 export default async function handler(req, res) {
-  // Garantir que apenas requisições POST sejam aceitas
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido' });
   }
 
-  const { prompt, model, config } = req.body;
+  const { contents, model, config } = req.body;
 
-  if (!prompt) {
-    return res.status(400).json({ error: 'O prompt é obrigatório' });
+  if (!contents) {
+    return res.status(400).json({ error: 'Conteúdo (contents) é obrigatório' });
   }
 
   try {
-    // Inicializa a IA usando a chave de ambiente protegida no Vercel
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    // Executa a geração de conteúdo
+    // Suporta tanto string simples quanto o objeto estruturado de contents
     const response = await ai.models.generateContent({
       model: model || 'gemini-3-pro-preview',
-      contents: prompt,
+      contents: contents,
       config: config || {}
     });
 
-    // Retorna o texto gerado para o front-end
     return res.status(200).json({ 
       text: response.text 
     });

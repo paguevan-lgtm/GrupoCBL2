@@ -6,63 +6,69 @@ import { LocationIcon } from './icons/LocationIcon';
 import { InstagramIcon } from './icons/InstagramIcon';
 import { EmailIcon } from './icons/EmailIcon';
 
-
 const Footer: React.FC = () => {
   return (
-    <footer className="bg-black py-16 border-t border-white/10">
-      <div className="container mx-auto px-6">
-        <div className="grid md:grid-cols-4 gap-12 text-gray-400">
-            {/* Col 1: Logo & About */}
-            <div className="md:col-span-2 space-y-4">
-                <Logo className="h-10 w-auto" />
-                <p className="text-sm max-w-md">
-                    Focados em tecnologia e resultados. O Grupo CBL transforma desafios complexos em soluções digitais simples e lucrativas. Atuamos onde existe oportunidade de inovação.
+    <footer className="bg-black py-24 border-t border-white/5 relative overflow-hidden">
+      {/* Background Element */}
+      <div className="absolute bottom-0 right-0 text-[20vw] font-black text-white/[0.02] leading-none pointer-events-none select-none -mb-10 -mr-10 italic">CBL</div>
+      
+      <div className="container mx-auto px-6 relative z-10">
+        <div className="grid md:grid-cols-12 gap-16 md:gap-8">
+            {/* Col 1: Brand */}
+            <div className="md:col-span-5 space-y-8">
+                <Logo className="scale-125 origin-left" />
+                <p className="text-white/60 text-lg max-w-sm font-light leading-relaxed">
+                    Elevando o padrão da tecnologia no Brasil através de engenharia rigorosa e design de alta performance.
                 </p>
-                <div className="flex space-x-4 pt-2">
-                    <a href="#" className="text-gray-400 hover:text-white transition-colors"><InstagramIcon /></a>
-                    <a href="#" className="text-gray-400 hover:text-white transition-colors"><EmailIcon /></a>
+                <div className="flex space-x-8 pt-4">
+                    <a href="https://instagram.com/grupocbl" target="_blank" className="text-white/30 hover:text-white transition-all transform hover:scale-110"><InstagramIcon /></a>
+                    <a href="mailto:contato@grupocbl.com" className="text-white/30 hover:text-white transition-all transform hover:scale-110"><EmailIcon /></a>
                 </div>
             </div>
 
-            {/* Col 2: Menu */}
-            <div className="space-y-4">
-                <h4 className="font-bold text-white tracking-wider">MENU</h4>
-                <nav className="flex flex-col space-y-3 text-sm">
-                    <a href="#about" className="hover:text-white transition-colors">Quem Somos</a>
-                    <a href="#services" className="hover:text-white transition-colors">Expertise</a>
-                    <a href="#differentiators" className="hover:text-white transition-colors">Diferenciais</a>
-                    <a href="#contact" className="hover:text-white transition-colors">Contato</a>
+            {/* Col 2: Navigation */}
+            <div className="md:col-span-3 space-y-8">
+                <h4 className="font-black text-white text-[10px] tracking-[0.4em] uppercase border-b border-white/10 pb-4">Navegação</h4>
+                <nav className="flex flex-col space-y-4">
+                    {['Quem Somos', 'Expertise', 'Diferenciais', 'Contato'].map((item) => (
+                      <a key={item} href={`#${item.toLowerCase()}`} className="text-white/40 hover:text-white transition-colors text-sm font-bold uppercase tracking-widest">{item}</a>
+                    ))}
                 </nav>
             </div>
 
-            {/* Col 3: Contato */}
-            <div className="space-y-4">
-                 <h4 className="font-bold text-white tracking-wider">CONTATO</h4>
-                 <ul className="space-y-3 text-sm">
-                    <li className="flex items-start gap-3">
-                        <PhoneIcon className="mt-1 flex-shrink-0" />
-                        <div>
-                            <span className="block font-semibold">COMERCIAL</span>
-                            <span>(13) 99774-4720</span>
+            {/* Col 3: Contact Details - ULTRA HIGH CONTRAST */}
+            <div className="md:col-span-4 space-y-8">
+                 <h4 className="font-black text-white text-[10px] tracking-[0.4em] uppercase border-b border-white/10 pb-4">Conectividade</h4>
+                 <div className="space-y-8">
+                    <div className="flex items-center gap-6 group">
+                        <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-red-500 group-hover:bg-red-600 group-hover:text-white transition-all">
+                          <PhoneIcon className="scale-125" />
                         </div>
-                    </li>
-                    <li className="flex items-start gap-3">
-                        <LocationIcon className="mt-1 flex-shrink-0" />
-                        <div>
-                            <span className="block font-semibold">SEDE</span>
-                            <span>São Paulo, SP</span>
-                            <span className="block text-xs text-gray-500">Atendimento Global</span>
+                        <div className="space-y-1">
+                            <span className="block font-black text-red-600 text-[9px] uppercase tracking-widest">WhatsApp Comercial</span>
+                            <span className="text-white text-xl font-black tracking-tight">(13) 99774-4720</span>
                         </div>
-                    </li>
-                 </ul>
+                    </div>
+                    <div className="flex items-center gap-6">
+                        <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-red-500">
+                          <LocationIcon className="scale-125" />
+                        </div>
+                        <div className="space-y-1">
+                            <span className="block font-black text-white/30 text-[9px] uppercase tracking-widest">Escritório Central</span>
+                            <span className="text-white text-base font-bold">São Paulo, SP — Brasil</span>
+                        </div>
+                    </div>
+                 </div>
             </div>
         </div>
 
-        <div className="mt-16 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center text-xs text-gray-500">
-            <p>&copy; {new Date().getFullYear()} Grupo CBL Soluções Digitais. Todos os direitos reservados.</p>
-            <div className="space-x-4 mt-4 md:mt-0">
-                <a href="#" className="hover:text-white">Privacidade</a>
-                <a href="#" className="hover:text-white">Legal</a>
+        <div className="mt-32 pt-10 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
+            <p className="text-[10px] text-white/20 font-black uppercase tracking-[0.3em]">
+              &copy; {new Date().getFullYear()} Grupo CBL Soluções Digitais. All Rights Reserved.
+            </p>
+            <div className="flex gap-10">
+                <a href="#" className="text-[9px] text-white/20 hover:text-white font-black uppercase tracking-widest transition-colors">Políticas de Segurança</a>
+                <a href="#" className="text-[9px] text-white/20 hover:text-white font-black uppercase tracking-widest transition-colors">Termos de Atendimento</a>
             </div>
         </div>
 

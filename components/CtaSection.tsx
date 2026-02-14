@@ -2,7 +2,6 @@
 import React from 'react';
 import { FadeInOnScroll } from './FadeInOnScroll';
 import { ZapIcon } from './icons/ZapIcon';
-import { ArrowUpRightIcon } from './icons/ArrowUpRightIcon';
 
 const CtaSection: React.FC<{ onOpenModal: () => void }> = ({ onOpenModal }) => {
   const handleOpenModal = (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -11,35 +10,42 @@ const CtaSection: React.FC<{ onOpenModal: () => void }> = ({ onOpenModal }) => {
   };
 
   return (
-    <section id="contact" className="py-20 md:py-32 cta-glow-bg">
-      <div className="container mx-auto px-6 text-center">
-        <FadeInOnScroll>
-            <p className="text-red-500 font-bold tracking-widest uppercase mb-4">Vamos Conversar?</p>
-            <h2 className="text-4xl md:text-6xl font-bold tracking-tighter mb-6 text-white">
-              Se você tem uma ideia,
-              <br />
-              <span className="font-normal text-gray-400">nós damos forma.</span>
+    <section id="contact" className="py-24 md:py-56 bg-black relative overflow-hidden flex flex-col items-center justify-center">
+      {/* Background Decorativo com contenção */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-full h-full bg-radial-gradient from-red-600/5 to-transparent pointer-events-none"></div>
+      
+      <div className="container mx-auto px-6 text-center relative z-10 w-full max-w-full overflow-hidden">
+        <FadeInOnScroll className="space-y-10 md:space-y-16">
+            <div className="inline-block max-w-full overflow-hidden px-4 py-2 border border-red-600/30 rounded-full bg-red-600/5">
+              <span className="text-[9px] md:text-[10px] font-black text-red-600 uppercase tracking-[0.2em] md:tracking-[0.5em] animate-pulse whitespace-nowrap block">
+                Protocolo_De_Abertura_Disponível
+              </span>
+            </div>
+
+            <h2 className="text-monumental font-black tracking-tighter text-white uppercase italic mb-8 mx-auto">
+              Crie seu <br /> <span className="text-red-600">Domínio.</span>
             </h2>
-            <p className="text-lg text-gray-400 max-w-2xl mx-auto mb-10">
-            Oportunidades não esperam. Transforme seu negócio hoje com a estratégia e tecnologia do Grupo CBL.
-            </p>
-            
-            <div className="flex flex-col items-center gap-6">
+
+            <div className="flex flex-col items-center gap-12 w-full">
                 <a 
                   href="#"
                   onClick={handleOpenModal}
-                  className="inline-flex items-center justify-center gap-3 bg-white text-black px-6 py-3 rounded-lg font-bold text-sm hover:bg-gray-200 transition-colors duration-300"
+                  className="group relative w-full sm:w-auto inline-flex items-center justify-center gap-4 bg-white text-black px-10 py-5 md:px-12 md:py-6 rounded-2xl font-black text-xs md:text-sm uppercase tracking-[0.3em] md:tracking-[0.4em] transition-all hover:scale-105 cta-glow active:scale-95"
                 >
                   <ZapIcon className="h-4 w-4" />
-                  INICIAR PROJETO
-                  <ArrowUpRightIcon className="h-4 w-4" />
+                  Iniciar Projeto
                 </a>
-                
-                <p className="text-sm text-gray-500 flex items-center justify-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" /></svg>
-                    BASE EM SÃO PAULO • ATUAÇÃO NACIONAL
-                </p>
-                <p className="text-xs text-gray-600">Atendimento direto: (13) 99774-4720</p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10 border-t border-white/5 pt-12 md:pt-16 w-full max-w-3xl">
+                    <div className="text-center md:text-left space-y-2">
+                      <span className="block text-[9px] font-black text-white/30 uppercase tracking-[0.3em]">WhatsApp_Oficial_CBL</span>
+                      <a href="tel:+5513997744720" className="text-xl md:text-2xl font-black text-white italic tracking-tighter hover:text-red-600 transition-colors">(13) 99774-4720</a>
+                    </div>
+                    <div className="text-center md:text-right space-y-2">
+                      <span className="block text-[9px] font-black text-white/30 uppercase tracking-[0.3em]">Email_Estratégico</span>
+                      <a href="mailto:contato@grupocbl.com" className="text-xl md:text-2xl font-black text-white italic tracking-tighter hover:text-red-600 transition-colors">contato@grupocbl.com</a>
+                    </div>
+                </div>
             </div>
         </FadeInOnScroll>
       </div>

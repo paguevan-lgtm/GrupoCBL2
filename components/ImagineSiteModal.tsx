@@ -14,8 +14,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
   const [showBanner, setShowBanner] = useState(true);
   const [formData, setFormData] = useState({
     companyName: '',
-    siteType: 'Institucional', // Novo campo
-    customInstructions: '', // Novo campo
+    customInstructions: '', 
     essence: '',
     targetAudience: '',
     toneOfVoice: '', 
@@ -111,12 +110,11 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
         Você é o Senior Lead Developer e Head de Design da CBL Tech.
         Crie um website de ELITE, profissional e eficaz para o cliente.
         
-        TIPO DE SITE ESCOLHIDO: ${formData.siteType}
-        
         CRÍTICO: 
         1. O layout DEVE SER 100% RESPONSIVO PARA MOBILE. Use classes como 'w-full', 'max-w-full', 'overflow-x-hidden' no body e containers para evitar scroll horizontal indesejado.
         2. O design deve ser ÚNICO e seguir estritamente o ESTILO solicitado.
         3. NÃO replique o estilo padrão "dark/hacker" da CBL a menos que explicitamente solicitado.
+        4. Identifique o TIPO DE SITE (Institucional, Loja, Landing Page, Blog) com base na ESSÊNCIA e nas INSTRUÇÕES do usuário.
         
         DADOS DO BRIEFING:
         Empresa: ${formData.companyName}
@@ -130,10 +128,10 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
         ${formData.customInstructions || 'Seguir boas práticas de UX/UI.'}
 
         DIRETRIZES DE DESIGN:
-        - Se for "Loja Virtual/E-commerce": Inclua vitrine de produtos, botões de compra, carrinho (visual).
-        - Se for "Landing Page": Foco total em conversão, CTA claro, seções de prova social.
-        - Se for "Institucional": Foco em "Sobre Nós", "Serviços", credibilidade corporativa.
-        - Se for "Portfólio": Galeria de imagens destaque, layout clean.
+        - Se identificar como "Loja Virtual/E-commerce": Inclua vitrine de produtos, botões de compra, carrinho (visual).
+        - Se identificar como "Landing Page": Foco total em conversão, CTA claro, seções de prova social.
+        - Se identificar como "Institucional": Foco em "Sobre Nós", "Serviços", credibilidade corporativa.
+        - Se identificar como "Portfólio": Galeria de imagens destaque, layout clean.
         - Use imagens via URL (Unsplash source) que combinem com o negócio (ex: 'https://source.unsplash.com/random/1200x800/?business').
         - NUNCA use placeholders "Lorem Ipsum". Escreva copy real e persuasivo.
 
@@ -296,21 +294,6 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
                    <h3 className="text-xs font-black text-white/40 uppercase tracking-[0.3em] border-b border-white/5 pb-4 mb-6">02. Estrutura & Estilo</h3>
                    
                    <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Tipo de Site *</label>
-                      <select 
-                        value={formData.siteType}
-                        onChange={(e) => setFormData({...formData, siteType: e.target.value})}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all appearance-none cursor-pointer"
-                      >
-                        <option value="Institucional" className="bg-[#050505]">Site Institucional (Empresa)</option>
-                        <option value="Landing Page" className="bg-[#050505]">Landing Page (Alta Conversão)</option>
-                        <option value="Loja Virtual" className="bg-[#050505]">Loja Virtual / E-commerce</option>
-                        <option value="Portfólio" className="bg-[#050505]">Portfólio Criativo</option>
-                        <option value="Blog" className="bg-[#050505]">Blog / Conteúdo</option>
-                      </select>
-                   </div>
-
-                   <div>
                       <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Essência do Negócio *</label>
                       <input type="text" value={formData.essence} onChange={(e) => setFormData({...formData, essence: e.target.value})} placeholder="Ex: Consultoria Financeira" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all placeholder-white/20" />
                    </div>
@@ -340,7 +323,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
                       <textarea 
                         value={formData.customInstructions} 
                         onChange={(e) => setFormData({...formData, customInstructions: e.target.value})} 
-                        placeholder="Descreva livremente: Seções obrigatórias, diferenciais do produto, textos específicos ou qualquer regra que a IA deva obedecer..." 
+                        placeholder="Descreva livremente: 'Quero uma Loja Virtual', 'Site para meu escritório de advocacia', 'Preciso de uma landing page para vender curso'..." 
                         className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all h-[130px] resize-none placeholder-white/20 leading-relaxed text-sm"
                       />
                    </div>

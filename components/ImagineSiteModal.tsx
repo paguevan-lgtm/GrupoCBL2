@@ -357,7 +357,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
                     <span className="text-red-600 font-black text-[10px] uppercase tracking-[0.4em]">Visualização de Engenharia</span>
                     <span className="bg-red-600/10 text-red-500 text-[8px] px-2 py-0.5 rounded border border-red-600/20 font-black">HIGH-FIDELITY</span>
                   </div>
-                  <span className="text-white font-black text-lg md:text-xl leading-none italic tracking-tighter">Projeto final profissional, 100% superior em todos os aspectos</span>
+                  <span className="text-white font-black text-lg md:text-xl leading-none italic tracking-tighter">O projeto final profissional será 100% superior em todos os aspectos.</span>
                   <span className="text-white/40 text-[10px] uppercase font-bold mt-2 tracking-[0.2em]">Protótipo conceitual em escala real • Engenharia Grupo CBL</span>
                 </div>
                 

@@ -2,107 +2,80 @@
 <!DOCTYPE html>
 <html lang="pt-BR" class="scroll-smooth">
   <head>
-    <meta charset="UTF-8" />
+    <meta charset="UTF8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Grupo CBL - Inovação & Tech</title>
-    
-    <!-- Tailwind via CDN para renderização instantânea -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              red: {
-                500: '#EF4444',
-                600: '#E53E3E',
-                700: '#C53030',
-              },
-              gray: {
-                900: '#111827',
-                950: '#030712',
-              }
-            },
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-            },
-          }
-        }
-      }
-    </script>
-
-    <style type="text/tailwindcss">
-      @tailwind base;
-      @tailwind components;
-      @tailwind utilities;
-
-      @layer base {
-        body {
-          @apply bg-[#1A1A1A] text-white antialiased overflow-x-hidden;
-        }
-      }
-      @layer components {
-        .custom-scrollbar::-webkit-scrollbar {
-          @apply w-1.5;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          @apply bg-transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          @apply bg-white/10 rounded-full hover:bg-white/20;
-        }
-      }
-    </style>
-
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
-      
+      /* Adicionando uma fonte moderna sem serifa do Google Fonts */
+      @import url('https://fonts.googleapis.com/css2?family-Inter:wght@400;500;600;700;900&display=swap');
       body {
+        font-family: 'Inter', sans-serif;
+        background-color: #1A1A1A;
+        /* Mobile-first: globe is 115% of viewport width */
         --globe-size: 115vw;
         --globe-radius: calc(var(--globe-size) / 2);
-        background-color: #1A1A1A;
       }
-      
+      header {
+        /* Otimização de performance para o header fixo */
+        will-change: transform, background-color, border-color;
+      }
       @media (min-width: 1024px) {
         body {
-          --globe-size: 100vh;
+            /* On desktop, base size on viewport height */
+            --globe-size: 100vh;
         }
       }
-
       .fade-in-section {
         opacity: 0;
         transform: translateY(20px);
-        transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        /* Otimização de performance para animações de scroll */
         will-change: transform, opacity;
       }
-
       .fade-in-section.is-visible {
         opacity: 1;
         transform: translateY(0);
       }
-
       .cta-glow-bg {
-        position: relative;
-        background-color: #000;
-        overflow: hidden;
+          position: relative;
+          background-color: #000;
+          overflow: hidden;
       }
-
       .cta-glow-bg::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 800px;
-        height: 800px;
-        background: radial-gradient(circle, rgba(229, 62, 62, 0.15) 0%, transparent 70%);
-        pointer-events: none;
-        z-index: 0;
+          content: '';
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 800px;
+          height: 800px;
+          background: radial-gradient(circle, rgba(229, 62, 62, 0.15) 0%, transparent 70%);
+          pointer-events: none;
+          z-index: 0;
+      }
+      .cta-glow-bg > * {
+          position: relative;
+          z-index: 1;
+      }
+      /* Custom scrollbar for result view */
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: #1F2937; /* Cor do trilho da barra de rolagem */
+        border-radius: 10px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #4A5568; /* Cor da barra de rolagem */
+        border-radius: 10px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #718096;
       }
 
-      /* Tech Globe Base Styles */
+      /* Final Globe with Static BG and Rotating Foreground */
       .tech-globe-container {
         position: absolute;
         inset: 0;
@@ -111,19 +84,16 @@
         align-items: center;
         justify-content: center;
         perspective: 1000px;
-        pointer-events: none;
       }
-
       .globe-wrapper {
         position: relative;
         width: var(--globe-size);
-        aspect-ratio: 1 / 1;
+        aspect-ratio: 1 / 1; /* Enforces 1:1 aspect ratio */
         transform-style: preserve-3d;
         will-change: transform;
-        max-width: 1200px;
+        max-width: 1200px; /* Cap the max size */
         transform: scale(1.6);
       }
-
       .globe-background {
         position: absolute;
         width: 100%;
@@ -132,7 +102,6 @@
         background: radial-gradient(circle at center, #150505, #000);
         box-shadow: 0 0 80px 0 rgba(229, 62, 62, 0.3), inset 0 0 50px 20px #000;
       }
-
       .rotating-elements {
         position: absolute;
         inset: 0;
@@ -140,7 +109,6 @@
         will-change: transform;
         transform: rotateY(30deg) rotateX(-10deg);
       }
-
       .globe-dot {
         position: absolute;
         top: 50%;
@@ -153,7 +121,12 @@
         box-shadow: 0 0 8px hsl(0, 100%, 70%);
         animation: blink-dot 6s infinite ease-in-out;
       }
-
+      .connection-line-container {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        transform-style: preserve-3d;
+      }
       .connection-line {
         position: absolute;
         top: 50%;
@@ -162,37 +135,70 @@
         height: 100%;
         margin-left: -50%;
         margin-top: -50%;
-        border: 1px solid hsla(0, 100%, 50%, 0.15);
+        border: 1px solid hsla(0, 100%, 50%, 0.3);
         border-radius: 50%;
         transform-origin: center center;
       }
 
       @keyframes blink-dot {
-        0%, 100% { transform: scale(0.5); opacity: 0; }
-        50% { transform: scale(1); opacity: 1; }
+        0%, 100% {
+            transform: scale(0.5);
+            opacity: 0;
+        }
+        50% {
+            transform: scale(1);
+            opacity: 1;
+        }
       }
 
+      /* -- Animação do Globo via CSS para Performance -- */
       .globe-wrapper.settle-effect {
-        transition: transform 3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        transition: transform 2.5s cubic-bezier(0.25, 1, 0.5, 1);
         transform: scale(1);
       }
-
       .rotating-elements.is-animating {
-        animation: globe-rotate 120s linear infinite;
+        animation: globe-rotate 80s linear infinite;
       }
 
       @keyframes globe-rotate {
-        from { transform: rotateY(30deg) rotateX(-10deg); }
-        to { transform: rotateY(390deg) rotateX(-10deg); }
+        from {
+          transform: rotateY(30deg) rotateX(-10deg);
+        }
+        to {
+          transform: rotateY(390deg) rotateX(-10deg);
+        }
       }
-
+      
+      /* --- Modal Input Focus --- */
+      .modal-input:focus {
+        box-shadow: 0 0 0 2px #1A1A1A, 0 0 0 4px rgba(229, 62, 62, 0.8);
+        border-color: transparent !important;
+      }
+      
       .cta-pulse {
-        animation: pulse-glow 2.5s infinite ease-in-out;
+        animation: pulse-glow 2s infinite ease-in-out;
       }
 
       @keyframes pulse-glow {
-        0%, 100% { box-shadow: 0 0 15px rgba(229, 62, 62, 0.3); }
-        50% { box-shadow: 0 0 30px rgba(229, 62, 62, 0.6); }
+        0%, 100% {
+          box-shadow: 0 0 10px rgba(229, 62, 62, 0.4), 0 0 20px rgba(229, 62, 62, 0.2);
+        }
+        50% {
+          box-shadow: 0 0 20px rgba(229, 62, 62, 0.8), 0 0 40px rgba(229, 62, 62, 0.4);
+        }
+      }
+
+      /* --- Interactive Differentiators --- */
+      .differentiator-content {
+        transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+      }
+      .differentiator-content.entering {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      .differentiator-content.entered {
+        opacity: 1;
+        transform: translateY(0);
       }
     </style>
   <script type="importmap">
@@ -201,12 +207,12 @@
     "react": "https://esm.sh/react@^19.2.4",
     "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
     "react/": "https://esm.sh/react@^19.2.4/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.41.0"
+    "@google/genai": "https://esm.sh/@google/genai"
   }
 }
 </script>
 </head>
-  <body>
+  <body class="bg-[#1A1A1A]">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

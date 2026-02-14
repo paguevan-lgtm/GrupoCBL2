@@ -38,7 +38,6 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onOpenModal, onOpenImagineMod
       
       {/* Background Especial para Mobile (Substitui o Globo) */}
       <div className="md:hidden absolute inset-0 z-0 pointer-events-none">
-          {/* Grade Técnica em Perspectiva */}
           <div className="absolute inset-0 opacity-[0.15]" 
                style={{ 
                  backgroundImage: `linear-gradient(rgba(239, 68, 68, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(239, 68, 68, 0.2) 1px, transparent 1px)`,
@@ -48,11 +47,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onOpenModal, onOpenImagineMod
                  transformOrigin: 'bottom'
                }}>
           </div>
-          
-          {/* Núcleo de Luz Central */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120vw] h-[120vw] bg-red-600/10 blur-[120px] rounded-full animate-pulse"></div>
-          
-          {/* HUD Decor elements - Mobile only */}
           <div className="absolute top-24 left-6 flex flex-col gap-1 opacity-40">
             <div className="w-8 h-0.5 bg-red-600"></div>
             <span className="text-[7px] font-mono text-white tracking-[0.3em]">LATENCY_012MS</span>
@@ -65,8 +60,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onOpenModal, onOpenImagineMod
       <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/70 to-[#000] z-0"></div>
       
       <div className="absolute inset-0 z-10 flex flex-col justify-center items-center text-center p-6">
-          <div className="w-full relative">
-             {/* HUD Brackets for Mobile Title focus */}
+          <div className="w-full relative flex flex-col items-center">
              <div className={`md:hidden absolute -inset-4 border-x border-white/5 pointer-events-none transition-all duration-1000 ${animateText ? 'opacity-100 scale-100' : 'opacity-0 scale-110'}`}></div>
 
              <div 
@@ -78,11 +72,28 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onOpenModal, onOpenImagineMod
               </span>
             </div>
             
-            <h1 className="text-[3.2rem] sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tighter uppercase flex flex-col items-center leading-[0.85] italic">
-              <div className="overflow-hidden py-1"><span className={`block transition-all duration-700 ease-out ${animateText ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full'}`} style={{ transitionDelay: '200ms' }}>Oportunidade</span></div>
-              <div className="overflow-hidden py-1"><span className={`block text-white/30 transition-all duration-700 ease-out ${animateText ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full'}`} style={{ transitionDelay: '350ms' }}>Não se</span></div>
-              <div className="overflow-hidden py-1"><span className={`block text-white/30 transition-all duration-700 ease-out ${animateText ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full'}`} style={{ transitionDelay: '400ms' }}>Espera.</span></div>
-              <div className="overflow-hidden py-1"><span className={`text-red-600 block transition-all duration-1000 cubic-bezier(0.16, 1, 0.3, 1) ${animateText ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full'}`} style={{ transitionDelay: '550ms' }}>Se cria.</span></div>
+            <h1 className="w-full text-[10vw] sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tighter uppercase italic leading-[0.9] flex flex-col items-center">
+              {/* Linhas de texto com overflow-hidden e padding simétrico para acomodar o itálico sem deslocar o centro */}
+              <div className="overflow-hidden py-1 px-8 w-full flex justify-center">
+                <span className={`block transition-all duration-700 ease-out ${animateText ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full'}`} style={{ transitionDelay: '200ms' }}>
+                  Oportunidade
+                </span>
+              </div>
+              <div className="overflow-hidden py-1 px-8 w-full flex justify-center">
+                <span className={`block text-white/30 transition-all duration-700 ease-out ${animateText ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full'}`} style={{ transitionDelay: '350ms' }}>
+                  Não se
+                </span>
+              </div>
+              <div className="overflow-hidden py-1 px-8 w-full flex justify-center">
+                <span className={`block text-white/30 transition-all duration-700 ease-out ${animateText ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full'}`} style={{ transitionDelay: '400ms' }}>
+                  Espera.
+                </span>
+              </div>
+              <div className="overflow-hidden py-1 px-8 w-full flex justify-center">
+                <span className={`text-red-600 block transition-all duration-1000 cubic-bezier(0.16, 1, 0.3, 1) ${animateText ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full'}`} style={{ transitionDelay: '550ms' }}>
+                  Se cria.
+                </span>
+              </div>
             </h1>
 
             <p 

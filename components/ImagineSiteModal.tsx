@@ -107,32 +107,42 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
 
     const textPart = {
       text: `
-        Você é o Senior Lead Developer e Head de Design da CBL Tech.
-        Crie um website institucional de ELITE, com estética LUXO e TECH.
-        
+        VOCÊ É O HEAD DE DESIGN E ENGENHARIA DO GRUPO CBL. 
+        Sua missão é materializar um website institucional de ULTRA-LUXO e ALTA PERFORMANCE técnica.
+
+        DIRETRIZES DE DESIGN PREMIUM:
+        1. ESTÉTICA: Use o estilo "Cyber-Luxury" ou "Minimalismo Executivo". Fundo Dark (#000000), detalhes em Red-600 (#dc2626) e bordas sutis com brilho interno (border-white/10).
+        2. LAYOUT: Implemente "Bento Grids" para serviços e seções com "Split Layouts" (imagem de um lado, texto do outro).
+        3. TIPOGRAFIA: Use exclusivamente fontes modernas via Google Fonts (Inter, Lexend ou Space Grotesk). Títulos com tracking negativo e bold extremo.
+        4. IMAGENS (CRÍTICO): 
+           - NUNCA use placeholders genéricos ou links quebrados.
+           - Use EXCLUSIVAMENTE links reais e diretos do Unsplash com parâmetros de otimização.
+           - Exemplos de IDs de qualidade (use conforme o contexto):
+             - Tech/Business: https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=1200
+             - Luxury Office: https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1200
+             - Abstract Tech: https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=1200
+             - Architecture: https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=1200
+           - Adicione sempre ?auto=format&fit=crop&q=80&w=1080 ao final da URL da imagem.
+
         DADOS DO BRIEFING:
-        Empresa: ${formData.companyName}
-        Essência do Negócio: ${formData.essence}
-        Público-Alvo: ${formData.targetAudience || 'Profissionais e empresas de alto padrão'}
-        Tom de Voz: ${formData.toneOfVoice || 'Corporativo, Seguro e Inovador'}
-        Cores Sugeridas: ${formData.brandColors || 'A definir pela engenharia baseada no estilo'}
-        Objetivo Principal: ${formData.objectives || 'Geração de Leads e Autoridade'}
-        Estilo Visual: ${formData.styleDescription || 'Premium, Dark Mode, Minimalista'}
-        Referência (URL): ${formData.referenceUrl || 'N/A'}
+        - Empresa: ${formData.companyName}
+        - Essência: ${formData.essence}
+        - Público: ${formData.targetAudience}
+        - Tom de Voz: ${formData.toneOfVoice}
+        - Objetivo: ${formData.objectives}
+        - Referência Visual: ${formData.styleDescription}
 
-        DIRETRIZES TÉCNICAS:
-        - NUNCA mencione ferramentas automatizadas ou robotizadas.
-        - O site deve parecer feito 100% à mão pela nossa equipe de elite.
-        - Use Tailwind CSS (CDN) para um design ultra-moderno.
-        - Seção Hero impactante, Serviços, Sobre, Depoimentos e Contato.
-        - Se houver uma imagem de referência, extraia a paleta de cores e o estilo visual dela.
-        - Animações fluidas e tipografia refinada (Inter/Lexend).
+        SEÇÕES OBRIGATÓRIAS:
+        - Hero: Título monumental, subtítulo persuasivo e CTA com efeito de glow.
+        - Expertise: Grid de serviços com ícones SVG minimalistas.
+        - Prova Social/Status: Logos de parceiros (simulados) ou números de impacto.
+        - Conversão: Formulário elegante integrado ao design.
 
-        RETORNE APENAS UM JSON PURO:
+        RETORNE APENAS UM JSON PURO NO FORMATO:
         {
-          "index.html": "código completo",
-          "theme.css": "estilos extras",
-          "interactions.js": "animações"
+          "index.html": "código HTML completo incluindo Tailwind via CDN",
+          "theme.css": "CSS customizado para animações complexas e glassmorphism",
+          "interactions.js": "Javascript para efeitos de scroll, hover e parallax sutil"
         }
       `
     };

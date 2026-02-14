@@ -1,22 +1,38 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { GeminiClient } from '@gemini/sdk';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+import { GoogleGenAI } from "@google/genai";
+
+export default async function handler(req, res) {
+  // Garantir que apenas requisições POST sejam aceitas
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido' });
   }
 
-  try {
-    const { prompt } = req.body;
-    const client = new GeminiClient({ apiKey: process.env.API_KEY });
+  const { prompt, model, config } = req.body;
 
-    const response = await client.create({
-      model: 'gemini-3-pro-preview',
-      prompt,
+  if (!prompt) {
+    return res.status(400).json({ error: 'O prompt é obrigatório' });
+  }
+
+  try {
+    // Inicializa a IA usando a chave de ambiente protegida no Vercel
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
+    // Executa a geração de conteúdo
+    const response = await ai.models.generateContent({
+      model: model || 'gemini-3-pro-preview',
+      contents: prompt,
+      config: config || {}
     });
 
-    res.status(200).json(response);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    // Retorna o texto gerado para o front-end
+    return res.status(200).json({ 
+      text: response.text 
+    });
+  } catch (error) {
+    console.error('Erro na API Gemini (Server-side):', error);
+    return res.status(500).json({ 
+      error: 'Falha ao processar requisição na IA',
+      details: error.message 
+    });
   }
 }

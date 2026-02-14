@@ -153,17 +153,23 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
         Você é o Senior Lead Developer e Head de Design da CBL Tech.
         Crie um website de ELITE, profissional e eficaz para o cliente.
         
-        CRÍTICO: 
-        1. O layout DEVE SER 100% RESPONSIVO PARA MOBILE. Use classes como 'w-full', 'max-w-full', 'overflow-x-hidden' no body e containers para evitar scroll horizontal indesejado.
+        CRÍTICO - REGRAS DE LAYOUT E DESIGN: 
+        1. O layout DEVE SER 100% RESPONSIVO PARA MOBILE. Use classes como 'w-full', 'max-w-full', 'overflow-x-hidden' no body e containers.
         2. O design deve ser ÚNICO e seguir estritamente o ESTILO solicitado.
-        3. NÃO replique o estilo padrão "dark/hacker" da CBL a menos que explicitamente solicitado.
-        4. Identifique o TIPO DE SITE (Institucional, Loja, Landing Page, Blog) com base na ESSÊNCIA e nas INSTRUÇÕES do usuário.
+        3. Identifique o TIPO DE SITE (Institucional, Loja, Landing Page, Blog) com base na ESSÊNCIA e nas INSTRUÇÕES do usuário.
         
-        IMAGENS FORNECIDAS:
-        O usuário enviou ${galleryImages.length} fotos reais do estabelecimento/produtos.
-        - Analise essas imagens para capturar a paleta de cores, o estilo e a vibe do negócio.
-        - SE POSSÍVEL, tente incorporar essas imagens no design (usando o Data URI base64 se o tamanho permitir no output, ou descrevendo onde elas ficariam).
-        - Se não for possível renderizar as imagens reais no código devido ao tamanho, use imagens placeholders do Unsplash que sejam EXTREMAMENTE parecidas com o que você analisou nas fotos reais.
+        IMAGENS FORNECIDAS PELO USUÁRIO (SISTEMA DE PLACEHOLDERS):
+        O usuário enviou arquivos reais. Para garantir que eles apareçam, você DEVE usar os códigos abaixo no atributo 'src' das tags <img> ou em 'background-image'. NÃO tente inventar URLs.
+        
+        - Para o Logo (se fornecido): Use estritamente "PLACEHOLDER_LOGO"
+        - Para as imagens da Galeria (${galleryImages.length} disponíveis): Use estritamente "PLACEHOLDER_GALLERY_0", "PLACEHOLDER_GALLERY_1", etc. até o limite.
+        
+        Exemplo: <img src="PLACEHOLDER_GALLERY_0" alt="Produto destaque" class="..." />
+        
+        IMPORTANTE: 
+        - PRIORIZE usar "PLACEHOLDER_GALLERY_X" nas seções principais (Hero, Vitrine, Sobre Nós).
+        - Se o design precisar de MAIS imagens do que as ${galleryImages.length} fornecidas, complete com imagens do Unsplash (ex: 'https://source.unsplash.com/random/800x600/?business').
+        - Analise as imagens visualmente (que estou enviando) para entender as cores e o estilo, mas USE OS PLACEHOLDERS no código HTML.
 
         DADOS DO BRIEFING:
         Empresa: ${formData.companyName}
@@ -171,24 +177,14 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
         Público-Alvo: ${formData.targetAudience || 'Geral'}
         Estilo Visual: ${formData.toneOfVoice}
         Cores da Marca: ${formData.brandColors || 'Harmônicas com o estilo'}
-        Referência: ${formData.referenceUrl || 'N/A'}
         
-        INSTRUÇÕES ESPECÍFICAS DO CLIENTE (OBEDECER RIGOROSAMENTE):
+        INSTRUÇÕES ESPECÍFICAS:
         ${formData.customInstructions || 'Seguir boas práticas de UX/UI.'}
-
-        DIRETRIZES DE DESIGN:
-        - Se identificar como "Loja Virtual/E-commerce": Inclua vitrine de produtos, botões de compra, carrinho (visual).
-        - Se identificar como "Landing Page": Foco total em conversão, CTA claro, seções de prova social.
-        - Se identificar como "Institucional": Foco em "Sobre Nós", "Serviços", credibilidade corporativa.
-        - Se identificar como "Portfólio": Galeria de imagens destaque, layout clean.
-        - Use imagens via URL (Unsplash source) que combinem com o negócio (ex: 'https://source.unsplash.com/random/1200x800/?business').
-        - NUNCA use placeholders "Lorem Ipsum". Escreva copy real e persuasivo.
 
         DIRETRIZES TÉCNICAS:
         - Código HTML5 semântico.
         - CSS via Tailwind CSS (CDN).
         - JavaScript para interatividade (menu mobile FUNCIONAL, scroll suave).
-        - Body deve ter 'overflow-x-hidden' para evitar quebra de layout em mobile.
         
         RETORNE APENAS UM JSON PURO:
         {
@@ -238,6 +234,24 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
       const files = JSON.parse(cleanText) as ProjectFiles;
       
       let previewHtml = files['index.html'] || '';
+
+      // ---- INJEÇÃO DAS IMAGENS REAIS NO HTML ----
+      
+      // 1. Injetar Logo/Referência
+      if (imageBase64) {
+        // Tenta substituir o placeholder ou procura por locais lógicos se a IA falhou em usar o placeholder exato
+        if (previewHtml.includes('PLACEHOLDER_LOGO')) {
+          previewHtml = previewHtml.replace(/PLACEHOLDER_LOGO/g, `data:image/jpeg;base64,${imageBase64}`);
+        }
+      }
+
+      // 2. Injetar Galeria
+      galleryImages.forEach((img, index) => {
+        const placeholder = `PLACEHOLDER_GALLERY_${index}`;
+        // Substituição global
+        const regex = new RegExp(placeholder, 'g');
+        previewHtml = previewHtml.replace(regex, `data:image/jpeg;base64,${img.base64}`);
+      });
       
       // Scripts para corrigir comportamento no iframe
       const clickBlockerScript = `

@@ -100,40 +100,75 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
     };
   }, [step]);
 
+  // Função utilitária para comprimir imagens (Evita Payload Too Large error)
+  const compressImage = (file: File): Promise<{ base64: string, preview: string }> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 800; // Limita largura para reduzir tamanho do payload
+          let width = img.width;
+          let height = img.height;
+
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          // Comprime para JPEG 0.7
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+          resolve({
+            base64: dataUrl.split(',')[1],
+            preview: dataUrl
+          });
+        };
+      };
+    });
+  };
+
   // Upload da Referência Visual (Logo/Exemplo)
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = (reader.result as string).split(',')[1];
-        setImageBase64(base64String);
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const { base64, preview } = await compressImage(file);
+        setImageBase64(base64);
+        setImagePreview(preview);
+      } catch (err) {
+        console.error("Erro ao processar imagem", err);
+      }
     }
   };
 
   // Upload da Galeria (Produtos/Local)
-  const handleGalleryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
       const remainingSlots = 6 - galleryImages.length;
       const filesToProcess = Array.from(files).slice(0, remainingSlots);
 
-      filesToProcess.forEach(file => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64String = (reader.result as string).split(',')[1];
+      for (const file of filesToProcess) {
+        try {
+          const { base64, preview } = await compressImage(file);
           const newImage: UploadedImage = {
             id: Math.random().toString(36).substr(2, 9),
-            preview: reader.result as string,
-            base64: base64String
+            preview: preview,
+            base64: base64
           };
           setGalleryImages(prev => [...prev, newImage]);
-        };
-        reader.readAsDataURL(file);
-      });
+        } catch (err) {
+          console.error("Erro ao processar imagem da galeria", err);
+        }
+      }
     }
     // Reset input
     if (galleryInputRef.current) galleryInputRef.current.value = '';
@@ -208,7 +243,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
       parts.push({ inlineData: { mimeType: "image/jpeg", data: img.base64 } });
     });
 
-    // 3. Adicionar o texto (Prompt)
+    // 3. Adicionar o texto (Prompt) - DEVE SER O ÚLTIMO
     parts.push(textPart);
 
     const contents = { parts };
@@ -301,7 +336,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
       setTimeout(() => setStep('preview'), 1200);
     } catch (err: any) {
       console.error("ImagineSiteModal Error:", err);
-      setError({ message: 'Ocorreu um erro técnico na engenharia do draft. Tente novamente em alguns instantes.' });
+      setError({ message: 'A conexão foi interrompida (Possível excesso de dados). Tente enviar menos fotos ou fotos menores.' });
       setStep('form');
     }
   };

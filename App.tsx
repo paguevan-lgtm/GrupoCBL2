@@ -16,14 +16,14 @@ const App: React.FC = () => {
   const [isImagineModalOpen, setIsImagineModalOpen] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
 
-  // Impede a rolagem durante a introdução
+  // Impede a rolagem durante a introdução E quando modais estão abertos
   useEffect(() => {
-    if (showIntro) {
+    if (showIntro || isModalOpen || isImagineModalOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
     }
-  }, [showIntro]);
+  }, [showIntro, isModalOpen, isImagineModalOpen]);
 
   return (
     <div className="bg-[#1A1A1A] text-white antialiased">

@@ -413,7 +413,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
                         multiple 
                         className="hidden" 
                       />
-                      <p className="text-[9px] text-white/30 mt-1">Fotos reais ajudam a IA a entender a identidade do negócio.</p>
+                      <p className="text-[9px] text-white/30 mt-1">Fotos reais ajudam a entender a identidade do negócio.</p>
                    </div>
                    
                    <div>

@@ -9,6 +9,12 @@ interface ProjectFiles {
   'README.md'?: string;
 }
 
+interface UploadedImage {
+  id: string;
+  preview: string;
+  base64: string;
+}
+
 const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
   const [step, setStep] = useState<'form' | 'loading' | 'preview'>('form');
   const [showBanner, setShowBanner] = useState(true);
@@ -22,8 +28,13 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
     referenceUrl: '',
   });
   
+  // Imagem de Referência (Identidade Visual)
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
+
+  // Galeria de Imagens Reais (Produtos/Estabelecimento)
+  const [galleryImages, setGalleryImages] = useState<UploadedImage[]>([]);
+
   const [progress, setProgress] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [buildLogs, setBuildLogs] = useState<string[]>([]);
@@ -31,6 +42,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
   const [error, setError] = useState<{ message: string } | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   const logs = [
     "Iniciando Protocolo de Draft CBL...",
@@ -39,6 +51,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
     "Mapeando Essência de Negócio e Público-alvo...",
     "Analisando referências visuais e paleta cromática...",
     "Processando diretrizes de estilo customizado...",
+    "Processando acervo de imagens reais do cliente...",
     "Desenhando Interface High-End exclusiva...",
     "Compilando Design System sob medida...",
     "Arquitetando Estrutura de Conversão focada em objetivos...",
@@ -87,6 +100,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
     };
   }, [step]);
 
+  // Upload da Referência Visual (Logo/Exemplo)
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -98,6 +112,35 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  // Upload da Galeria (Produtos/Local)
+  const handleGalleryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const remainingSlots = 6 - galleryImages.length;
+      const filesToProcess = Array.from(files).slice(0, remainingSlots);
+
+      filesToProcess.forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64String = (reader.result as string).split(',')[1];
+          const newImage: UploadedImage = {
+            id: Math.random().toString(36).substr(2, 9),
+            preview: reader.result as string,
+            base64: base64String
+          };
+          setGalleryImages(prev => [...prev, newImage]);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+    // Reset input
+    if (galleryInputRef.current) galleryInputRef.current.value = '';
+  };
+
+  const removeGalleryImage = (id: string) => {
+    setGalleryImages(prev => prev.filter(img => img.id !== id));
   };
 
   const generateFullWebsite = async () => {
@@ -116,6 +159,12 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
         3. NÃO replique o estilo padrão "dark/hacker" da CBL a menos que explicitamente solicitado.
         4. Identifique o TIPO DE SITE (Institucional, Loja, Landing Page, Blog) com base na ESSÊNCIA e nas INSTRUÇÕES do usuário.
         
+        IMAGENS FORNECIDAS:
+        O usuário enviou ${galleryImages.length} fotos reais do estabelecimento/produtos.
+        - Analise essas imagens para capturar a paleta de cores, o estilo e a vibe do negócio.
+        - SE POSSÍVEL, tente incorporar essas imagens no design (usando o Data URI base64 se o tamanho permitir no output, ou descrevendo onde elas ficariam).
+        - Se não for possível renderizar as imagens reais no código devido ao tamanho, use imagens placeholders do Unsplash que sejam EXTREMAMENTE parecidas com o que você analisou nas fotos reais.
+
         DADOS DO BRIEFING:
         Empresa: ${formData.companyName}
         Essência do Negócio: ${formData.essence}
@@ -150,9 +199,23 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
       `
     };
 
-    const contents = imageBase64 
-      ? { parts: [{ inlineData: { mimeType: "image/jpeg", data: imageBase64 } }, textPart] }
-      : { parts: [textPart] };
+    // Construir o payload de conteúdo
+    const parts = [];
+
+    // 1. Adicionar imagem de referência visual (Logo/Print) se existir
+    if (imageBase64) {
+      parts.push({ inlineData: { mimeType: "image/jpeg", data: imageBase64 } });
+    }
+
+    // 2. Adicionar imagens da galeria (Produtos/Fotos reais)
+    galleryImages.forEach(img => {
+      parts.push({ inlineData: { mimeType: "image/jpeg", data: img.base64 } });
+    });
+
+    // 3. Adicionar o texto (Prompt)
+    parts.push(textPart);
+
+    const contents = { parts };
 
     try {
       const response = await fetch('/api/gemini', {
@@ -160,7 +223,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: contents,
-          model: 'gemini-3-pro-preview',
+          model: 'gemini-3-pro-preview', // Modelo capaz de visão multimodal
           config: { responseMimeType: 'application/json' }
         })
       });
@@ -308,14 +371,49 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
                         className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all placeholder-white/20"
                       />
                    </div>
-                </div>
 
-                {/* Coluna 3: Detalhes & Personalização */}
-                <div className="space-y-6 bg-white/5 p-6 rounded-2xl border border-white/10">
-                   <h3 className="text-xs font-black text-white/40 uppercase tracking-[0.3em] border-b border-white/5 pb-4 mb-6">03. Detalhes Específicos</h3>
                    <div>
                       <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Público-Alvo</label>
                       <input type="text" value={formData.targetAudience} onChange={(e) => setFormData({...formData, targetAudience: e.target.value})} placeholder="Ex: Pequenas e médias empresas" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all placeholder-white/20" />
+                   </div>
+                </div>
+
+                {/* Coluna 3: Detalhes & Conteúdo Visual */}
+                <div className="space-y-6 bg-white/5 p-6 rounded-2xl border border-white/10">
+                   <h3 className="text-xs font-black text-white/40 uppercase tracking-[0.3em] border-b border-white/5 pb-4 mb-6">03. Detalhes & Conteúdo</h3>
+                   
+                   <div>
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Fotos do Estabelecimento / Produtos (Max 6)</label>
+                      <div className="grid grid-cols-3 gap-2 mb-2">
+                        {galleryImages.map(img => (
+                          <div key={img.id} className="relative aspect-square rounded-lg overflow-hidden border border-white/20 group">
+                            <img src={img.preview} alt="Upload" className="w-full h-full object-cover" />
+                            <button 
+                              onClick={() => removeGalleryImage(img.id)}
+                              className="absolute top-1 right-1 bg-black/80 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <XIcon />
+                            </button>
+                          </div>
+                        ))}
+                        {galleryImages.length < 6 && (
+                          <div 
+                            onClick={() => galleryInputRef.current?.click()}
+                            className="aspect-square bg-white/5 border border-dashed border-white/20 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-red-600 hover:bg-red-600/10 transition-all group"
+                          >
+                            <span className="text-2xl text-white/30 group-hover:text-red-500 font-light transition-colors">+</span>
+                          </div>
+                        )}
+                      </div>
+                      <input 
+                        type="file" 
+                        ref={galleryInputRef} 
+                        onChange={handleGalleryUpload} 
+                        accept="image/*" 
+                        multiple 
+                        className="hidden" 
+                      />
+                      <p className="text-[9px] text-white/30 mt-1">Fotos reais ajudam a IA a entender a identidade do negócio.</p>
                    </div>
                    
                    <div>
@@ -324,7 +422,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
                         value={formData.customInstructions} 
                         onChange={(e) => setFormData({...formData, customInstructions: e.target.value})} 
                         placeholder="Descreva livremente: 'Quero uma Loja Virtual', 'Site para meu escritório de advocacia', 'Preciso de uma landing page para vender curso'..." 
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all h-[130px] resize-none placeholder-white/20 leading-relaxed text-sm"
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all h-[100px] resize-none placeholder-white/20 leading-relaxed text-sm"
                       />
                    </div>
 

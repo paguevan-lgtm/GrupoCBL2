@@ -4,8 +4,8 @@ import { SpinnerIcon } from './icons/SpinnerIcon';
 import { XIcon } from './icons/XIcon';
 
 const FormField = ({ label, placeholder, name, value, onChange, type = 'text', isTextArea = false }: any) => (
-    <div className="space-y-1.5">
-        <label htmlFor={name} className="block text-[10px] font-black text-red-600 uppercase tracking-[0.2em]">{label}</label>
+    <div className="space-y-1.5 group">
+        <label htmlFor={name} className="block text-[10px] font-black text-red-600 uppercase tracking-[0.2em] group-focus-within:text-white transition-colors">{label}</label>
         {isTextArea ? (
             <textarea
                 id={name}
@@ -13,7 +13,7 @@ const FormField = ({ label, placeholder, name, value, onChange, type = 'text', i
                 placeholder={placeholder}
                 value={value}
                 onChange={onChange}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-red-600 focus:bg-white/10 outline-none transition-all h-20 resize-none text-sm"
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/20 focus:border-red-600 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(220,38,38,0.1)] outline-none transition-all h-20 resize-none text-sm"
             />
         ) : (
             <input
@@ -23,7 +23,7 @@ const FormField = ({ label, placeholder, name, value, onChange, type = 'text', i
                 placeholder={placeholder}
                 value={value}
                 onChange={onChange}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-red-600 focus:bg-white/10 outline-none transition-all text-sm"
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/20 focus:border-red-600 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(220,38,38,0.1)] outline-none transition-all text-sm"
             />
         )}
     </div>
@@ -48,14 +48,14 @@ const ResultView = ({ result, onRestart }: any) => {
                 />
             </div>
             <div className="mt-6 flex flex-col md:flex-row gap-4 shrink-0">
-                <a href="https://wa.me/13997744720" target="_blank" rel="noopener noreferrer" className="flex-1 bg-red-600 text-white py-4 rounded-xl font-black text-xs text-center uppercase tracking-widest hover:bg-red-700 transition-all shadow-xl shadow-red-600/30">Falar com Consultor</a>
-                <button onClick={onRestart} className="flex-1 border border-white/20 text-white py-4 rounded-xl font-black text-xs uppercase hover:bg-white/10 transition-all tracking-widest">Nova Auditoria</button>
+                <a href="https://wa.me/13997744720" target="_blank" rel="noopener noreferrer" className="flex-1 bg-red-600 text-white py-4 rounded-xl font-black text-xs text-center uppercase tracking-widest hover:bg-red-700 transition-all shadow-xl shadow-red-600/30 hover:scale-[1.02]">Falar com Consultor</a>
+                <button onClick={onRestart} className="flex-1 border border-white/20 text-white py-4 rounded-xl font-black text-xs uppercase hover:bg-white/10 transition-all tracking-widest hover:border-white/40">Nova Auditoria</button>
             </div>
         </div>
     );
 };
 
-const DiagnosticModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
+const DiagnosticModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowToast?: (msg: string, type: 'success'|'error') => void }> = ({ isOpen, onClose, onShowToast }) => {
     const [view, setView] = useState('form');
     const [formData, setFormData] = useState({
         nome: '',
@@ -70,12 +70,16 @@ const DiagnosticModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ i
         dificuldade: ''
     });
     const [analysisResult, setAnalysisResult] = useState('');
-    const [error, setError] = useState<string | null>(null);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        if(!formData.nome || !formData.whatsapp) {
+            onShowToast?.("Preencha ao menos Nome e WhatsApp.", "error");
+            return;
+        }
+
         setView('loading');
-        setError(null);
 
         const prompt = `Analise os seguintes dados estratégicos de negócio para o Grupo CBL e forneça um parecer técnico de alta performance: ${JSON.stringify(formData)}. O objetivo é identificar gargalos e oportunidades de escala digital. Seja direto, técnico e use terminologia de negócios de elite.`;
 
@@ -84,7 +88,7 @@ const DiagnosticModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ i
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                prompt: prompt,
+                contents: prompt,
                 model: 'gemini-3-flash-preview'
               })
             });
@@ -94,8 +98,9 @@ const DiagnosticModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ i
             const data = await response.json();
             setAnalysisResult(data.text || '');
             setView('result');
+            onShowToast?.("Diagnóstico concluído com sucesso.", "success");
         } catch (err) {
-            setError("Falha ao processar auditoria. Tente novamente em instantes.");
+            onShowToast?.("Erro ao processar auditoria. Tente novamente.", "error");
             setView('form');
         }
     };
@@ -108,24 +113,24 @@ const DiagnosticModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ i
                 className="bg-[#0c0c0c] border border-white/10 rounded-3xl w-full max-w-4xl max-h-[90vh] md:max-h-[85vh] flex flex-col relative shadow-[0_0_100px_rgba(0,0,0,1)]" 
                 onClick={e => e.stopPropagation()}
             >
-                <button onClick={onClose} className="absolute top-4 right-4 md:top-6 md:right-6 text-white/40 hover:text-white transition-all z-20 bg-black/50 rounded-full p-2"><XIcon /></button>
+                <button onClick={onClose} className="absolute top-4 right-4 md:top-6 md:right-6 text-white/40 hover:text-white transition-all z-20 bg-black/50 rounded-full p-2 hover:bg-white/10"><XIcon /></button>
                 
                 {view === 'form' && (
                     <div className="flex flex-col h-full overflow-hidden">
                         <div className="p-6 md:p-8 text-center space-y-2 shrink-0 border-b border-white/5 bg-[#0c0c0c] z-10">
                             <h2 className="text-2xl md:text-4xl font-black text-white uppercase italic tracking-tighter">Auditoria Estratégica</h2>
                             <p className="text-gray-400 text-[10px] uppercase font-bold tracking-[0.3em]">Protocolo de Análise High-End CBL</p>
-                            {error && <p className="text-red-500 text-[10px] font-black uppercase tracking-widest mt-2">{error}</p>}
                         </div>
 
                         <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto custom-scrollbar p-6 md:p-8 space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                <FormField label="Nome do Empreendimento" name="nome" value={formData.nome} onChange={(e:any) => setFormData({...formData, nome: e.target.value})} placeholder="Ex: CBL Incorporadora" />
+                                <FormField label="Nome do Empreendimento *" name="nome" value={formData.nome} onChange={(e:any) => setFormData({...formData, nome: e.target.value})} placeholder="Ex: CBL Incorporadora" />
+                                <FormField label="WhatsApp Comercial *" name="whatsapp" value={formData.whatsapp} onChange={(e:any) => setFormData({...formData, whatsapp: e.target.value})} placeholder="(00) 00000-0000" />
                                 <FormField label="Link do Instagram" name="instagram" value={formData.instagram} onChange={(e:any) => setFormData({...formData, instagram: e.target.value})} placeholder="@seuperfil" />
                                 <FormField label="Link do Site ou Google" name="site" value={formData.site} onChange={(e:any) => setFormData({...formData, site: e.target.value})} placeholder="https://..." />
-                                <FormField label="WhatsApp Comercial" name="whatsapp" value={formData.whatsapp} onChange={(e:any) => setFormData({...formData, whatsapp: e.target.value})} placeholder="(00) 00000-0000" />
                                 
-                                <div className="md:col-span-2 pt-4 pb-1 border-b border-white/5">
+                                <div className="md:col-span-2 pt-4 pb-1 border-b border-white/5 flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 bg-red-600 rounded-full"></span>
                                     <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em]">Performance & Métricas</span>
                                 </div>
 
@@ -143,7 +148,9 @@ const DiagnosticModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ i
                             </div>
                             
                             <div className="pt-4 pb-2">
-                                <button type="submit" className="w-full bg-red-600 text-white py-5 rounded-2xl font-black uppercase text-xs md:text-sm tracking-[0.3em] hover:bg-red-700 transition-all shadow-2xl shadow-red-600/20">Solicitar Parecer Técnico</button>
+                                <button type="submit" className="w-full bg-red-600 text-white py-5 rounded-2xl font-black uppercase text-xs md:text-sm tracking-[0.3em] hover:bg-red-700 transition-all shadow-2xl shadow-red-600/20 active:scale-[0.98] group">
+                                    Solicitar Parecer Técnico
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -151,11 +158,25 @@ const DiagnosticModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ i
                 
                 {view === 'loading' && (
                     <div className="h-full flex flex-col items-center justify-center p-8 text-center space-y-8">
-                        <SpinnerIcon />
-                        <div className="space-y-4">
-                            <p className="text-white font-black text-xl md:text-2xl uppercase italic animate-pulse tracking-tighter">Cruzando Dados de Performance...</p>
-                            <p className="text-gray-500 font-mono text-[10px] uppercase tracking-[0.4em]">Engenharia CBL em Processamento Profundo</p>
+                        <div className="relative">
+                           <SpinnerIcon />
+                           <div className="absolute inset-0 bg-red-600/20 blur-xl animate-pulse"></div>
                         </div>
+                        <div className="space-y-4 max-w-sm mx-auto">
+                            <p className="text-white font-black text-xl md:text-2xl uppercase italic animate-pulse tracking-tighter">Cruzando Dados...</p>
+                            
+                            <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+                                <div className="h-full bg-red-600 w-1/2 animate-[shimmer_2s_infinite]"></div>
+                            </div>
+                            
+                            <p className="text-gray-500 font-mono text-[10px] uppercase tracking-[0.4em]">Engenharia CBL em Processamento</p>
+                        </div>
+                        <style>{`
+                            @keyframes shimmer {
+                                0% { transform: translateX(-100%); }
+                                100% { transform: translateX(200%); }
+                            }
+                        `}</style>
                     </div>
                 )}
                 

@@ -15,7 +15,7 @@ interface UploadedImage {
   base64: string;
 }
 
-const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
+const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowToast?: (msg: string, type: 'success'|'error') => void }> = ({ isOpen, onClose, onShowToast }) => {
   const [step, setStep] = useState<'form' | 'loading' | 'preview'>('form');
   const [showBanner, setShowBanner] = useState(true);
   const [formData, setFormData] = useState({
@@ -100,7 +100,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
     };
   }, [step]);
 
-  // Função utilitária para comprimir imagens (Evita Payload Too Large error)
+  // Função utilitária para comprimir imagens
   const compressImage = (file: File): Promise<{ base64: string, preview: string }> => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -135,7 +135,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
     });
   };
 
-  // Upload da Referência Visual (Logo/Exemplo)
+  // Upload da Referência Visual
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -143,18 +143,20 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
         const { base64, preview } = await compressImage(file);
         setImageBase64(base64);
         setImagePreview(preview);
+        onShowToast?.("Referência visual carregada.", "success");
       } catch (err) {
         console.error("Erro ao processar imagem", err);
+        onShowToast?.("Erro ao carregar imagem.", "error");
       }
     }
   };
 
-  // Upload da Galeria (Produtos/Local)
+  // Upload da Galeria
   const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
       const remainingSlots = 6 - galleryImages.length;
-      const filesToProcess = Array.from(files).slice(0, remainingSlots);
+      const filesToProcess = Array.from(files).slice(0, remainingSlots) as File[];
 
       for (const file of filesToProcess) {
         try {
@@ -169,6 +171,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
           console.error("Erro ao processar imagem da galeria", err);
         }
       }
+      onShowToast?.(`${filesToProcess.length} imagens adicionadas à galeria.`, "success");
     }
     // Reset input
     if (galleryInputRef.current) galleryInputRef.current.value = '';
@@ -179,6 +182,15 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
   };
 
   const generateFullWebsite = async () => {
+    // Validação Visual e Lógica
+    if (!formData.companyName || !formData.essence) {
+       setError({ message: "Campos obrigatórios: Nome da Empresa e Essência." });
+       onShowToast?.("Preencha os campos obrigatórios para continuar.", "error");
+       
+       // Shake effect visual (opcional implementation logic would go here)
+       return;
+    }
+
     setStep('loading');
     setError(null);
     setBuildLogs(["> Conectando ao Núcleo de Engenharia Grupo CBL..."]);
@@ -274,7 +286,6 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
       
       // 1. Injetar Logo/Referência
       if (imageBase64) {
-        // Tenta substituir o placeholder ou procura por locais lógicos se a IA falhou em usar o placeholder exato
         if (previewHtml.includes('PLACEHOLDER_LOGO')) {
           previewHtml = previewHtml.replace(/PLACEHOLDER_LOGO/g, `data:image/jpeg;base64,${imageBase64}`);
         }
@@ -283,7 +294,6 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
       // 2. Injetar Galeria
       galleryImages.forEach((img, index) => {
         const placeholder = `PLACEHOLDER_GALLERY_${index}`;
-        // Substituição global
         const regex = new RegExp(placeholder, 'g');
         previewHtml = previewHtml.replace(regex, `data:image/jpeg;base64,${img.base64}`);
       });
@@ -291,27 +301,17 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
       // Scripts para corrigir comportamento no iframe
       const clickBlockerScript = `
         <script>
-          // Prevenir navegação de links e submits de form dentro do iframe
           document.addEventListener('click', function(e) {
             const target = e.target.closest('a, button, input[type="submit"]');
             if (target) {
               const href = target.getAttribute('href');
-              // Permite âncoras internas suaves
-              if (href && href.startsWith('#')) {
-                // Comportamento normal de âncora
-                return;
-              }
-              // Bloqueia navegação externa ou reload
+              if (href && href.startsWith('#')) return;
               e.preventDefault();
               console.log('Navegação simulada bloqueada no preview.');
-              
-              // Feedback visual de clique
               target.style.transform = 'scale(0.95)';
               setTimeout(() => target.style.transform = '', 150);
             }
           }, true);
-          
-          // Forçar overflow-x hidden no body
           document.body.style.overflowX = 'hidden';
           document.body.style.width = '100%';
         </script>
@@ -333,10 +333,12 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
       setProgress(100);
       setBuildLogs(prev => [...prev, "> Draft finalizado pela equipe de engenharia."]);
       
+      onShowToast?.("Draft gerado com sucesso.", "success");
       setTimeout(() => setStep('preview'), 1200);
     } catch (err: any) {
       console.error("ImagineSiteModal Error:", err);
-      setError({ message: 'A conexão foi interrompida (Possível excesso de dados). Tente enviar menos fotos ou fotos menores.' });
+      setError({ message: 'Conexão instável. Reduza o número de imagens e tente novamente.' });
+      onShowToast?.("Erro ao gerar draft. Verifique sua conexão.", "error");
       setStep('form');
     }
   };
@@ -355,45 +357,45 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
                <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80 shadow-[0_0_8px_rgba(234,179,8,0.5)]"></div>
                <div className="w-2.5 h-2.5 rounded-full bg-green-500/80 shadow-[0_0_8px_rgba(34,197,94,0.5)]"></div>
              </div>
-             <span className="text-[10px] font-mono text-white/30 tracking-widest uppercase">CBL_ENGINEERING_CORE_V5</span>
+             <span className="text-[10px] font-mono text-white/30 tracking-widest uppercase hidden md:inline-block">CBL_ENGINEERING_CORE_V5</span>
           </div>
-          <button onClick={onClose} className="text-white/40 hover:text-white transition-all p-2 rounded-lg"><XIcon /></button>
+          <button onClick={onClose} className="text-white/40 hover:text-white transition-all p-2 rounded-lg hover:bg-white/10"><XIcon /></button>
         </div>
 
         {step === 'form' && (
           <div className="flex-grow flex items-start justify-center p-6 md:p-12 overflow-y-auto custom-scrollbar">
-            <div className="w-full max-w-6xl space-y-12">
+            <div className="w-full max-w-6xl space-y-12 pb-12">
               <div className="text-center space-y-4">
                 <h2 className="text-4xl md:text-8xl font-black tracking-tighter uppercase italic text-white leading-none">
                   Visualize seu <span className="text-red-600">Site</span>
                 </h2>
-                <p className="text-white/60 text-base md:text-lg max-w-2xl mx-auto font-light">Briefing estratégico para materialização de interface pela equipe CBL.</p>
+                <p className="text-white/60 text-sm md:text-lg max-w-2xl mx-auto font-light">Briefing estratégico para materialização de interface pela equipe CBL.</p>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                 {/* Coluna 1: Identidade Visual */}
                 <div className="space-y-6 bg-white/5 p-6 rounded-2xl border border-white/10">
                    <h3 className="text-xs font-black text-white/40 uppercase tracking-[0.3em] border-b border-white/5 pb-4 mb-6">01. Identidade Visual</h3>
-                   <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Nome da Empresa *</label>
-                      <input type="text" value={formData.companyName} onChange={(e) => setFormData({...formData, companyName: e.target.value})} placeholder="Ex: Grupo CBL Tech" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all placeholder-white/20" />
+                   <div className="space-y-1.5 group">
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 group-focus-within:text-white transition-colors">Nome da Empresa *</label>
+                      <input type="text" value={formData.companyName} onChange={(e) => setFormData({...formData, companyName: e.target.value})} placeholder="Ex: Grupo CBL Tech" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(220,38,38,0.1)] outline-none transition-all placeholder-white/20 text-sm" />
+                   </div>
+                   <div className="space-y-1.5 group">
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 group-focus-within:text-white transition-colors">Cores da Marca</label>
+                      <input type="text" value={formData.brandColors} onChange={(e) => setFormData({...formData, brandColors: e.target.value})} placeholder="Ex: Azul Marinho e Branco" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(220,38,38,0.1)] outline-none transition-all placeholder-white/20 text-sm" />
                    </div>
                    <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Cores da Marca</label>
-                      <input type="text" value={formData.brandColors} onChange={(e) => setFormData({...formData, brandColors: e.target.value})} placeholder="Ex: Azul Marinho e Branco" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all placeholder-white/20" />
-                   </div>
-                   <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Referência Visual (Logo/Screenshot)</label>
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Referência Visual (Logo)</label>
                       <div 
                         onClick={() => fileInputRef.current?.click()}
-                        className="group relative cursor-pointer aspect-video bg-white/5 border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center hover:border-red-600/50 transition-all overflow-hidden"
+                        className="group relative cursor-pointer aspect-video bg-white/5 border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center hover:border-red-600/50 hover:bg-white/10 transition-all overflow-hidden"
                       >
                         {imagePreview ? (
-                          <img src={imagePreview} className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity" alt="Preview" />
+                          <img src={imagePreview} className="w-full h-full object-contain p-4 opacity-80 group-hover:opacity-100 transition-opacity" alt="Preview" />
                         ) : (
                           <div className="flex flex-col items-center text-center p-4">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white/20 group-hover:text-red-600 transition-colors mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                            <span className="text-[10px] text-white/30 uppercase font-black tracking-widest">Clique para subir imagem</span>
+                            <span className="text-[10px] text-white/30 uppercase font-black tracking-widest group-hover:text-white transition-colors">Clique para subir imagem</span>
                           </div>
                         )}
                         <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
@@ -405,25 +407,25 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
                 <div className="space-y-6 bg-white/5 p-6 rounded-2xl border border-white/10">
                    <h3 className="text-xs font-black text-white/40 uppercase tracking-[0.3em] border-b border-white/5 pb-4 mb-6">02. Estrutura & Estilo</h3>
                    
-                   <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Essência do Negócio *</label>
-                      <input type="text" value={formData.essence} onChange={(e) => setFormData({...formData, essence: e.target.value})} placeholder="Ex: Consultoria Financeira" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all placeholder-white/20" />
+                   <div className="space-y-1.5 group">
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 group-focus-within:text-white transition-colors">Essência do Negócio *</label>
+                      <input type="text" value={formData.essence} onChange={(e) => setFormData({...formData, essence: e.target.value})} placeholder="Ex: Consultoria Financeira" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(220,38,38,0.1)] outline-none transition-all placeholder-white/20 text-sm" />
                    </div>
                    
-                   <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Estilo (Ex: Moderno, Minimalista...)</label>
+                   <div className="space-y-1.5 group">
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 group-focus-within:text-white transition-colors">Estilo Visual</label>
                       <input 
                         type="text"
                         value={formData.toneOfVoice} 
                         onChange={(e) => setFormData({...formData, toneOfVoice: e.target.value})}
-                        placeholder="Descreva o estilo visual desejado..."
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all placeholder-white/20"
+                        placeholder="Ex: Moderno, Minimalista, Dark Mode..."
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(220,38,38,0.1)] outline-none transition-all placeholder-white/20 text-sm"
                       />
                    </div>
 
-                   <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Público-Alvo</label>
-                      <input type="text" value={formData.targetAudience} onChange={(e) => setFormData({...formData, targetAudience: e.target.value})} placeholder="Ex: Pequenas e médias empresas" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all placeholder-white/20" />
+                   <div className="space-y-1.5 group">
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 group-focus-within:text-white transition-colors">Público-Alvo</label>
+                      <input type="text" value={formData.targetAudience} onChange={(e) => setFormData({...formData, targetAudience: e.target.value})} placeholder="Ex: Pequenas e médias empresas" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(220,38,38,0.1)] outline-none transition-all placeholder-white/20 text-sm" />
                    </div>
                 </div>
 
@@ -432,14 +434,14 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
                    <h3 className="text-xs font-black text-white/40 uppercase tracking-[0.3em] border-b border-white/5 pb-4 mb-6">03. Detalhes & Conteúdo</h3>
                    
                    <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Fotos do Estabelecimento / Produtos (Max 6)</label>
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Galeria de Fotos (Max 6)</label>
                       <div className="grid grid-cols-3 gap-2 mb-2">
                         {galleryImages.map(img => (
                           <div key={img.id} className="relative aspect-square rounded-lg overflow-hidden border border-white/20 group">
                             <img src={img.preview} alt="Upload" className="w-full h-full object-cover" />
                             <button 
                               onClick={() => removeGalleryImage(img.id)}
-                              className="absolute top-1 right-1 bg-black/80 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="absolute top-1 right-1 bg-black/80 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
                             >
                               <XIcon />
                             </button>
@@ -462,31 +464,30 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
                         multiple 
                         className="hidden" 
                       />
-                      <p className="text-[9px] text-white/30 mt-1">Fotos reais ajudam a entender a identidade do negócio.</p>
+                      <p className="text-[9px] text-white/30 mt-1 font-mono">JPG/PNG. Fotos reais aumentam a fidelidade do draft.</p>
                    </div>
                    
-                   <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Detalhes do Negócio / Instruções Livres</label>
+                   <div className="space-y-1.5 group">
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 group-focus-within:text-white transition-colors">Detalhes / Instruções Livres</label>
                       <textarea 
                         value={formData.customInstructions} 
                         onChange={(e) => setFormData({...formData, customInstructions: e.target.value})} 
-                        placeholder="Descreva livremente: 'Quero uma Loja Virtual', 'Site para meu escritório de advocacia', 'Preciso de uma landing page para vender curso'..." 
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all h-[100px] resize-none placeholder-white/20 leading-relaxed text-sm"
+                        placeholder="Descreva livremente: 'Quero uma Loja Virtual', 'Site para meu escritório', 'Landing page para vender curso'..." 
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(220,38,38,0.1)] outline-none transition-all h-[100px] resize-none placeholder-white/20 leading-relaxed text-sm"
                       />
                    </div>
-
-                   <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Referência Externa (URL)</label>
-                      <input type="text" value={formData.referenceUrl} onChange={(e) => setFormData({...formData, referenceUrl: e.target.value})} placeholder="https://exemplo.com.br" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 outline-none transition-all placeholder-white/20" />
+                   
+                   <div className="space-y-1.5 group">
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 group-focus-within:text-white transition-colors">Referência Externa (URL)</label>
+                      <input type="text" value={formData.referenceUrl} onChange={(e) => setFormData({...formData, referenceUrl: e.target.value})} placeholder="https://exemplo.com.br" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(220,38,38,0.1)] outline-none transition-all placeholder-white/20 text-sm" />
                    </div>
                 </div>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-6 pt-6">
                 <button 
                   onClick={generateFullWebsite} 
-                  disabled={!formData.companyName || !formData.essence} 
-                  className="w-full bg-red-600 text-white py-6 rounded-2xl font-black uppercase tracking-[0.4em] hover:bg-red-700 transition-all shadow-[0_20px_40px_rgba(220,38,38,0.3)] disabled:opacity-20 flex items-center justify-center gap-4 group"
+                  className="w-full bg-red-600 text-white py-6 rounded-2xl font-black uppercase tracking-[0.4em] hover:bg-red-700 transition-all shadow-[0_20px_40px_rgba(220,38,38,0.3)] hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-4 group disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Engenhar Draft de Alta Performance
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
@@ -555,7 +556,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
                 <div className="flex items-center gap-6">
                   <button 
                     onClick={() => { onClose(); window.location.hash = '#contact'; }} 
-                    className="bg-red-600 hover:bg-red-700 text-white px-10 py-4 rounded-xl font-black uppercase text-xs transition-all cta-pulse tracking-[0.2em] shadow-xl shadow-red-600/40"
+                    className="bg-red-600 hover:bg-red-700 text-white px-10 py-4 rounded-xl font-black uppercase text-xs transition-all cta-pulse tracking-[0.2em] shadow-xl shadow-red-600/40 hover:scale-105"
                   >
                     Contratar Projeto Real
                   </button>

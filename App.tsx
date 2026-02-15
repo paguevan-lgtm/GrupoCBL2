@@ -10,11 +10,20 @@ import Footer from './components/Footer';
 import DiagnosticModal from './components/DiagnosticModal';
 import ImagineSiteModal from './components/ImagineSiteModal';
 import IntroAnimation from './components/IntroAnimation';
+import { Toast } from './components/Toast';
+import { ScrollProgress } from './components/ui/ScrollProgress';
 
 const App: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isImagineModalOpen, setIsImagineModalOpen] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
+  
+  // Toast State
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+  };
 
   // Impede a rolagem durante a introdução E quando modais estão abertos
   useEffect(() => {
@@ -26,8 +35,19 @@ const App: React.FC = () => {
   }, [showIntro, isModalOpen, isImagineModalOpen]);
 
   return (
-    <div className="bg-[#1A1A1A] text-white antialiased">
+    <div className="bg-[#1A1A1A] text-white antialiased selection:bg-red-600 selection:text-white">
+      {/* Componentes de UI Globais */}
+      <ScrollProgress />
+      
       {showIntro && <IntroAnimation onFinished={() => setShowIntro(false)} />}
+      
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
+      )}
       
       <Header onOpenModal={() => setIsModalOpen(true)} />
       <main>
@@ -42,8 +62,18 @@ const App: React.FC = () => {
         <CtaSection onOpenModal={() => setIsModalOpen(true)} />
       </main>
       <Footer />
-      <DiagnosticModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
-      <ImagineSiteModal isOpen={isImagineModalOpen} onClose={() => setIsImagineModalOpen(false)} />
+      
+      <DiagnosticModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onShowToast={showToast}
+      />
+      
+      <ImagineSiteModal 
+        isOpen={isImagineModalOpen} 
+        onClose={() => setIsImagineModalOpen(false)} 
+        onShowToast={showToast}
+      />
     </div>
   );
 };

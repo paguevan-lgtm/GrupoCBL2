@@ -9,6 +9,7 @@ import CtaSection from './components/CtaSection';
 import Footer from './components/Footer';
 import DiagnosticModal from './components/DiagnosticModal';
 import ImagineSiteModal from './components/ImagineSiteModal';
+import NeuroSalesModal from './components/NeuroSalesModal';
 import IntroAnimation from './components/IntroAnimation';
 import { Toast } from './components/Toast';
 import { ScrollProgress } from './components/ui/ScrollProgress';
@@ -16,6 +17,7 @@ import { ScrollProgress } from './components/ui/ScrollProgress';
 const App: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isImagineModalOpen, setIsImagineModalOpen] = useState(false);
+  const [isNeuroModalOpen, setIsNeuroModalOpen] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
   
   // Toast State
@@ -27,12 +29,12 @@ const App: React.FC = () => {
 
   // Impede a rolagem durante a introdução E quando modais estão abertos
   useEffect(() => {
-    if (showIntro || isModalOpen || isImagineModalOpen) {
+    if (showIntro || isModalOpen || isImagineModalOpen || isNeuroModalOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
     }
-  }, [showIntro, isModalOpen, isImagineModalOpen]);
+  }, [showIntro, isModalOpen, isImagineModalOpen, isNeuroModalOpen]);
 
   return (
     <div className="bg-[#1A1A1A] text-white antialiased selection:bg-red-600 selection:text-white">
@@ -54,6 +56,7 @@ const App: React.FC = () => {
         <HeroSection 
           onOpenModal={() => setIsModalOpen(true)} 
           onOpenImagineModal={() => setIsImagineModalOpen(true)}
+          onOpenNeuroModal={() => setIsNeuroModalOpen(true)}
           startAnimation={!showIntro} 
         />
         <AboutSection />
@@ -72,6 +75,12 @@ const App: React.FC = () => {
       <ImagineSiteModal 
         isOpen={isImagineModalOpen} 
         onClose={() => setIsImagineModalOpen(false)} 
+        onShowToast={showToast}
+      />
+
+      <NeuroSalesModal 
+        isOpen={isNeuroModalOpen}
+        onClose={() => setIsNeuroModalOpen(false)}
         onShowToast={showToast}
       />
     </div>

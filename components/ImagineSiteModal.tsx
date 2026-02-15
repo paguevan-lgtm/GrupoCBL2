@@ -177,6 +177,60 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
     setGalleryImages(prev => prev.filter(img => img.id !== id));
   };
 
+  const handleRandomize = () => {
+    const presets = [
+      {
+        companyName: 'Neon Brew',
+        essence: 'Cafeteria Cyberpunk Noturna',
+        targetAudience: 'Programadores, Gamers, Designers',
+        toneOfVoice: 'Futurista, Neon, Dark Mode',
+        brandColors: 'Roxo Neon, Azul Ciano, Preto Profundo',
+        customInstructions: 'Quero um cardápio digital interativo e destaque para o ambiente com luzes neon. Inclua uma seção de eventos noturnos.',
+        referenceUrl: 'https://cyberpunk.net'
+      },
+      {
+        companyName: 'Verde Vida EcoResort',
+        essence: 'Resort Ecológico de Luxo',
+        targetAudience: 'Casais, Amantes da Natureza, Executivos',
+        toneOfVoice: 'Orgânico, Sereno, Minimalista, Sofisticado',
+        brandColors: 'Verde Musgo, Bege Areia, Branco Off-white',
+        customInstructions: 'Foco total nas imagens das cabanas e na experiência de spa na floresta. Design limpo e respirável.',
+        referenceUrl: 'https://nature.com'
+      },
+      {
+        companyName: 'Velocity Motors',
+        essence: 'Concessionária de Carros Esportivos',
+        targetAudience: 'Entusiastas de Automobilismo, Colecionadores',
+        toneOfVoice: 'Agressivo, Dinâmico, Premium',
+        brandColors: 'Vermelho Ferrari, Preto Fosco, Cromado',
+        customInstructions: 'Galeria de carros em carrossel, ficha técnica detalhada e formulário de agendamento de test-drive.',
+        referenceUrl: 'https://ferrari.com'
+      },
+      {
+        companyName: 'Zenith Arquitetura',
+        essence: 'Escritório de Arquitetura Contemporânea',
+        targetAudience: 'Incorporadoras, Clientes de Alto Padrão',
+        toneOfVoice: 'Minimalista, Geométrico, Elegante',
+        brandColors: 'Preto, Branco, Cinza Concreto',
+        customInstructions: 'Portfolio em grid assimétrico. Tipografia grande e pouca cor. O foco é a estrutura dos prédios.',
+        referenceUrl: 'https://archdaily.com'
+      },
+      {
+        companyName: 'Sushi Flow',
+        essence: 'Restaurante Japonês Fusion',
+        targetAudience: 'Jovens Adultos, Foodies',
+        toneOfVoice: 'Moderno, Vibrante, Acolhedor',
+        brandColors: 'Laranja Salmão, Preto, Dourado',
+        customInstructions: 'Destaque para fotos dos pratos. Menu com animações suaves. Botão de delivery bem visível.',
+        referenceUrl: 'https://noburestaurants.com'
+      }
+    ];
+
+    const random = presets[Math.floor(Math.random() * presets.length)];
+    setFormData(random);
+    onShowToast?.("Dados de exemplo preenchidos pela IA.", "success");
+  };
+
   const generateFullWebsite = async () => {
     // Validação Visual e Lógica
     if (!formData.companyName || !formData.essence) {
@@ -365,6 +419,14 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
                   Visualize seu <span className="text-red-600">Site</span>
                 </h2>
                 <p className="text-white/60 text-sm md:text-lg max-w-2xl mx-auto font-light">Briefing estratégico para materialização de interface pela equipe CBL.</p>
+                
+                <button 
+                  onClick={handleRandomize}
+                  className="mt-2 text-[10px] font-mono uppercase tracking-widest text-white/40 hover:text-red-500 transition-colors inline-flex items-center gap-2 border border-white/10 px-4 py-2 rounded-full hover:border-red-500/50 hover:bg-white/5"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                  Gerar Aleatório
+                </button>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">

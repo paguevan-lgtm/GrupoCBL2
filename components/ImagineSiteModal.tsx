@@ -45,18 +45,15 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
   const logs = [
-    "Iniciando Protocolo de Draft CBL...",
-    "Conectando à Pexels API para curadoria visual...",
-    "Sincronizando assets de alta resolução...",
-    "Mapeando Essência de Negócio e Público-alvo...",
-    "Analisando referências visuais e paleta cromática...",
-    "Processando diretrizes de estilo customizado...",
-    "Desenhando Interface High-End exclusiva...",
-    "Compilando Design System sob medida...",
-    "Arquitetando Estrutura de Conversão focada em objetivos...",
-    "Otimizando Performance, SEO e Acessibilidade...",
-    "Finalizando Auditoria de Qualidade CBL...",
-    "Draft Pronto para Revisão do Cliente."
+    "Inicializando Núcleo Generativo Google Gemini...",
+    "Interpretando Briefing e Essência da Marca...",
+    "Arquitetando Estrutura de UX/UI...",
+    "Gerando Conteúdo Textual Persuasivo...",
+    "Sintetizando Elementos Visuais e Imagens...",
+    "Compilando Código HTML5 Semântico...",
+    "Aplicando Estilização Tailwind CSS...",
+    "Otimizando Responsividade Mobile...",
+    "Finalizando Renderização do Protótipo..."
   ];
 
   useEffect(() => {
@@ -74,7 +71,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
       logInterval = window.setInterval(() => {
         setProgress(prev => {
           if (prev >= 98) return prev; 
-          const next = prev + (Math.random() * 2.5);
+          const next = prev + (Math.random() * 3.5); // Um pouco mais rápido
           const logThreshold = (currentLogIndex + 1) * (100 / logs.length);
           
           if (next >= logThreshold && currentLogIndex < logs.length) {
@@ -86,7 +83,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
           }
           return next;
         });
-      }, 200);
+      }, 300);
     } else {
       setProgress(0);
       setBuildLogs([]);
@@ -180,33 +177,6 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
     setGalleryImages(prev => prev.filter(img => img.id !== id));
   };
 
-  // --- LÓGICA DE STOCK IMAGES (PEXELS/FALLBACK) ---
-  const fetchContextImages = async (query: string): Promise<string[]> => {
-      // Tenta buscar no Pexels (Server-side)
-      try {
-          const res = await fetch('/api/pexels', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ query: query })
-          });
-          
-          if (res.ok) {
-              const data = await res.json();
-              if (data.images && data.images.length > 0) {
-                  return data.images.map((img: any) => img.src);
-              }
-          }
-      } catch (e) {
-          console.warn("Pexels fetch failed, using fallback.", e);
-      }
-
-      // Fallback: Pollinations.ai (Gera imagens baseadas em prompt sem key)
-      const fallbackImages = Array(6).fill(0).map((_, i) => 
-          `https://image.pollinations.ai/prompt/${encodeURIComponent(query)}%20${i}?width=1080&height=720&nologo=true&seed=${Math.random()}`
-      );
-      return fallbackImages;
-  };
-
   const generateFullWebsite = async () => {
     // Validação Visual e Lógica
     if (!formData.companyName || !formData.essence) {
@@ -217,74 +187,44 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
 
     setStep('loading');
     setError(null);
-    setBuildLogs(["> Conectando ao Núcleo de Engenharia Grupo CBL..."]);
-
-    // 1. Preparar Imagens (User Uploads + Stock Images)
-    let finalGalleryUrls: string[] = [];
-    
-    // Adiciona as do usuário primeiro (Data URL Base64)
-    galleryImages.forEach(img => {
-        finalGalleryUrls.push(`data:image/jpeg;base64,${img.base64}`);
-    });
-
-    // Se tiver menos de 6 imagens, completa com Stock Images baseadas na essência
-    if (finalGalleryUrls.length < 6) {
-        setBuildLogs(prev => [...prev, `> Buscando imagens premium para: ${formData.essence}...`]);
-        try {
-            const stockImages = await fetchContextImages(formData.essence + " professional business aesthetic");
-            // Adiciona as stock images até completar 6 (ou o quanto tiver)
-            const slotsNeeded = 6 - finalGalleryUrls.length;
-            finalGalleryUrls = [...finalGalleryUrls, ...stockImages.slice(0, slotsNeeded)];
-        } catch (e) {
-            console.error("Erro ao buscar stock images", e);
-        }
-    }
+    setBuildLogs(["> Iniciando conexão segura com Google Gemini..."]);
 
     const textPart = {
       text: `
         Você é o Senior Lead Developer e Head de Design da CBL Tech.
-        
-        ATENÇÃO EXTREMA - PROTOCOLO DE IMAGENS:
-        Eu preparei um banco de imagens REAIS para este site.
-        Você ESTÁ ESTRITAMENTE PROIBIDO de inventar nomes de arquivos como 'coffee.jpg', 'hero.png', 'selection.jpg'.
-        Se você fizer isso, o site quebrará.
-        
-        USE APENAS E EXCLUSIVAMENTE OS SEGUINTES PLACEHOLDERS COMO 'src':
-        
-        1. "PLACEHOLDER_LOGO" -> Para o logo no header.
-        2. "PLACEHOLDER_GALLERY_0" -> Ideal para o Banner Principal/Hero.
-        3. "PLACEHOLDER_GALLERY_1" -> Ideal para seção 'Sobre' ou destaque.
-        4. "PLACEHOLDER_GALLERY_2" -> Para cards de serviços/produtos.
-        5. "PLACEHOLDER_GALLERY_3", "PLACEHOLDER_GALLERY_4", etc...
+        Sua missão é criar um Single Page Application (SPA) moderno, responsivo e de alta conversão.
 
-        EXEMPLO CORRETO: <img src="PLACEHOLDER_GALLERY_0" alt="Banner" class="..." />
-        EXEMPLO ERRADO (CRIME): <img src="images/banner.jpg" ... />
+        DADOS DO PROJETO:
+        - Empresa: ${formData.companyName}
+        - Ramo/Essência: ${formData.essence}
+        - Público-Alvo: ${formData.targetAudience || 'Geral'}
+        - Estilo Visual: ${formData.toneOfVoice || 'Profissional e Moderno'}
+        - Cores: ${formData.brandColors || 'Neutras com destaque em cores fortes'}
+        - Instruções Extras: ${formData.customInstructions || 'Focar em conversão e clareza.'}
 
-        CRÍTICO - REGRAS DE LAYOUT E DESIGN: 
-        1. O layout DEVE SER 100% RESPONSIVO PARA MOBILE. Use classes como 'w-full', 'max-w-full', 'overflow-x-hidden' no body e containers.
-        2. Identifique o TIPO DE SITE (Institucional, Loja, Landing Page, Blog) com base na ESSÊNCIA e nas INSTRUÇÕES do usuário.
-        3. Crie seções completas: Header, Hero (Impactante), Sobre, Serviços/Produtos (Grid), Depoimentos (se couber), Footer.
+        REGRAS CRÍTICAS DE IMAGENS (SISTEMA NATIVO):
+        1. Para o LOGO: Use o placeholder "PLACEHOLDER_LOGO".
+        2. Para TODAS AS OUTRAS IMAGENS (Hero, Backgrounds, Cards, Galeria):
+           Você DEVE gerar URLs dinâmicas usando o serviço Pollinations.
+           Sintaxe: https://image.pollinations.ai/prompt/{DESCRIÇÃO_EM_INGLES_DA_CENA}?nologo=true&private=true&width=1200&height=800
+           
+           EXEMPLOS:
+           - Hero Section de Café: src="https://image.pollinations.ai/prompt/cinematic%20shot%20of%20delicious%20coffee%20cup%20on%20wooden%20table%20morning%20light?nologo=true"
+           - Escritório Moderno: src="https://image.pollinations.ai/prompt/modern%20corporate%20office%20glass%20meeting%20room?nologo=true"
+           
+           NUNCA use caminhos relativos como "images/foto.jpg". Sempre use URLs absolutas do Pollinations descritivas.
 
-        DADOS DO BRIEFING:
-        Empresa: ${formData.companyName}
-        Essência do Negócio: ${formData.essence}
-        Público-Alvo: ${formData.targetAudience || 'Geral'}
-        Estilo Visual: ${formData.toneOfVoice}
-        Cores da Marca: ${formData.brandColors || 'Harmônicas com o estilo'}
-        
-        INSTRUÇÕES ESPECÍFICAS:
-        ${formData.customInstructions || 'Seguir boas práticas de UX/UI.'}
+        REGRAS DE CÓDIGO:
+        - Use HTML5 semântico e Tailwind CSS via CDN.
+        - O site deve ser totalmente RESPONSIVO.
+        - Seções obrigatórias: Header, Hero Section (Impactante), Sobre, Serviços/Produtos, Prova Social (se couber), Footer.
+        - Adicione scripts simples para menu mobile funcionar.
 
-        DIRETRIZES TÉCNICAS:
-        - Código HTML5 semântico.
-        - CSS via Tailwind CSS (CDN).
-        - JavaScript para interatividade (menu mobile FUNCIONAL, scroll suave).
-        
-        RETORNE APENAS UM JSON PURO:
+        SAÍDA ESPERADA (JSON PURO):
         {
-          "index.html": "...",
-          "theme.css": "...",
-          "interactions.js": "..."
+          "index.html": "<!DOCTYPE html>...",
+          "theme.css": "/* CSS adicional se necessário */",
+          "interactions.js": "// JS para menu e interações"
         }
       `
     };
@@ -292,14 +232,15 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
     // Construir o payload de conteúdo
     const parts = [];
 
-    // Nota: Como estamos usando placeholders textuais para o Gemini e substituindo no final,
-    // NÃO enviamos os bytes das imagens para o Gemini (economiza tokens e evita erro de payload size).
-    // Apenas se tiver referência visual (logo) que ajuda na criatividade, enviamos.
+    // Se tiver logo, envia para contexto
     if (imageBase64) {
       parts.push({ inlineData: { mimeType: "image/jpeg", data: imageBase64 } });
     }
 
-    // Adicionar o texto (Prompt)
+    // Se o usuário fez upload de imagens de galeria, podemos instruir o modelo a usar placeholders específicos para elas,
+    // mas para simplificar e garantir que funcione (já que o usuário pediu o modo nativo/anterior), 
+    // vamos focar na geração por IA, e injetar as imagens do usuário se houverem.
+    
     parts.push(textPart);
 
     const contents = { parts };
@@ -326,44 +267,30 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
       
       let previewHtml = files['index.html'] || '';
 
-      // ---- INJEÇÃO DAS IMAGENS (REAIS + STOCK) NO HTML ----
+      // ---- PÓS-PROCESSAMENTO DE IMAGENS ----
       
-      // 1. Injetar Logo/Referência
+      // 1. Injetar Logo Real
       if (imageBase64) {
         previewHtml = previewHtml.replace(/PLACEHOLDER_LOGO/g, `data:image/jpeg;base64,${imageBase64}`);
       } else {
-         // Se não tiver logo, remove o placeholder ou coloca um texto
+         // Fallback de texto se não tiver logo
          previewHtml = previewHtml.replace(/<img[^>]*src=["']PLACEHOLDER_LOGO["'][^>]*>/g, `<div class="font-bold text-2xl">${formData.companyName}</div>`);
-         // Caso a IA tenha colocado apenas o src sem a tag completa
-         previewHtml = previewHtml.replace(/PLACEHOLDER_LOGO/g, ''); 
       }
 
-      // 2. Injetar Galeria (Mista: User Uploads + Pexels URLs)
-      finalGalleryUrls.forEach((url, index) => {
-        const placeholder = `PLACEHOLDER_GALLERY_${index}`;
-        const regex = new RegExp(placeholder, 'g');
-        previewHtml = previewHtml.replace(regex, url);
-      });
-
-      // 3. Fallback de Segurança "Brute Force" para Alucinações (ex: src="images/coffee.jpg")
-      // Se a IA alucinou um path relativo, nós forçamos a substituição por uma imagem da galeria.
-      // O regex procura srcs que NÃO começam com http, data ou PLACEHOLDER.
-      if (finalGalleryUrls.length > 0) {
-        let replacementIndex = 0;
-        previewHtml = previewHtml.replace(/src=["'](?!http|data|PLACEHOLDER)([^"']+)["']/g, (match) => {
-            // Usa imagens da galeria de forma cíclica para corrigir
-            const url = finalGalleryUrls[replacementIndex % finalGalleryUrls.length];
-            replacementIndex++;
-            console.warn("Corrigindo imagem quebrada gerada pela IA:", match, "->", url);
-            return `src="${url}"`;
-        });
-        
-        // Correção também para style="background-image: url(...)"
-        previewHtml = previewHtml.replace(/url\(['"]?(?!http|data|PLACEHOLDER)([^'")]+)['"]?\)/g, (match) => {
-             const url = finalGalleryUrls[replacementIndex % finalGalleryUrls.length];
-             replacementIndex++;
-             return `url('${url}')`;
-        });
+      // 2. Se o usuário subiu imagens na galeria, podemos tentar substituir algumas das imagens geradas pela IA
+      // pelas imagens reais do usuário, para dar um toque personalizado.
+      // Substitui as primeiras N ocorrências de pollinations pelas imagens do usuário
+      if (galleryImages.length > 0) {
+         let imgIndex = 0;
+         // Regex procura URLs do pollinations
+         previewHtml = previewHtml.replace(/https:\/\/image\.pollinations\.ai\/prompt\/[^"']+/g, (match) => {
+             if (imgIndex < galleryImages.length) {
+                 const userImg = `data:image/jpeg;base64,${galleryImages[imgIndex].base64}`;
+                 imgIndex++;
+                 return userImg;
+             }
+             return match; // Mantém a imagem gerada se acabarem as do usuário
+         });
       }
       
       // Scripts para corrigir comportamento no iframe
@@ -478,7 +405,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
                    <div className="space-y-1.5 group">
                       <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 group-focus-within:text-white transition-colors">Essência do Negócio *</label>
                       <input type="text" value={formData.essence} onChange={(e) => setFormData({...formData, essence: e.target.value})} placeholder="Ex: Consultoria Financeira" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(220,38,38,0.1)] outline-none transition-all placeholder-white/20 text-sm" />
-                      <p className="text-[9px] text-white/30 font-mono">* Usado para busca automática de imagens.</p>
+                      <p className="text-[9px] text-white/30 font-mono">* Usado para gerar imagens contextuais.</p>
                    </div>
                    
                    <div className="space-y-1.5 group">
@@ -534,7 +461,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
                         className="hidden" 
                       />
                       <p className="text-[9px] text-white/30 mt-1 font-mono">
-                        Dica: Se não tiver fotos, o sistema buscará imagens profissionais automaticamente na Pexels.
+                        Se não enviar fotos, a IA gerará imagens profissionais automaticamente.
                       </p>
                    </div>
                    

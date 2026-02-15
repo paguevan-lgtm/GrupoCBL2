@@ -49,6 +49,34 @@ interface AnalysisData {
 }
 
 const StructuredResultView = ({ result, onRestart }: { result: AnalysisData, onRestart: () => void }) => {
+    
+    // Função para gerar o link do WhatsApp com mensagem formatada
+    const getWhatsappLink = () => {
+        const protocolId = Math.random().toString(36).substring(2, 7).toUpperCase();
+        const date = new Date().toLocaleDateString('pt-BR');
+        
+        const message = `
+*PROTOCOLO CBL:* #${protocolId} 🚀
+_Data: ${date}_
+
+Olá, vim pelo site e recebi meu diagnóstico estratégico. Gostaria de avançar com o plano de correção.
+
+🏢 *DADOS DA EMPRESA*
+*Empresa:* ${result.company}
+*Score Digital:* ${result.score}/100
+
+📊 *RESUMO TÉCNICO*
+"${result.summary}"
+
+⚠️ *PRINCIPAIS GARGALOS IDENTIFICADOS*
+${result.bottlenecks.map(b => `• ${b.title} (${b.severity === 'high' ? 'Crítico' : 'Moderado'})`).join('\n')}
+
+Aguardo o contato de um especialista.
+`.trim();
+
+        return `https://wa.me/5513997744720?text=${encodeURIComponent(message)}`;
+    };
+
     return (
         <div className="flex flex-col h-full w-full overflow-hidden bg-[#0A0A0A]">
             <div className="p-6 md:p-8 flex flex-col h-full w-full overflow-hidden">
@@ -152,7 +180,12 @@ const StructuredResultView = ({ result, onRestart }: { result: AnalysisData, onR
                 
                 {/* Footer Actions */}
                 <div className="mt-6 flex flex-col md:flex-row gap-4 shrink-0 pt-6 border-t border-white/10 bg-[#0A0A0A]">
-                    <a href="https://wa.me/13997744720" target="_blank" rel="noopener noreferrer" className="flex-1 bg-red-600 text-white py-4 rounded-xl font-black text-xs text-center uppercase tracking-[0.2em] hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 hover:scale-[1.02] flex items-center justify-center gap-2">
+                    <a 
+                        href={getWhatsappLink()} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="flex-1 bg-red-600 text-white py-4 rounded-xl font-black text-xs text-center uppercase tracking-[0.2em] hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 hover:scale-[1.02] flex items-center justify-center gap-2"
+                    >
                         <ZapIcon className="w-4 h-4" />
                         Executar Estratégia
                     </a>

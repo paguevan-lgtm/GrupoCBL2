@@ -243,24 +243,27 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
     const textPart = {
       text: `
         Você é o Senior Lead Developer e Head de Design da CBL Tech.
-        Crie um website de ELITE, profissional e eficaz para o cliente.
         
+        ATENÇÃO EXTREMA - PROTOCOLO DE IMAGENS:
+        Eu preparei um banco de imagens REAIS para este site.
+        Você ESTÁ ESTRITAMENTE PROIBIDO de inventar nomes de arquivos como 'coffee.jpg', 'hero.png', 'selection.jpg'.
+        Se você fizer isso, o site quebrará.
+        
+        USE APENAS E EXCLUSIVAMENTE OS SEGUINTES PLACEHOLDERS COMO 'src':
+        
+        1. "PLACEHOLDER_LOGO" -> Para o logo no header.
+        2. "PLACEHOLDER_GALLERY_0" -> Ideal para o Banner Principal/Hero.
+        3. "PLACEHOLDER_GALLERY_1" -> Ideal para seção 'Sobre' ou destaque.
+        4. "PLACEHOLDER_GALLERY_2" -> Para cards de serviços/produtos.
+        5. "PLACEHOLDER_GALLERY_3", "PLACEHOLDER_GALLERY_4", etc...
+
+        EXEMPLO CORRETO: <img src="PLACEHOLDER_GALLERY_0" alt="Banner" class="..." />
+        EXEMPLO ERRADO (CRIME): <img src="images/banner.jpg" ... />
+
         CRÍTICO - REGRAS DE LAYOUT E DESIGN: 
         1. O layout DEVE SER 100% RESPONSIVO PARA MOBILE. Use classes como 'w-full', 'max-w-full', 'overflow-x-hidden' no body e containers.
-        2. O design deve ser ÚNICO e seguir estritamente o ESTILO solicitado.
-        3. Identifique o TIPO DE SITE (Institucional, Loja, Landing Page, Blog) com base na ESSÊNCIA e nas INSTRUÇÕES do usuário.
-        
-        IMAGENS (SISTEMA DE PLACEHOLDERS INTELIGENTES):
-        O sistema já curou ${finalGalleryUrls.length} imagens de alta qualidade para este projeto.
-        Você DEVE usar os códigos abaixo nos atributos 'src' das tags <img> ou em 'background-image'. NÃO invente URLs externas.
-        
-        - Para o Logo (se fornecido): Use estritamente "PLACEHOLDER_LOGO"
-        - Para as imagens (Hero, Galeria, Sobre): Use estritamente "PLACEHOLDER_GALLERY_0", "PLACEHOLDER_GALLERY_1", "PLACEHOLDER_GALLERY_2", etc.
-        
-        IMPORTANTE: 
-        - Distribua os PLACEHOLDER_GALLERY_X pelo site de forma inteligente.
-        - Use a imagem 0 geralmente para o Banner Principal (Hero).
-        - Se precisar de mais imagens do que as disponíveis, repita as existentes ou use CSS gradients elegantes.
+        2. Identifique o TIPO DE SITE (Institucional, Loja, Landing Page, Blog) com base na ESSÊNCIA e nas INSTRUÇÕES do usuário.
+        3. Crie seções completas: Header, Hero (Impactante), Sobre, Serviços/Produtos (Grid), Depoimentos (se couber), Footer.
 
         DADOS DO BRIEFING:
         Empresa: ${formData.companyName}
@@ -331,16 +334,37 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
       } else {
          // Se não tiver logo, remove o placeholder ou coloca um texto
          previewHtml = previewHtml.replace(/<img[^>]*src=["']PLACEHOLDER_LOGO["'][^>]*>/g, `<div class="font-bold text-2xl">${formData.companyName}</div>`);
+         // Caso a IA tenha colocado apenas o src sem a tag completa
+         previewHtml = previewHtml.replace(/PLACEHOLDER_LOGO/g, ''); 
       }
 
       // 2. Injetar Galeria (Mista: User Uploads + Pexels URLs)
       finalGalleryUrls.forEach((url, index) => {
         const placeholder = `PLACEHOLDER_GALLERY_${index}`;
-        // Substitui todas as ocorrências deste placeholder pela URL
-        // A URL pode ser base64 (user) ou https (pexels/fallback)
         const regex = new RegExp(placeholder, 'g');
         previewHtml = previewHtml.replace(regex, url);
       });
+
+      // 3. Fallback de Segurança "Brute Force" para Alucinações (ex: src="images/coffee.jpg")
+      // Se a IA alucinou um path relativo, nós forçamos a substituição por uma imagem da galeria.
+      // O regex procura srcs que NÃO começam com http, data ou PLACEHOLDER.
+      if (finalGalleryUrls.length > 0) {
+        let replacementIndex = 0;
+        previewHtml = previewHtml.replace(/src=["'](?!http|data|PLACEHOLDER)([^"']+)["']/g, (match) => {
+            // Usa imagens da galeria de forma cíclica para corrigir
+            const url = finalGalleryUrls[replacementIndex % finalGalleryUrls.length];
+            replacementIndex++;
+            console.warn("Corrigindo imagem quebrada gerada pela IA:", match, "->", url);
+            return `src="${url}"`;
+        });
+        
+        // Correção também para style="background-image: url(...)"
+        previewHtml = previewHtml.replace(/url\(['"]?(?!http|data|PLACEHOLDER)([^'")]+)['"]?\)/g, (match) => {
+             const url = finalGalleryUrls[replacementIndex % finalGalleryUrls.length];
+             replacementIndex++;
+             return `url('${url}')`;
+        });
+      }
       
       // Scripts para corrigir comportamento no iframe
       const clickBlockerScript = `

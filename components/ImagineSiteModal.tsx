@@ -1,12 +1,19 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { XIcon } from './icons/XIcon';
+import { jsPDF } from 'jspdf';
 
 interface ProjectFiles {
   'index.html'?: string;
   'theme.css'?: string;
   'interactions.js'?: string;
   'README.md'?: string;
+}
+
+interface StrategicInsight {
+    section: string;
+    decision: string;
+    impact: string;
 }
 
 interface UploadedImage {
@@ -39,6 +46,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [buildLogs, setBuildLogs] = useState<string[]>([]);
   const [projectFiles, setProjectFiles] = useState<ProjectFiles | null>(null);
+  const [strategyData, setStrategyData] = useState<StrategicInsight[]>([]);
   const [error, setError] = useState<{ message: string } | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -181,13 +189,104 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
     setGalleryImages(prev => prev.filter(img => img.id !== id));
   };
 
+  // Download PDF Function
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    
+    // Configurações de estilo
+    const redColor = '#dc2626';
+    const blackColor = '#000000';
+    const grayColor = '#4b5563';
+
+    // Header
+    doc.setFillColor(blackColor);
+    doc.rect(0, 0, pageWidth, 40, 'F');
+    
+    doc.setTextColor('#ffffff');
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text("DOSSIÊ ESTRATÉGICO", 20, 25);
+    
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`PROJETO: ${formData.companyName.toUpperCase()}`, pageWidth - 20, 25, { align: 'right' });
+
+    // Intro
+    let yPos = 60;
+    doc.setTextColor(blackColor);
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("Racional de Engenharia & Design", 20, yPos);
+    
+    yPos += 10;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(grayColor);
+    doc.text("Este documento detalha as decisões técnicas e psicológicas aplicadas no draft do seu site para maximizar conversão e autoridade.", 20, yPos);
+
+    // Strategy Sections
+    yPos += 20;
+
+    strategyData.forEach((item, index) => {
+        // Verifica quebra de página
+        if (yPos > 250) {
+            doc.addPage();
+            yPos = 30;
+        }
+
+        // Section Title
+        doc.setFontSize(12);
+        doc.setTextColor(redColor);
+        doc.setFont("helvetica", "bold");
+        doc.text(item.section.toUpperCase(), 20, yPos);
+        yPos += 8;
+
+        // Decision (O que foi feito)
+        doc.setFontSize(11);
+        doc.setTextColor(blackColor);
+        doc.setFont("helvetica", "bold");
+        doc.text("A Estratégia:", 20, yPos);
+        yPos += 6;
+        
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        const decisionLines = doc.splitTextToSize(item.decision, pageWidth - 40);
+        doc.text(decisionLines, 20, yPos);
+        yPos += (decisionLines.length * 5) + 4;
+
+        // Impact (Por que funciona)
+        doc.setFontSize(11);
+        doc.setTextColor(blackColor);
+        doc.setFont("helvetica", "bold");
+        doc.text("Impacto no Cliente:", 20, yPos);
+        yPos += 6;
+
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "italic");
+        doc.setTextColor(grayColor);
+        const impactLines = doc.splitTextToSize(item.impact, pageWidth - 40);
+        doc.text(impactLines, 20, yPos);
+        yPos += (impactLines.length * 5) + 15; // Espaço extra entre itens
+    });
+
+    // Footer
+    const pageCount = doc.getNumberOfPages();
+    for(let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(grayColor);
+        doc.text(`Engenharia Grupo CBL - Página ${i} de ${pageCount}`, pageWidth / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
+    }
+
+    doc.save(`Dossie_Estrategico_${formData.companyName.replace(/\s+/g, '_')}.pdf`);
+  };
+
   const generateFullWebsite = async () => {
     // Validação Visual e Lógica
     if (!formData.companyName || !formData.essence) {
        setError({ message: "Campos obrigatórios: Nome da Empresa e Essência." });
        onShowToast?.("Preencha os campos obrigatórios para continuar.", "error");
-       
-       // Shake effect visual (opcional implementation logic would go here)
        return;
     }
 
@@ -198,46 +297,49 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
     const textPart = {
       text: `
         Você é o Senior Lead Developer e Head de Design da CBL Tech.
-        Crie um website de ELITE, profissional e eficaz para o cliente.
+        Crie um website de ELITE para o cliente e explique suas decisões.
         
-        CRÍTICO - REGRAS DE LAYOUT E DESIGN: 
-        1. O layout DEVE SER 100% RESPONSIVO PARA MOBILE. Use classes como 'w-full', 'max-w-full', 'overflow-x-hidden' no body e containers.
-        2. O design deve ser ÚNICO e seguir estritamente o ESTILO solicitado.
-        3. Identifique o TIPO DE SITE (Institucional, Loja, Landing Page, Blog) com base na ESSÊNCIA e nas INSTRUÇÕES do usuário.
-        
-        IMAGENS FORNECIDAS PELO USUÁRIO (SISTEMA DE PLACEHOLDERS):
-        O usuário enviou arquivos reais. Para garantir que eles apareçam, você DEVE usar os códigos abaixo no atributo 'src' das tags <img> ou em 'background-image'. NÃO tente inventar URLs.
-        
-        - Para o Logo (se fornecido): Use estritamente "PLACEHOLDER_LOGO"
-        - Para as imagens da Galeria (${galleryImages.length} disponíveis): Use estritamente "PLACEHOLDER_GALLERY_0", "PLACEHOLDER_GALLERY_1", etc. até o limite.
-        
-        Exemplo: <img src="PLACEHOLDER_GALLERY_0" alt="Produto destaque" class="..." />
-        
-        IMPORTANTE: 
-        - PRIORIZE usar "PLACEHOLDER_GALLERY_X" nas seções principais (Hero, Vitrine, Sobre Nós).
-        - Se o design precisar de MAIS imagens do que as ${galleryImages.length} fornecidas, complete com imagens do Unsplash (ex: 'https://source.unsplash.com/random/800x600/?business').
-        - Analise as imagens visualmente (que estou enviando) para entender as cores e o estilo, mas USE OS PLACEHOLDERS no código HTML.
-
         DADOS DO BRIEFING:
         Empresa: ${formData.companyName}
-        Essência do Negócio: ${formData.essence}
-        Público-Alvo: ${formData.targetAudience || 'Geral'}
-        Estilo Visual: ${formData.toneOfVoice}
-        Cores da Marca: ${formData.brandColors || 'Harmônicas com o estilo'}
-        
-        INSTRUÇÕES ESPECÍFICAS:
-        ${formData.customInstructions || 'Seguir boas práticas de UX/UI.'}
+        Essência: ${formData.essence}
+        Público: ${formData.targetAudience || 'Geral'}
+        Estilo: ${formData.toneOfVoice}
+        Cores: ${formData.brandColors || 'Harmônicas'}
+        Instruções: ${formData.customInstructions}
 
-        DIRETRIZES TÉCNICAS:
-        - Código HTML5 semântico.
-        - CSS via Tailwind CSS (CDN).
-        - JavaScript para interatividade (menu mobile FUNCIONAL, scroll suave).
+        IMAGENS (PLACEHOLDERS):
+        Use "PLACEHOLDER_LOGO" para o logo.
+        Use "PLACEHOLDER_GALLERY_0" até "PLACEHOLDER_GALLERY_${galleryImages.length - 1}" para imagens enviadas.
         
-        RETORNE APENAS UM JSON PURO:
+        RETORNE UM JSON ESTRITO NESTE FORMATO:
         {
-          "index.html": "...",
-          "theme.css": "...",
-          "interactions.js": "..."
+          "files": {
+             "index.html": "...",
+             "theme.css": "...",
+             "interactions.js": "..."
+          },
+          "strategy": [
+             { 
+               "section": "Hero Section (Topo do Site)", 
+               "decision": "Descreva o layout escolhido e a 'manchete' usada.", 
+               "impact": "Explique COMO isso prende a atenção e evita rejeição imediata (Bounce Rate). Use termos como 'Autoridade Instantânea' ou 'Prova Social'." 
+             },
+             { 
+               "section": "Prova Social / Vitrine", 
+               "decision": "Como os produtos/serviços foram dispostos.", 
+               "impact": "Explique o gatilho mental ativado (ex: Escassez, Desejo, Lógica). Diga 'Isso facilita a decisão de compra porque...'." 
+             },
+             { 
+               "section": "Call to Action (Botões)", 
+               "decision": "A cor e o texto dos botões de conversão.", 
+               "impact": "Explique por que essa posição e cor aumentam o CTR (Taxa de Clique). Diga 'Isso remove a fricção do usuário...'." 
+             },
+             {
+               "section": "Paleta de Cores & Tipografia",
+               "decision": "A escolha das cores ${formData.brandColors} e fontes.",
+               "impact": "Como isso transmite a essência '${formData.essence}' e gera confiança subconsciente."
+             }
+          ]
         }
       `
     };
@@ -274,11 +376,9 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
       if (!response.ok) throw new Error('Falha na comunicação com o servidor de engenharia.');
 
       const data = await response.json();
-      
-      let cleanText = data.text.trim();
-      cleanText = cleanText.replace(/^[^{]*/, '').replace(/[^}]*$/, '');
-
-      const files = JSON.parse(cleanText) as ProjectFiles;
+      const parsed = JSON.parse(data.text);
+      const files = parsed.files;
+      setStrategyData(parsed.strategy || []);
       
       let previewHtml = files['index.html'] || '';
 
@@ -550,7 +650,11 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
                     <span className="bg-red-600/10 text-red-500 text-[8px] px-2 py-0.5 rounded border border-red-600/20 font-black">HIGH-FIDELITY</span>
                   </div>
                   <span className="text-white font-black text-lg md:text-xl leading-none italic tracking-tighter">O projeto final profissional será 100% superior em todos os aspectos.</span>
-                  <span className="text-white/40 text-[10px] uppercase font-bold mt-2 tracking-[0.2em]">Protótipo conceitual em escala real • Engenharia Grupo CBL</span>
+                  <div className="flex gap-2 mt-2 justify-center md:justify-start">
+                     <button onClick={handleDownloadPDF} className="text-white/60 hover:text-white text-[9px] uppercase font-bold tracking-[0.2em] underline decoration-red-600 decoration-2 underline-offset-4 hover:scale-105 transition-transform">
+                        Baixar Dossiê Estratégico (PDF)
+                     </button>
+                  </div>
                 </div>
                 
                 <div className="flex items-center gap-6">
@@ -577,7 +681,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
                    <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse shadow-[0_0_10px_red]"></div>
                    <div className="flex flex-col">
                       <span className="text-white font-black text-xs uppercase tracking-widest">Gostou do Resultado?</span>
-                      <span className="text-white/40 text-[9px] uppercase font-bold tracking-wider">Transforme este draft em realidade</span>
+                      <button onClick={handleDownloadPDF} className="text-white/40 hover:text-white text-[9px] uppercase font-bold tracking-wider text-left hover:underline">Baixar PDF da Estratégia</button>
                    </div>
                 </div>
                 <div className="flex items-center gap-3">

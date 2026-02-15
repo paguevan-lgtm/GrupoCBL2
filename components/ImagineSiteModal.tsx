@@ -46,12 +46,11 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
 
   const logs = [
     "Iniciando Protocolo de Draft CBL...",
-    "Configurando Arquitetura Mobile-First...",
-    "Sincronizando com Servidores de Engenharia...",
+    "Conectando à Pexels API para curadoria visual...",
+    "Sincronizando assets de alta resolução...",
     "Mapeando Essência de Negócio e Público-alvo...",
     "Analisando referências visuais e paleta cromática...",
     "Processando diretrizes de estilo customizado...",
-    "Processando acervo de imagens reais do cliente...",
     "Desenhando Interface High-End exclusiva...",
     "Compilando Design System sob medida...",
     "Arquitetando Estrutura de Conversão focada em objetivos...",
@@ -181,19 +180,65 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
     setGalleryImages(prev => prev.filter(img => img.id !== id));
   };
 
+  // --- LÓGICA DE STOCK IMAGES (PEXELS/FALLBACK) ---
+  const fetchContextImages = async (query: string): Promise<string[]> => {
+      // Tenta buscar no Pexels (Server-side)
+      try {
+          const res = await fetch('/api/pexels', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ query: query })
+          });
+          
+          if (res.ok) {
+              const data = await res.json();
+              if (data.images && data.images.length > 0) {
+                  return data.images.map((img: any) => img.src);
+              }
+          }
+      } catch (e) {
+          console.warn("Pexels fetch failed, using fallback.", e);
+      }
+
+      // Fallback: Pollinations.ai (Gera imagens baseadas em prompt sem key)
+      const fallbackImages = Array(6).fill(0).map((_, i) => 
+          `https://image.pollinations.ai/prompt/${encodeURIComponent(query)}%20${i}?width=1080&height=720&nologo=true&seed=${Math.random()}`
+      );
+      return fallbackImages;
+  };
+
   const generateFullWebsite = async () => {
     // Validação Visual e Lógica
     if (!formData.companyName || !formData.essence) {
        setError({ message: "Campos obrigatórios: Nome da Empresa e Essência." });
        onShowToast?.("Preencha os campos obrigatórios para continuar.", "error");
-       
-       // Shake effect visual (opcional implementation logic would go here)
        return;
     }
 
     setStep('loading');
     setError(null);
     setBuildLogs(["> Conectando ao Núcleo de Engenharia Grupo CBL..."]);
+
+    // 1. Preparar Imagens (User Uploads + Stock Images)
+    let finalGalleryUrls: string[] = [];
+    
+    // Adiciona as do usuário primeiro (Data URL Base64)
+    galleryImages.forEach(img => {
+        finalGalleryUrls.push(`data:image/jpeg;base64,${img.base64}`);
+    });
+
+    // Se tiver menos de 6 imagens, completa com Stock Images baseadas na essência
+    if (finalGalleryUrls.length < 6) {
+        setBuildLogs(prev => [...prev, `> Buscando imagens premium para: ${formData.essence}...`]);
+        try {
+            const stockImages = await fetchContextImages(formData.essence + " professional business aesthetic");
+            // Adiciona as stock images até completar 6 (ou o quanto tiver)
+            const slotsNeeded = 6 - finalGalleryUrls.length;
+            finalGalleryUrls = [...finalGalleryUrls, ...stockImages.slice(0, slotsNeeded)];
+        } catch (e) {
+            console.error("Erro ao buscar stock images", e);
+        }
+    }
 
     const textPart = {
       text: `
@@ -205,18 +250,17 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
         2. O design deve ser ÚNICO e seguir estritamente o ESTILO solicitado.
         3. Identifique o TIPO DE SITE (Institucional, Loja, Landing Page, Blog) com base na ESSÊNCIA e nas INSTRUÇÕES do usuário.
         
-        IMAGENS FORNECIDAS PELO USUÁRIO (SISTEMA DE PLACEHOLDERS):
-        O usuário enviou arquivos reais. Para garantir que eles apareçam, você DEVE usar os códigos abaixo no atributo 'src' das tags <img> ou em 'background-image'. NÃO tente inventar URLs.
+        IMAGENS (SISTEMA DE PLACEHOLDERS INTELIGENTES):
+        O sistema já curou ${finalGalleryUrls.length} imagens de alta qualidade para este projeto.
+        Você DEVE usar os códigos abaixo nos atributos 'src' das tags <img> ou em 'background-image'. NÃO invente URLs externas.
         
         - Para o Logo (se fornecido): Use estritamente "PLACEHOLDER_LOGO"
-        - Para as imagens da Galeria (${galleryImages.length} disponíveis): Use estritamente "PLACEHOLDER_GALLERY_0", "PLACEHOLDER_GALLERY_1", etc. até o limite.
-        
-        Exemplo: <img src="PLACEHOLDER_GALLERY_0" alt="Produto destaque" class="..." />
+        - Para as imagens (Hero, Galeria, Sobre): Use estritamente "PLACEHOLDER_GALLERY_0", "PLACEHOLDER_GALLERY_1", "PLACEHOLDER_GALLERY_2", etc.
         
         IMPORTANTE: 
-        - PRIORIZE usar "PLACEHOLDER_GALLERY_X" nas seções principais (Hero, Vitrine, Sobre Nós).
-        - Se o design precisar de MAIS imagens do que as ${galleryImages.length} fornecidas, complete com imagens do Unsplash (ex: 'https://source.unsplash.com/random/800x600/?business').
-        - Analise as imagens visualmente (que estou enviando) para entender as cores e o estilo, mas USE OS PLACEHOLDERS no código HTML.
+        - Distribua os PLACEHOLDER_GALLERY_X pelo site de forma inteligente.
+        - Use a imagem 0 geralmente para o Banner Principal (Hero).
+        - Se precisar de mais imagens do que as disponíveis, repita as existentes ou use CSS gradients elegantes.
 
         DADOS DO BRIEFING:
         Empresa: ${formData.companyName}
@@ -245,17 +289,14 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
     // Construir o payload de conteúdo
     const parts = [];
 
-    // 1. Adicionar imagem de referência visual (Logo/Print) se existir
+    // Nota: Como estamos usando placeholders textuais para o Gemini e substituindo no final,
+    // NÃO enviamos os bytes das imagens para o Gemini (economiza tokens e evita erro de payload size).
+    // Apenas se tiver referência visual (logo) que ajuda na criatividade, enviamos.
     if (imageBase64) {
       parts.push({ inlineData: { mimeType: "image/jpeg", data: imageBase64 } });
     }
 
-    // 2. Adicionar imagens da galeria (Produtos/Fotos reais)
-    galleryImages.forEach(img => {
-      parts.push({ inlineData: { mimeType: "image/jpeg", data: img.base64 } });
-    });
-
-    // 3. Adicionar o texto (Prompt) - DEVE SER O ÚLTIMO
+    // Adicionar o texto (Prompt)
     parts.push(textPart);
 
     const contents = { parts };
@@ -282,20 +323,23 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
       
       let previewHtml = files['index.html'] || '';
 
-      // ---- INJEÇÃO DAS IMAGENS REAIS NO HTML ----
+      // ---- INJEÇÃO DAS IMAGENS (REAIS + STOCK) NO HTML ----
       
       // 1. Injetar Logo/Referência
       if (imageBase64) {
-        if (previewHtml.includes('PLACEHOLDER_LOGO')) {
-          previewHtml = previewHtml.replace(/PLACEHOLDER_LOGO/g, `data:image/jpeg;base64,${imageBase64}`);
-        }
+        previewHtml = previewHtml.replace(/PLACEHOLDER_LOGO/g, `data:image/jpeg;base64,${imageBase64}`);
+      } else {
+         // Se não tiver logo, remove o placeholder ou coloca um texto
+         previewHtml = previewHtml.replace(/<img[^>]*src=["']PLACEHOLDER_LOGO["'][^>]*>/g, `<div class="font-bold text-2xl">${formData.companyName}</div>`);
       }
 
-      // 2. Injetar Galeria
-      galleryImages.forEach((img, index) => {
+      // 2. Injetar Galeria (Mista: User Uploads + Pexels URLs)
+      finalGalleryUrls.forEach((url, index) => {
         const placeholder = `PLACEHOLDER_GALLERY_${index}`;
+        // Substitui todas as ocorrências deste placeholder pela URL
+        // A URL pode ser base64 (user) ou https (pexels/fallback)
         const regex = new RegExp(placeholder, 'g');
-        previewHtml = previewHtml.replace(regex, `data:image/jpeg;base64,${img.base64}`);
+        previewHtml = previewHtml.replace(regex, url);
       });
       
       // Scripts para corrigir comportamento no iframe
@@ -337,7 +381,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
       setTimeout(() => setStep('preview'), 1200);
     } catch (err: any) {
       console.error("ImagineSiteModal Error:", err);
-      setError({ message: 'Conexão instável. Reduza o número de imagens e tente novamente.' });
+      setError({ message: 'Instabilidade no núcleo de processamento. Tente novamente.' });
       onShowToast?.("Erro ao gerar draft. Verifique sua conexão.", "error");
       setStep('form');
     }
@@ -410,6 +454,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
                    <div className="space-y-1.5 group">
                       <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 group-focus-within:text-white transition-colors">Essência do Negócio *</label>
                       <input type="text" value={formData.essence} onChange={(e) => setFormData({...formData, essence: e.target.value})} placeholder="Ex: Consultoria Financeira" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-red-600 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(220,38,38,0.1)] outline-none transition-all placeholder-white/20 text-sm" />
+                      <p className="text-[9px] text-white/30 font-mono">* Usado para busca automática de imagens.</p>
                    </div>
                    
                    <div className="space-y-1.5 group">
@@ -434,7 +479,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
                    <h3 className="text-xs font-black text-white/40 uppercase tracking-[0.3em] border-b border-white/5 pb-4 mb-6">03. Detalhes & Conteúdo</h3>
                    
                    <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Galeria de Fotos (Max 6)</label>
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">Galeria de Fotos (Opcional)</label>
                       <div className="grid grid-cols-3 gap-2 mb-2">
                         {galleryImages.map(img => (
                           <div key={img.id} className="relative aspect-square rounded-lg overflow-hidden border border-white/20 group">
@@ -464,7 +509,9 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowT
                         multiple 
                         className="hidden" 
                       />
-                      <p className="text-[9px] text-white/30 mt-1 font-mono">JPG/PNG. Fotos reais aumentam a fidelidade do draft.</p>
+                      <p className="text-[9px] text-white/30 mt-1 font-mono">
+                        Dica: Se não tiver fotos, o sistema buscará imagens profissionais automaticamente na Pexels.
+                      </p>
                    </div>
                    
                    <div className="space-y-1.5 group">

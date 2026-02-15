@@ -77,22 +77,22 @@ const NeuroSalesModal: React.FC<{
         
         // 1. Gerar Persona com IA (Contextualizada ao Produto)
         const personaPrompt = `
-            ATUE COMO: Gerador de Cenários de Vendas.
-            PRODUTO OFERECIDO: "${product}".
+            ATUE COMO: Gerador de Cenários de Vendas Reais.
+            OFERTA DO USUÁRIO: "${product}".
             
-            TAREFA: Crie uma persona de comprador EXTREMAMENTE REALISTA para este nicho específico.
+            TAREFA: Crie uma persona de comprador EXTREMAMENTE REALISTA para este nicho.
             
-            DIRETRIZES:
-            - Se o produto for B2B (ex: software), crie um gestor/diretor cético.
-            - Se o produto for B2C (ex: curso, mentoria), crie um consumidor final exigente.
-            - NÃO crie personas genéricas. A objeção deve ser sobre O PRODUTO (ex: dúvida sobre entrega, garantia, funcionalidade específica).
+            DIRETRIZES IMPORTANTES:
+            1. A persona tem uma DOR ESPECÍFICA (ex: precisa de durabilidade, ou preço, ou status).
+            2. A objeção deve ser COERENTE. Se o produto é "Motos", a objeção não pode ser técnica demais LOGO DE CARA (ex: "suspensão invertida") a menos que o vendedor ofereça uma moto esportiva.
+            3. O estilo deve ser de alguém ocupado, que quer resolver um problema.
             
             Retorne JSON estrito:
             {
                 "name": "Nome Brasileiro",
-                "role": "Cargo ou Perfil (ex: Gerente de Marketing, Pequeno Empresário, Investidor Iniciante)",
-                "objection": "Objeção técnica ou prática específica sobre ${product} (NÃO USE APENAS 'PREÇO')",
-                "style": "Estilo de comunicação (ex: Direto e Seco, Analítico, Desconfiado)"
+                "role": "Quem é ele? (ex: Entregador Autônomo, Diretor de Logística, Estudante)",
+                "objection": "A preocupação central dele (ex: Custo de manutenção alto, Revenda ruim, Durabilidade duvidosa)",
+                "style": "Estilo de fala (ex: Prático e direto, Desconfiado, Analítico)"
             }
         `;
 
@@ -113,7 +113,7 @@ const NeuroSalesModal: React.FC<{
             setStep('simulation');
             
             // Primeira mensagem da IA
-            const initialMsg = `Aqui é ${pData.name}. Vi sua proposta sobre ${product}. Seja breve, o que você tem pra mim?`;
+            const initialMsg = `Aqui é ${pData.name}. Vi seu anúncio sobre ${product}. O que você tem pra mim?`;
             setMessages([{ sender: 'ai', text: initialMsg, emotion: 30 }]);
             
         } catch (error) {
@@ -138,27 +138,29 @@ const NeuroSalesModal: React.FC<{
         const chatPrompt = `
             PERSONAGEM: ${persona.name} (${persona.role}).
             ESTILO: ${persona.style}.
-            OBJEÇÃO OCULTA: ${persona.objection}.
-            PRODUTO EM PAUTA: "${product}".
+            DOR/OBJEÇÃO: ${persona.objection}.
+            NICHIO: "${product}".
             
             HISTÓRICO DA CONVERSA:
             ${messages.map(m => `${m.sender === 'user' ? 'Vendedor' : 'Você'}: ${m.text}`).join('\n')}
             Vendedor (Agora): "${userMsg}"
 
-            INSTRUÇÕES RÍGIDAS DE INTERAÇÃO:
-            1. FALE SOBRE O PRODUTO: Se o usuário falou de uma funcionalidade, pergunte detalhes. Se falou de resultados, peça provas.
-            2. PROIBIDO JARGÕES GENÉRICOS DESTRUTIVOS: Não fique falando "ROI", "CAPEX", "OPEX", "Sinergia" a menos que você seja explicitamente um CFO de grande empresa. Fale como uma pessoa normal desse cargo falaria.
-            3. SEJA DURO MAS COERENTE: Se a resposta do vendedor for boa e resolver sua dúvida sobre "${product}", aumente o interesse. Se for enrolação ("bullshit"), seja rude.
-            4. Se o interesse passar de 90, você comprou (diga "Ok, vamos fechar").
-            5. Se o interesse cair a 0, você encerra ("Não tenho tempo para isso. Adeus").
+            REGRAS DE INTELIGÊNCIA DE VENDAS (CRÍTICO):
+            1. NÃO ALUCINE SPECS TÉCNICAS: Se o vendedor ainda não disse qual modelo/produto específico é, NÃO comece a falar de "suspensão invertida", "arrefecimento líquido" ou peças específicas. VOCÊ NÃO SABE O QUE ELE ESTÁ VENDENDO AINDA.
+            2. FLUXO LÓGICO:
+               - Se o vendedor foi genérico (ex: "tenho várias opções"), sua resposta deve ser EXPOR SUA NECESSIDADE para ver se ele tem o produto certo. (Ex: "Ok, mas eu rodo 200km por dia em estrada de terra. Você tem algo que aguenta isso ou suas motos são de plástico?").
+               - SÓ CRITIQUE TÉCNICA SE ELE APRESENTOU O PRODUTO. Se ele falou "Tenho a Moto X", aí sim você ataca os defeitos da Moto X.
+            3. SEJA UM COMPRADOR REAL: Compradores reais não fazem quiz técnico do nada. Eles querem saber se resolve o problema deles.
+            4. Se o vendedor for "sabonete" (não responde, enrola), seja rude e diminua o interesse.
+            5. Se o interesse passar de 90, feche o negócio.
 
             INTERESSE ATUAL: ${currentInterest} (0-100)
 
             RETORNE JSON:
             {
-                "response": "Sua resposta na primeira pessoa, curta e reativa.",
-                "interest_score": (Novo score baseado na última fala),
-                "game_over": (boolean - true APENAS se vendeu ou se a negociação morreu de vez)
+                "response": "Sua resposta na primeira pessoa. Curta, grossa ou interessada, dependendo do contexto.",
+                "interest_score": (Novo score baseado na lógica acima),
+                "game_over": (boolean - true APENAS se vendeu ou se mandou o vendedor passear)
             }
         `;
 
@@ -219,8 +221,8 @@ const NeuroSalesModal: React.FC<{
             {
                 "copy_score": (Nota 0-10),
                 "main_strength": "O melhor argumento usado (cite a frase se houver).",
-                "critical_error": "Onde ele errou na explicação do produto ou quebra de objeção.",
-                "tactical_advice": "O que ele deveria ter dito para vender esse produto específico melhor."
+                "critical_error": "Onde ele errou na condução (ex: foi genérico, não fez perguntas de qualificação).",
+                "tactical_advice": "O que ele deveria ter dito para controlar a venda melhor."
             }
         `;
 

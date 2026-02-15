@@ -81,6 +81,10 @@ const App: React.FC = () => {
       <NeuroSalesModal 
         isOpen={isNeuroModalOpen}
         onClose={() => setIsNeuroModalOpen(false)}
+        onOpenDiagnostic={() => {
+          setIsNeuroModalOpen(false);
+          setTimeout(() => setIsModalOpen(true), 300);
+        }}
         onShowToast={showToast}
       />
     </div>

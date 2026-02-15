@@ -39,14 +39,17 @@ const ResultView = ({ result, onRestart }: any) => {
     };
 
     return (
-        <div className="p-6 md:p-8 flex flex-col h-full">
+        <div className="p-6 md:p-8 flex flex-col h-full w-full">
             <h3 className="text-xl md:text-2xl font-black text-white mb-4 uppercase italic tracking-tighter shrink-0">Parecer Técnico Engenharia CBL</h3>
-            <div className="bg-black/60 border border-white/10 rounded-xl p-6 overflow-y-auto custom-scrollbar shadow-inner flex-grow">
+            
+            {/* Added min-h-0 to ensure flex child can shrink and scroll properly */}
+            <div className="bg-black/60 border border-white/10 rounded-xl p-6 overflow-y-auto custom-scrollbar shadow-inner flex-grow min-h-0">
                 <div 
                     className="text-gray-200 text-sm md:text-base leading-relaxed font-light"
                     dangerouslySetInnerHTML={{ __html: formatResult(result) }}
                 />
             </div>
+            
             <div className="mt-6 flex flex-col md:flex-row gap-4 shrink-0">
                 <a href="https://wa.me/13997744720" target="_blank" rel="noopener noreferrer" className="flex-1 bg-red-600 text-white py-4 rounded-xl font-black text-xs text-center uppercase tracking-widest hover:bg-red-700 transition-all shadow-xl shadow-red-600/30 hover:scale-[1.02]">Falar com Consultor</a>
                 <button onClick={onRestart} className="flex-1 border border-white/20 text-white py-4 rounded-xl font-black text-xs uppercase hover:bg-white/10 transition-all tracking-widest hover:border-white/40">Nova Auditoria</button>
@@ -110,7 +113,7 @@ const DiagnosticModal: React.FC<{ isOpen: boolean; onClose: () => void; onShowTo
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/98 backdrop-blur-xl p-4 md:p-6" onClick={onClose}>
             <div 
-                className="bg-[#0c0c0c] border border-white/10 rounded-3xl w-full max-w-4xl max-h-[90vh] md:max-h-[85vh] flex flex-col relative shadow-[0_0_100px_rgba(0,0,0,1)]" 
+                className="bg-[#0c0c0c] border border-white/10 rounded-3xl w-full max-w-4xl max-h-[90vh] md:max-h-[85vh] flex flex-col relative shadow-[0_0_100px_rgba(0,0,0,1)] overflow-hidden" 
                 onClick={e => e.stopPropagation()}
             >
                 <button onClick={onClose} className="absolute top-4 right-4 md:top-6 md:right-6 text-white/40 hover:text-white transition-all z-20 bg-black/50 rounded-full p-2 hover:bg-white/10"><XIcon /></button>

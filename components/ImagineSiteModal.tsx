@@ -254,7 +254,7 @@ const ImagineSiteModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: contents,
-          model: 'gemini-3-pro-preview', // Modelo capaz de visão multimodal
+          model: 'gemini-3-flash-preview',
           config: { responseMimeType: 'application/json' }
         })
       });

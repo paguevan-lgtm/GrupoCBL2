@@ -11,10 +11,22 @@ import DiagnosticModal from './components/DiagnosticModal';
 import ImagineSiteModal from './components/ImagineSiteModal';
 import NeuroSalesModal from './components/NeuroSalesModal';
 import IntroAnimation from './components/IntroAnimation';
+import AdminPanel from './components/AdminPanel';
 import { Toast } from './components/Toast';
 import { ScrollProgress } from './components/ui/ScrollProgress';
 
 const App: React.FC = () => {
+  // Verificação de Rota Administrativa
+  const [isAdminRoute, setIsAdminRoute] = useState(false);
+
+  useEffect(() => {
+    // Verifica se a URL contém /PAINEL ou /painel
+    const path = window.location.pathname;
+    if (path === '/PAINEL' || path === '/painel') {
+      setIsAdminRoute(true);
+    }
+  }, []);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isImagineModalOpen, setIsImagineModalOpen] = useState(false);
   const [isNeuroModalOpen, setIsNeuroModalOpen] = useState(false);
@@ -29,12 +41,17 @@ const App: React.FC = () => {
 
   // Impede a rolagem durante a introdução E quando modais estão abertos
   useEffect(() => {
-    if (showIntro || isModalOpen || isImagineModalOpen || isNeuroModalOpen) {
+    if (!isAdminRoute && (showIntro || isModalOpen || isImagineModalOpen || isNeuroModalOpen)) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
     }
-  }, [showIntro, isModalOpen, isImagineModalOpen, isNeuroModalOpen]);
+  }, [showIntro, isModalOpen, isImagineModalOpen, isNeuroModalOpen, isAdminRoute]);
+
+  // Se for rota administrativa, renderiza apenas o painel
+  if (isAdminRoute) {
+    return <AdminPanel />;
+  }
 
   return (
     <div className="bg-[#1A1A1A] text-white antialiased selection:bg-red-600 selection:text-white">

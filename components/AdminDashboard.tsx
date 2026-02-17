@@ -71,6 +71,11 @@ interface AdsStrategy {
         google_value: string;
         meta_value: string;
     };
+    projections: {
+        clicks: string;
+        leads: string;
+        cpm: string;
+    };
     google_ads: {
         campaign_type: string;
         keywords: string[];
@@ -84,7 +89,18 @@ interface AdsStrategy {
         copy_hook: string;
         copy_body: string;
     };
-    tactical_tip: string;
+    tactical_plan: {
+        phase1_testing: string;
+        phase2_optimization: string;
+        budget_distribution_note: string;
+    };
+}
+
+interface CriticFeedback {
+    score: number;
+    brutal_feedback: string;
+    fixed_copy: string;
+    fixed_headline: string;
 }
 
 type SearchMode = 'standard' | 'whale' | 'crisis' | 'ghost';
@@ -93,7 +109,10 @@ type SearchMode = 'standard' | 'whale' | 'crisis' | 'ghost';
 const MarketingCommand = () => {
     const [formData, setFormData] = useState({ niche: '', city: '', budget: '' });
     const [isLoading, setIsLoading] = useState(false);
+    const [isCriticLoading, setIsCriticLoading] = useState(false);
     const [strategy, setStrategy] = useState<AdsStrategy | null>(null);
+    const [criticFeedback, setCriticFeedback] = useState<CriticFeedback | null>(null);
+    const [viewMode, setViewMode] = useState<'strategy' | 'tutorial'>('strategy');
 
     const generateStrategy = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -101,38 +120,124 @@ const MarketingCommand = () => {
 
         setIsLoading(true);
         setStrategy(null);
+        setCriticFeedback(null);
+        setViewMode('strategy');
 
         const prompt = `
-            Atue como um Gestor de Tráfego Sênior do Grupo CBL.
-            Crie uma estratégia de ADS REALISTA e DETALHADA para:
+            Atue como um Gestor de Tráfego de Elite (Top 1% Brasil).
+            Crie uma estratégia de ADS REALISTA, MATEMÁTICA e DETALHADA para:
             Nicho: ${formData.niche}
             Cidade: ${formData.city || 'Geral'}
             Verba Mensal: R$ ${formData.budget}
 
-            JSON ESTRITO DE SAÍDA:
+            REGRAS CRÍTICAS DE JSON:
+            1. NÃO coloque markdown (\`\`\`json).
+            2. Retorne APENAS o objeto JSON válido.
+            3. Seja agressivo na copy.
+
+            ESTRUTURA DE SAÍDA:
             {
                 "niche": "${formData.niche}",
                 "total_budget": "R$ ${formData.budget}",
                 "allocation": {
-                    "google_percent": (número ex: 40),
-                    "meta_percent": (número ex: 60),
-                    "google_value": "Valor em R$",
-                    "meta_value": "Valor em R$"
+                    "google_percent": (número inteiro ex: 40),
+                    "meta_percent": (número inteiro ex: 60),
+                    "google_value": "Valor R$",
+                    "meta_value": "Valor R$"
+                },
+                "projections": {
+                    "clicks": "Estimativa (ex: 400-600)",
+                    "leads": "Estimativa (ex: 30-50)",
+                    "cpm": "Custo por mil (ex: R$ 15,00)"
                 },
                 "google_ads": {
-                    "campaign_type": "Ex: Rede de Pesquisa - Fundo de Funil",
+                    "campaign_type": "Ex: Rede de Pesquisa (Fundo de Funil)",
                     "keywords": ["palavra1", "palavra2", "palavra3"],
-                    "headline": "Título Matador para o Anúncio (Max 30 chars)",
-                    "description": "Descrição persuasiva para o Google (Max 90 chars)"
+                    "headline": "Título Chamativo (Max 30 chars)",
+                    "description": "Descrição persuasiva (Max 90 chars)"
                 },
                 "meta_ads": {
                     "objective": "Ex: Mensagens no WhatsApp",
                     "audience_interests": ["Interesse 1", "Interesse 2"],
-                    "creative_idea": "Descreva visualmente a imagem ou vídeo que deve ser feito. Seja específico.",
-                    "copy_hook": "A primeira frase para prender atenção (Atenção)",
-                    "copy_body": "O restante do texto focando em desejo e chamada para ação."
+                    "creative_idea": "Descrição visual da imagem/vídeo.",
+                    "copy_hook": "Primeira frase (Gancho)",
+                    "copy_body": "Corpo do texto com CTA"
                 },
-                "tactical_tip": "Uma dica de ouro sobre como converter esses leads (ex: tempo de resposta, script de vendas)."
+                "tactical_plan": {
+                    "phase1_testing": "O que fazer nos dias 1-7 (ex: testar 3 criativos, R$ X/dia)",
+                    "phase2_optimization": "O que fazer dias 8-30 (ex: cortar o ruim, escalar o bom)",
+                    "budget_distribution_note": "Dica de como dividir a verba diária"
+                }
+            }
+        `;
+
+        try {
+            console.log("Enviando prompt para IA...");
+            const response = await fetch('/api/gemini', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: prompt,
+                    model: 'gemini-3-flash-preview', // Modelo rápido
+                    config: { responseMimeType: 'application/json' }
+                })
+            });
+
+            if (!response.ok) throw new Error("Erro na API");
+
+            const data = await response.json();
+            
+            // LIMPEZA AGRESSIVA DO JSON
+            let cleanText = data.text;
+            // Remove blocos de código markdown se existirem
+            cleanText = cleanText.replace(/```json/g, '').replace(/```/g, '');
+            // Encontra o primeiro '{' e o último '}'
+            const firstBrace = cleanText.indexOf('{');
+            const lastBrace = cleanText.lastIndexOf('}');
+            if (firstBrace !== -1 && lastBrace !== -1) {
+                cleanText = cleanText.substring(firstBrace, lastBrace + 1);
+            }
+
+            try {
+                const parsed = JSON.parse(cleanText);
+                setStrategy(parsed);
+            } catch (e) {
+                console.error("Erro de Parse JSON:", e);
+                console.log("Texto recebido:", cleanText);
+                alert("A IA retornou um formato inválido. Tente novamente.");
+            }
+
+        } catch (error) {
+            console.error(error);
+            alert("Erro ao gerar estratégia. Verifique sua conexão.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const runCritic = async () => {
+        if (!strategy) return;
+        setIsCriticLoading(true);
+
+        const prompt = `
+            ATUE COMO: Um Diretor Criativo Rabugento, Crítico e Genial (Estilo Ogilvy/Draper).
+            
+            ANALISE ESTA COPY E CRIATIVO DE ANÚNCIO:
+            Headline Google: "${strategy.google_ads.headline}"
+            Copy Meta: "${strategy.meta_ads.copy_hook} ${strategy.meta_ads.copy_body}"
+            Criativo: "${strategy.meta_ads.creative_idea}"
+
+            TAREFA:
+            1. Dê uma nota de 0 a 10. Seja duro.
+            2. Faça uma crítica brutal explicando por que está "médio" ou "ruim".
+            3. REESCREVA a Copy e a Headline para serem EXTREMAMENTE persuasivas.
+
+            SAÍDA JSON:
+            {
+                "score": (número),
+                "brutal_feedback": "Texto da crítica",
+                "fixed_copy": "Nova copy completa",
+                "fixed_headline": "Nova headline matadora"
             }
         `;
 
@@ -146,15 +251,18 @@ const MarketingCommand = () => {
                     config: { responseMimeType: 'application/json' }
                 })
             });
-
             const data = await response.json();
-            const cleanText = data.text.replace(/^```json/, '').replace(/```$/, '').trim();
-            setStrategy(JSON.parse(cleanText));
-        } catch (error) {
-            console.error(error);
-            alert("Erro ao gerar estratégia. Tente novamente.");
+            let cleanText = data.text.replace(/```json/g, '').replace(/```/g, '');
+            const firstBrace = cleanText.indexOf('{');
+            const lastBrace = cleanText.lastIndexOf('}');
+            if (firstBrace !== -1 && lastBrace !== -1) cleanText = cleanText.substring(firstBrace, lastBrace + 1);
+            
+            setCriticFeedback(JSON.parse(cleanText));
+        } catch (e) {
+            console.error(e);
+            alert("A IA crítica está dormindo. Tente de novo.");
         } finally {
-            setIsLoading(false);
+            setIsCriticLoading(false);
         }
     };
 
@@ -168,6 +276,22 @@ const MarketingCommand = () => {
                     </h2>
                     <p className="text-white/40 text-[10px] uppercase tracking-widest mt-1">Gerador de Campanhas de Alta Performance</p>
                 </div>
+                {strategy && (
+                    <div className="flex bg-[#050505] p-1 rounded-lg border border-white/10">
+                        <button 
+                            onClick={() => setViewMode('strategy')}
+                            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-md transition-all ${viewMode === 'strategy' ? 'bg-white text-black shadow' : 'text-white/40 hover:text-white'}`}
+                        >
+                            Estratégia Visual
+                        </button>
+                        <button 
+                            onClick={() => setViewMode('tutorial')}
+                            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-md transition-all ${viewMode === 'tutorial' ? 'bg-red-600 text-white shadow' : 'text-white/40 hover:text-white'}`}
+                        >
+                            Plano de Voo (Tutorial)
+                        </button>
+                    </div>
+                )}
             </div>
 
             <div className="flex-1 flex overflow-hidden">
@@ -179,7 +303,7 @@ const MarketingCommand = () => {
                             <input 
                                 type="text" 
                                 placeholder="Ex: Hamburgueria Artesanal" 
-                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-red-600 outline-none"
+                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-red-600 outline-none transition-all"
                                 value={formData.niche}
                                 onChange={e => setFormData({...formData, niche: e.target.value})}
                             />
@@ -189,7 +313,7 @@ const MarketingCommand = () => {
                             <input 
                                 type="text" 
                                 placeholder="Ex: Santos, SP" 
-                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-white/30 outline-none"
+                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-white/30 outline-none transition-all"
                                 value={formData.city}
                                 onChange={e => setFormData({...formData, city: e.target.value})}
                             />
@@ -199,7 +323,7 @@ const MarketingCommand = () => {
                             <input 
                                 type="number" 
                                 placeholder="1000" 
-                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-white/30 outline-none"
+                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-white/30 outline-none transition-all"
                                 value={formData.budget}
                                 onChange={e => setFormData({...formData, budget: e.target.value})}
                             />
@@ -215,7 +339,7 @@ const MarketingCommand = () => {
                     
                     <div className="mt-auto p-4 bg-white/5 rounded-xl border border-white/5">
                         <p className="text-[9px] text-white/30 leading-relaxed">
-                            <strong className="text-white">Dica:</strong> Use isso para fechar contratos. Mostre ao cliente exatamente como você vai investir o dinheiro dele. Isso gera autoridade imediata.
+                            <strong className="text-white">Dica Pro:</strong> Use o "Plano de Voo" para orientar o cliente sobre os primeiros 30 dias. Isso reduz a ansiedade por resultados imediatos.
                         </p>
                     </div>
                 </div>
@@ -239,28 +363,44 @@ const MarketingCommand = () => {
                         </div>
                     )}
 
-                    {strategy && (
-                        <div className="max-w-4xl mx-auto space-y-8 animate-in slide-in-from-bottom-10 duration-500">
+                    {strategy && viewMode === 'strategy' && (
+                        <div className="max-w-5xl mx-auto space-y-8 animate-in slide-in-from-bottom-10 duration-500">
                             
-                            {/* Budget Allocation */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="bg-[#111] border border-white/10 p-6 rounded-2xl relative overflow-hidden">
-                                    <div className="absolute top-0 right-0 p-4 opacity-10"><Logo /></div>
-                                    <h3 className="text-white/50 text-[10px] uppercase tracking-[0.2em] font-black mb-4">Google Ads (Captura)</h3>
-                                    <div className="text-3xl font-black text-white mb-1">{strategy.allocation.google_value}</div>
-                                    <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden mb-2">
-                                        <div className="h-full bg-blue-500" style={{ width: `${strategy.allocation.google_percent}%` }}></div>
-                                    </div>
-                                    <span className="text-blue-500 text-xs font-bold">{strategy.allocation.google_percent}% do Budget</span>
+                            {/* Top Cards - Visual Impact */}
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div className="bg-[#111] border border-white/10 p-4 rounded-2xl flex flex-col justify-between h-32 relative overflow-hidden group">
+                                    <div className="absolute -right-4 -top-4 bg-red-600/10 w-24 h-24 rounded-full group-hover:scale-150 transition-transform duration-500"></div>
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-white/40 relative z-10">Verba Total</span>
+                                    <span className="text-2xl font-black text-white relative z-10">{strategy.total_budget}</span>
                                 </div>
-                                <div className="bg-[#111] border border-white/10 p-6 rounded-2xl relative overflow-hidden">
-                                    <div className="absolute top-0 right-0 p-4 opacity-10"><Logo /></div>
-                                    <h3 className="text-white/50 text-[10px] uppercase tracking-[0.2em] font-black mb-4">Meta Ads (Atração)</h3>
-                                    <div className="text-3xl font-black text-white mb-1">{strategy.allocation.meta_value}</div>
-                                    <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden mb-2">
-                                        <div className="h-full bg-purple-500" style={{ width: `${strategy.allocation.meta_percent}%` }}></div>
+                                <div className="bg-[#111] border border-white/10 p-4 rounded-2xl flex flex-col justify-between h-32">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-white/40">Cliques Est.</span>
+                                    <span className="text-2xl font-black text-blue-400">{strategy.projections.clicks}</span>
+                                </div>
+                                <div className="bg-[#111] border border-white/10 p-4 rounded-2xl flex flex-col justify-between h-32">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-white/40">Leads Est.</span>
+                                    <span className="text-2xl font-black text-green-500">{strategy.projections.leads}</span>
+                                </div>
+                                <div className="bg-[#111] border border-white/10 p-4 rounded-2xl flex flex-col justify-between h-32">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-white/40">CPM Médio</span>
+                                    <span className="text-2xl font-black text-purple-400">{strategy.projections.cpm}</span>
+                                </div>
+                            </div>
+
+                            {/* Budget Allocation Graphic */}
+                            <div className="bg-[#111] border border-white/10 p-6 rounded-2xl">
+                                <h3 className="text-[10px] font-black text-white/50 uppercase tracking-[0.2em] mb-6">Alocação de Verba</h3>
+                                <div className="flex h-12 w-full rounded-xl overflow-hidden mb-4">
+                                    <div style={{ width: `${strategy.allocation.google_percent}%` }} className="bg-blue-600 flex items-center justify-center relative group">
+                                        <span className="text-[10px] font-black text-white uppercase tracking-widest group-hover:scale-110 transition-transform">Google {strategy.allocation.google_percent}%</span>
                                     </div>
-                                    <span className="text-purple-500 text-xs font-bold">{strategy.allocation.meta_percent}% do Budget</span>
+                                    <div style={{ width: `${strategy.allocation.meta_percent}%` }} className="bg-purple-600 flex items-center justify-center relative group">
+                                        <span className="text-[10px] font-black text-white uppercase tracking-widest group-hover:scale-110 transition-transform">Meta {strategy.allocation.meta_percent}%</span>
+                                    </div>
+                                </div>
+                                <div className="flex justify-between text-xs font-mono text-white/40">
+                                    <span>{strategy.allocation.google_value} (Intenção de Compra)</span>
+                                    <span>{strategy.allocation.meta_value} (Geração de Desejo)</span>
                                 </div>
                             </div>
 
@@ -314,23 +454,96 @@ const MarketingCommand = () => {
                                     
                                     <div>
                                         <label className="block text-[9px] text-white/30 uppercase tracking-widest mb-2">Copy (Legenda)</label>
-                                        <div className="bg-[#050505] p-4 rounded-xl border border-white/5 text-sm text-white/80 h-full">
-                                            <p className="font-bold text-white mb-2">{strategy.meta_ads.copy_hook}</p>
-                                            <p className="whitespace-pre-wrap text-xs text-white/60 leading-relaxed">{strategy.meta_ads.copy_body}</p>
+                                        <div className="bg-[#050505] p-4 rounded-xl border border-white/5 text-sm text-white/80 h-full flex flex-col justify-between">
+                                            <div>
+                                                <p className="font-bold text-white mb-2">{strategy.meta_ads.copy_hook}</p>
+                                                <p className="whitespace-pre-wrap text-xs text-white/60 leading-relaxed">{strategy.meta_ads.copy_body}</p>
+                                            </div>
+                                            
+                                            {/* Botão de Crítica IA */}
+                                            <button 
+                                                onClick={runCritic}
+                                                disabled={isCriticLoading}
+                                                className="mt-4 w-full bg-red-900/20 hover:bg-red-900/40 border border-red-500/30 text-red-400 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
+                                            >
+                                                {isCriticLoading ? <SpinnerIcon /> : (
+                                                    <>
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                                        Análise Crítica (IA)
+                                                    </>
+                                                )}
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Tactical Tip */}
-                            <div className="bg-gradient-to-r from-yellow-900/20 to-transparent border border-yellow-600/30 p-4 rounded-xl flex gap-4 items-start">
-                                <div className="mt-1"><ZapIcon className="w-5 h-5 text-yellow-500" /></div>
-                                <div>
-                                    <h4 className="text-yellow-500 font-black uppercase text-[10px] tracking-widest mb-1">Dica Tática CBL</h4>
-                                    <p className="text-white text-xs leading-relaxed">{strategy.tactical_tip}</p>
+                            {/* Critic Feedback Result */}
+                            {criticFeedback && (
+                                <div className="animate-in slide-in-from-top-10 duration-500 bg-red-950/20 border border-red-500/30 p-6 rounded-2xl relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 p-4 opacity-10 text-red-500 font-black text-6xl rotate-12">{criticFeedback.score}</div>
+                                    <h4 className="text-red-500 font-black uppercase text-sm tracking-widest mb-4 flex items-center gap-2">
+                                        <span className="text-2xl">☠️</span> Feedback do Diretor Criativo
+                                    </h4>
+                                    <div className="space-y-4">
+                                        <div className="bg-black/40 p-4 rounded-xl border border-red-500/10">
+                                            <p className="text-red-200 text-xs italic leading-relaxed">"{criticFeedback.brutal_feedback}"</p>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="text-[9px] font-black text-green-500 uppercase tracking-widest">Headline Corrigida</label>
+                                                <p className="text-white text-sm font-bold mt-1 bg-green-900/10 p-2 rounded border border-green-500/20">{criticFeedback.fixed_headline}</p>
+                                            </div>
+                                            <div>
+                                                <label className="text-[9px] font-black text-green-500 uppercase tracking-widest">Copy Otimizada</label>
+                                                <p className="text-white/80 text-xs mt-1 bg-green-900/10 p-2 rounded border border-green-500/20 whitespace-pre-wrap">{criticFeedback.fixed_copy}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                        </div>
+                    )}
+
+                    {strategy && viewMode === 'tutorial' && (
+                        <div className="max-w-4xl mx-auto space-y-8 animate-in slide-in-from-right-10 duration-500">
+                            <div className="bg-[#111] border-l-4 border-green-500 p-8 rounded-r-2xl">
+                                <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter mb-2">Plano de Voo</h3>
+                                <p className="text-white/40 text-sm mb-6">Guia tático para execução da verba de {strategy.total_budget}.</p>
+
+                                <div className="space-y-8 relative">
+                                    {/* Linha do Tempo */}
+                                    <div className="absolute left-[19px] top-4 bottom-4 w-0.5 bg-white/10"></div>
+
+                                    {/* Fase 1 */}
+                                    <div className="relative pl-12">
+                                        <div className="absolute left-0 top-0 w-10 h-10 bg-black border border-white/20 rounded-full flex items-center justify-center text-white font-black text-xs z-10">01</div>
+                                        <h4 className="text-white font-bold text-sm uppercase tracking-widest mb-2">Fase de Teste (Dias 1-7)</h4>
+                                        <p className="text-white/60 text-sm leading-relaxed bg-white/5 p-4 rounded-xl border border-white/5">
+                                            {strategy.tactical_plan.phase1_testing}
+                                        </p>
+                                    </div>
+
+                                    {/* Fase 2 */}
+                                    <div className="relative pl-12">
+                                        <div className="absolute left-0 top-0 w-10 h-10 bg-black border border-white/20 rounded-full flex items-center justify-center text-white font-black text-xs z-10">02</div>
+                                        <h4 className="text-white font-bold text-sm uppercase tracking-widest mb-2">Otimização & Escala (Dias 8-30)</h4>
+                                        <p className="text-white/60 text-sm leading-relaxed bg-white/5 p-4 rounded-xl border border-white/5">
+                                            {strategy.tactical_plan.phase2_optimization}
+                                        </p>
+                                    </div>
+
+                                    {/* Configuração */}
+                                    <div className="relative pl-12">
+                                        <div className="absolute left-0 top-0 w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-black text-xs z-10">$$</div>
+                                        <h4 className="text-green-500 font-bold text-sm uppercase tracking-widest mb-2">Configuração Financeira</h4>
+                                        <p className="text-white/60 text-sm leading-relaxed bg-green-900/10 p-4 rounded-xl border border-green-500/20">
+                                            {strategy.tactical_plan.budget_distribution_note}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
-
                         </div>
                     )}
                 </div>

@@ -26,7 +26,10 @@ interface Lead {
   place_id: string;
   types: string[];
   price_level?: number;
-  contactedAt?: string; // Data de contato
+  business_status?: string;
+  opening_hours?: { open_now: boolean };
+  photos?: { photo_reference: string }[];
+  contactedAt?: string;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
@@ -84,6 +87,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     if (place.rating && place.rating < 4.2) score += 20; // Nota baixa
     if (place.user_ratings_total && place.user_ratings_total < 20) score += 10; // Pouca avaliação
     if (place.types?.includes('health') || place.types?.includes('lawyer')) score += 5; // Nichos caros
+    if (place.business_status === 'OPERATIONAL') score += 5;
     return Math.min(score, 99);
   };
 
@@ -103,7 +107,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     const timeoutId = setTimeout(() => controller.abort(), 15000); 
 
     try {
-      addLog("Conectando ao Google Places API via Proxy Seguro...");
+      addLog("Conectando ao Google Places API (TextSearch)...");
       
       const response = await fetch('/api/places', {
         method: 'POST',
@@ -130,13 +134,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           let reasonText = "";
 
           if (!hasWebsite) {
-              analysisText = "Empresa sem vitrine digital. Invisível para clientes modernos.";
+              analysisText = "ALTA PRIORIDADE: Sem site detectado. Cliente vulnerável.";
               reasonText = "Sem Site";
           } else if (place.rating < 4.0) {
-              analysisText = "Crise de reputação detectada. Precisa de gestão urgente.";
+              analysisText = "REPUTAÇÃO FRÁGIL: Nota baixa no Google. Precisa de gestão.";
               reasonText = "Baixa Nota";
           } else {
-              analysisText = "Negócio estabelecido. Potencial para escala via tráfego pago.";
+              analysisText = "EXPANSÃO: Negócio validado. Oferecer tráfego pago.";
               reasonText = "Escala";
           }
 
@@ -154,7 +158,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               ai_analysis: analysisText,
               match_reason: reasonText,
               types: place.types || [],
-              price_level: place.price_level
+              price_level: place.price_level,
+              business_status: place.business_status,
+              opening_hours: place.opening_hours,
+              photos: place.photos
           };
       });
 
@@ -193,9 +200,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const markAsContacted = (lead: Lead) => {
       const leadWithDate = { ...lead, contactedAt: new Date().toISOString() };
       setContactedLeads(prev => [leadWithDate, ...prev]);
-      // Remove da lista atual
       setLeads(prev => prev.filter(l => l.id !== lead.id));
-      onLogout && console.log('Lead salvo localmente'); // Apenas para usar a prop e evitar linter
+      onLogout && console.log('Lead salvo localmente');
   };
 
   const openWhatsApp = (lead: Lead) => {
@@ -203,10 +209,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           alert("Telefone não disponível.");
           return;
       }
-      // Limpa tudo que não é número
       let cleanPhone = lead.phone.replace(/\D/g, '');
-      
-      // Lógica Brasil: Se tiver 10 ou 11 digitos e não começar com 55, adiciona.
       if (cleanPhone.length >= 10 && cleanPhone.length <= 11) {
           cleanPhone = '55' + cleanPhone;
       }
@@ -216,14 +219,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   };
 
   const openInstagram = (lead: Lead) => {
-      // 1. Se o site oficial for um instagram, usa ele
       if (lead.website && lead.website.includes('instagram.com')) {
           window.open(lead.website, '_blank');
           return;
       }
-
-      // 2. Deep Search no Google focado em achar o perfil
-      // "site:instagram.com" força o Google a só mostrar resultados do Instagram
       const query = `site:instagram.com "${lead.name}" ${location}`;
       window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
   };
@@ -248,7 +247,6 @@ Gostaria de apresentar uma proposta rápida de como podemos resolver isso. Podem
       setTimeout(() => setCopiedId(null), 2000);
   };
 
-  // Filtro da aba Chamados
   const filteredContactedLeads = contactedLeads.filter(l => 
       l.name.toLowerCase().includes(chamadosSearch.toLowerCase()) || 
       (l.types && l.types.some(t => t.includes(chamadosSearch.toLowerCase())))
@@ -264,7 +262,7 @@ Gostaria de apresentar uma proposta rápida de como podemos resolver isso. Podem
           </div>
           <div className="h-4 w-px bg-white/10"></div>
           <span className="text-[10px] font-mono text-white/50 uppercase tracking-widest hidden md:inline-block">
-            Intelligence Hub v4.0
+            Intelligence Hub v4.1
           </span>
         </div>
         
@@ -274,7 +272,7 @@ Gostaria de apresentar uma proposta rápida de como podemos resolver isso. Podem
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                 </span>
-                <span className="text-[9px] font-mono text-green-500 uppercase tracking-widest">System Online</span>
+                <span className="text-[9px] font-mono text-green-500 uppercase tracking-widest">Places API: Connected</span>
             </div>
             <button onClick={onLogout} className="text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-red-500 transition-colors">Sair</button>
         </div>
@@ -316,45 +314,40 @@ Gostaria de apresentar uma proposta rápida de como podemos resolver isso. Podem
                 {/* Search Header */}
                 <div className="p-6 border-b border-white/5 bg-[#050505]/95 backdrop-blur z-10 shrink-0">
                     <div className="max-w-7xl mx-auto w-full">
-                        <div className="mb-6 flex items-end justify-between">
-                            <div>
-                                <h1 className="text-3xl font-black uppercase italic tracking-tighter text-white">
-                                    Prospecção <span className="text-red-600">Ativa</span>
-                                </h1>
-                                <p className="text-white/40 text-[10px] font-mono uppercase tracking-[0.2em] mt-1">
-                                    Google Places API v2 • Deep Search
-                                </p>
-                            </div>
+                        <div className="mb-6">
+                            <h1 className="text-4xl font-black uppercase italic tracking-tighter text-white">
+                                Prospecção <span className="text-red-600">Deep Dive</span>
+                            </h1>
                         </div>
 
-                        <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end bg-[#0A0A0A] p-5 rounded-2xl border border-white/10 shadow-2xl relative overflow-hidden group">
+                        <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end bg-[#0A0A0A] p-5 rounded-3xl border border-white/10 shadow-2xl relative overflow-hidden group">
                             <div className="absolute top-0 left-0 w-1 h-full bg-red-600 opacity-50 group-hover:opacity-100 transition-opacity"></div>
                             
-                            <div className="md:col-span-4 space-y-1.5">
+                            <div className="md:col-span-4 space-y-2">
                                 <label className="text-[9px] font-black text-red-600 uppercase tracking-widest ml-1">Nicho de Mercado</label>
                                 <div className="relative">
-                                    <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pl-10 text-white focus:border-red-600 outline-none text-sm font-medium transition-all" placeholder="Ex: Barbearia, Clínica..." />
-                                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg></div>
+                                    <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 pl-12 text-white focus:border-red-600 outline-none text-base font-bold transition-all" placeholder="Ex: Estética, Hamburgueria..." />
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg></div>
                                 </div>
                             </div>
-                            <div className="md:col-span-3 space-y-1.5">
+                            <div className="md:col-span-3 space-y-2">
                                 <label className="text-[9px] font-black text-red-600 uppercase tracking-widest ml-1">Região Alvo</label>
                                 <div className="relative">
-                                    <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pl-10 text-white focus:border-red-600 outline-none text-sm font-medium transition-all" placeholder="Ex: Jardins, SP" />
-                                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30"><LocationIcon className="w-4 h-4 text-white/30" /></div>
+                                    <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 pl-12 text-white focus:border-red-600 outline-none text-base font-bold transition-all" placeholder="Ex: Pinheiros, SP" />
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30"><LocationIcon className="w-5 h-5 text-white/30" /></div>
                                 </div>
                             </div>
-                            <div className="md:col-span-3 space-y-1.5">
+                            <div className="md:col-span-3 space-y-2">
                                  <label className="text-[9px] font-black text-red-600 uppercase tracking-widest ml-1">Filtro de Site</label>
-                                 <select value={siteFilter} onChange={(e: any) => setSiteFilter(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-red-600 outline-none text-sm font-medium appearance-none cursor-pointer">
+                                 <select value={siteFilter} onChange={(e: any) => setSiteFilter(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white focus:border-red-600 outline-none text-base font-bold appearance-none cursor-pointer">
                                     <option value="no_site" className="bg-black">⚠️ Sem Site (Prioridade)</option>
                                     <option value="with_site" className="bg-black">💻 Com Site</option>
                                     <option value="all" className="bg-black">🌎 Todos</option>
                                  </select>
                             </div>
                             <div className="md:col-span-2">
-                                 <button type="submit" disabled={isLoading} className="w-full bg-red-600 hover:bg-red-700 text-white py-3.5 rounded-xl font-black uppercase text-xs tracking-[0.2em] shadow-lg shadow-red-600/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 h-[46px] transition-all hover:shadow-[0_0_20px_rgba(220,38,38,0.4)]">
-                                    {isLoading ? <SpinnerIcon /> : 'Varredura'}
+                                 <button type="submit" disabled={isLoading} className="w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-lg shadow-red-600/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 h-[58px] transition-all hover:shadow-[0_0_30px_rgba(220,38,38,0.5)]">
+                                    {isLoading ? <SpinnerIcon /> : 'CAÇAR LEADS'}
                                 </button>
                             </div>
                         </form>
@@ -362,8 +355,8 @@ Gostaria de apresentar uma proposta rápida de como podemos resolver isso. Podem
                 </div>
 
                 {/* Results Grid / Debug Area */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
-                    <div className="max-w-7xl mx-auto">
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-[#050505]">
+                    <div className="max-w-8xl mx-auto">
                         
                         {/* Debug Console Compacto */}
                         {(isLoading || debugLogs.length > 0) && (
@@ -375,128 +368,171 @@ Gostaria de apresentar uma proposta rápida de como podemos resolver isso. Podem
 
                         {!isLoading && leads.length === 0 && searchTerm && debugLogs.length === 0 && (
                             <div className="h-64 flex flex-col items-center justify-center text-center opacity-50">
-                                 <div className="w-16 h-16 border-2 border-white/10 rounded-full flex items-center justify-center mb-4">
-                                     <svg className="w-6 h-6 text-white/30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                 <div className="w-20 h-20 border-2 border-dashed border-white/10 rounded-full flex items-center justify-center mb-6 animate-pulse">
+                                     <svg className="w-8 h-8 text-white/30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                                  </div>
-                                 <h3 className="text-lg font-black text-white uppercase italic tracking-widest">Aguardando Comando</h3>
+                                 <h3 className="text-xl font-black text-white uppercase italic tracking-widest">Sistema Pronto</h3>
+                                 <p className="text-white/40 text-xs font-mono mt-2">Configure os parâmetros acima para iniciar a varredura.</p>
                             </div>
                         )}
 
                         {!isLoading && leads.length > 0 && (
                             <div className="pb-20">
-                                 <div className="flex justify-between items-end mb-6 px-1 border-b border-white/5 pb-2">
-                                    <span className="text-[10px] text-white/40 uppercase tracking-[0.3em] font-black">{leads.length} OPORTUNIDADES</span>
+                                 <div className="flex justify-between items-end mb-8 px-1 border-b border-white/5 pb-4">
+                                    <div className="flex items-center gap-4">
+                                        <span className="text-3xl font-black text-white italic">{leads.length}</span>
+                                        <span className="text-[10px] text-white/40 uppercase tracking-[0.3em] font-bold mt-2">Oportunidades Encontradas</span>
+                                    </div>
                                  </div>
                                  
-                                 {/* GRID DE CARDS HIGH END */}
-                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
+                                 {/* GRID DE CARDS HIGH END - MAIOR E COM FOTOS */}
+                                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8">
                                      {leads.map((lead) => (
-                                         <div key={lead.id} className="bg-[#0c0c0c]/80 backdrop-blur-sm border border-white/5 rounded-2xl p-0 flex flex-col justify-between h-full group hover:border-red-600/30 transition-all duration-300 relative overflow-hidden shadow-lg hover:shadow-[0_0_30px_rgba(220,38,38,0.05)]">
+                                         <div key={lead.id} className="bg-[#0c0c0c] border border-white/10 rounded-3xl flex flex-col justify-between h-full group hover:border-red-600/50 transition-all duration-300 relative overflow-hidden shadow-2xl hover:shadow-[0_0_50px_rgba(220,38,38,0.1)]">
                                              
-                                             {/* Header do Card */}
-                                             <div className="p-6 pb-4 relative">
-                                                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-600/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                             {/* Imagem de Capa do Local */}
+                                             <div className="h-48 w-full bg-gray-900 relative overflow-hidden shrink-0">
+                                                 {lead.photos && lead.photos.length > 0 ? (
+                                                     <img 
+                                                        src={`/api/photo?ref=${lead.photos[0].photo_reference}`} 
+                                                        className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700"
+                                                        alt={lead.name}
+                                                     />
+                                                 ) : (
+                                                     <div className="w-full h-full bg-gradient-to-br from-gray-800 to-black flex items-center justify-center opacity-50">
+                                                         <Logo className="scale-75 opacity-20" />
+                                                     </div>
+                                                 )}
                                                  
-                                                 <div className="flex justify-between items-start mb-3">
-                                                     <div className="flex gap-2 flex-wrap">
-                                                         {/* Badges de Categoria */}
-                                                         {lead.types.slice(0, 2).map((t, idx) => (
+                                                 {/* Overlay Gradient */}
+                                                 <div className="absolute inset-0 bg-gradient-to-t from-[#0c0c0c] via-[#0c0c0c]/60 to-transparent"></div>
+
+                                                 {/* Badges Flutuantes */}
+                                                 <div className="absolute top-4 left-4 flex gap-2">
+                                                     {lead.opening_hours?.open_now ? (
+                                                         <span className="bg-green-500/90 backdrop-blur text-black text-[9px] font-black px-2 py-1 rounded uppercase tracking-wide flex items-center gap-1">
+                                                             <span className="w-1.5 h-1.5 bg-black rounded-full animate-pulse"></span> Aberto
+                                                         </span>
+                                                     ) : (
+                                                         lead.opening_hours && (
+                                                             <span className="bg-red-600/90 backdrop-blur text-white text-[9px] font-black px-2 py-1 rounded uppercase tracking-wide">
+                                                                 Fechado
+                                                             </span>
+                                                         )
+                                                     )}
+                                                     {lead.price_level && (
+                                                         <span className="bg-black/60 backdrop-blur text-white text-[9px] font-black px-2 py-1 rounded uppercase tracking-wide border border-white/10">
+                                                             {Array(lead.price_level).fill('$').join('')}
+                                                         </span>
+                                                     )}
+                                                 </div>
+                                                 
+                                                 <div className="absolute top-4 right-4">
+                                                     <div className="bg-black/80 backdrop-blur border border-white/10 px-2 py-1 rounded-lg flex items-center gap-1">
+                                                         <span className="text-yellow-500 text-xs">★</span>
+                                                         <span className="text-white text-xs font-bold">{lead.rating}</span>
+                                                         <span className="text-white/40 text-[9px]">({lead.user_ratings_total})</span>
+                                                     </div>
+                                                 </div>
+                                             </div>
+
+                                             {/* Corpo do Card */}
+                                             <div className="p-6 relative -mt-6">
+                                                 <div className="flex justify-between items-start mb-2">
+                                                     <div className="flex gap-2 flex-wrap mb-2">
+                                                         {lead.types.slice(0, 3).map((t, idx) => (
                                                              <span key={idx} className="bg-white/5 text-[8px] font-mono text-white/50 px-2 py-0.5 rounded border border-white/5 uppercase tracking-wide">
                                                                  {t.replace(/_/g, ' ')}
                                                              </span>
                                                          ))}
                                                      </div>
-                                                     <div className="flex items-center gap-1">
-                                                         <span className="text-xs font-bold text-white">{lead.rating}</span>
-                                                         <span className="text-yellow-500 text-[10px]">★</span>
-                                                         <span className="text-[8px] text-white/30">({lead.user_ratings_total})</span>
-                                                     </div>
                                                  </div>
 
-                                                 <h3 className="text-xl font-black text-white uppercase leading-tight line-clamp-2 mb-2 group-hover:text-red-500 transition-colors h-14">
+                                                 <h3 className="text-2xl font-black text-white uppercase leading-tight line-clamp-2 mb-3 group-hover:text-red-500 transition-colors h-16">
                                                      {lead.name}
                                                  </h3>
                                                  
-                                                 <div className="flex items-center gap-2 mb-3">
-                                                    <LocationIcon className="w-3 h-3 text-white/30" />
-                                                    <p className="text-white/40 text-[10px] line-clamp-1 flex-1 font-mono">
-                                                        {lead.address.split(',')[0]}
+                                                 <div className="flex items-start gap-2 mb-4 min-h-[40px]">
+                                                    <LocationIcon className="w-4 h-4 text-white/30 mt-0.5 shrink-0" />
+                                                    <p className="text-white/60 text-xs line-clamp-2 font-medium leading-relaxed">
+                                                        {lead.address}
                                                     </p>
                                                  </div>
 
-                                                 <div className="flex justify-between items-center border-t border-white/5 pt-3">
+                                                 <div className="flex justify-between items-center border-t border-white/10 pt-4 mb-4">
                                                      {lead.status_site === 'sem_site' ? (
-                                                         <span className="flex items-center gap-1.5 bg-red-900/10 text-red-500 text-[8px] font-black px-2 py-1 rounded border border-red-500/20 uppercase tracking-wider">
-                                                             <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span> Sem Site
-                                                         </span>
+                                                         <div className="flex flex-col">
+                                                             <span className="text-[8px] uppercase tracking-widest text-red-500 font-bold mb-1">Status Web</span>
+                                                             <span className="flex items-center gap-1.5 text-red-500 font-black text-xs uppercase tracking-wider">
+                                                                 <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span> Sem Site
+                                                             </span>
+                                                         </div>
                                                      ) : (
-                                                         <span className="flex items-center gap-1.5 bg-blue-900/10 text-blue-400 text-[8px] font-black px-2 py-1 rounded border border-blue-500/20 uppercase tracking-wider">
-                                                             <span className="w-1.5 h-1.5 bg-blue-400 rounded-full"></span> Com Site
-                                                         </span>
+                                                         <div className="flex flex-col">
+                                                             <span className="text-[8px] uppercase tracking-widest text-blue-400 font-bold mb-1">Status Web</span>
+                                                             <span className="flex items-center gap-1.5 text-blue-400 font-black text-xs uppercase tracking-wider">
+                                                                 <span className="w-2 h-2 bg-blue-400 rounded-full"></span> Online
+                                                             </span>
+                                                         </div>
                                                      )}
                                                      
-                                                     {/* Score Pequeno */}
-                                                     <div className="flex items-center gap-1">
-                                                         <span className="text-[8px] uppercase text-white/30 font-bold">Score</span>
-                                                         <span className={`text-xs font-black ${lead.lead_score > 70 ? 'text-green-500' : 'text-red-500'}`}>
-                                                             {lead.lead_score}
-                                                         </span>
+                                                     {/* Score Circle Big */}
+                                                     <div className="relative w-12 h-12 flex items-center justify-center">
+                                                        <svg className="w-full h-full transform -rotate-90">
+                                                            <circle cx="24" cy="24" r="20" stroke="#222" strokeWidth="4" fill="transparent" />
+                                                            <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="4" fill="transparent"
+                                                                className={lead.lead_score > 70 ? 'text-green-500' : 'text-red-600'}
+                                                                strokeDasharray={126}
+                                                                strokeDashoffset={126 - (126 * lead.lead_score) / 100}
+                                                            />
+                                                        </svg>
+                                                        <span className="absolute text-sm font-black text-white">{lead.lead_score}</span>
                                                      </div>
                                                  </div>
-                                             </div>
 
-                                             {/* Insights AI Area */}
-                                             <div className="px-6 pb-4">
-                                                 <div className="bg-white/[0.02] rounded-lg p-3 border border-white/5 relative">
-                                                     <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-red-600 rounded-l-lg opacity-50"></div>
-                                                     <p className="text-[10px] text-white/70 italic leading-relaxed pl-2">
+                                                 {/* AI Analysis Box */}
+                                                 <div className="bg-white/[0.03] rounded-xl p-3 border border-white/5 relative mb-2">
+                                                     <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-xl ${lead.lead_score > 70 ? 'bg-green-600' : 'bg-red-600'}`}></div>
+                                                     <p className="text-[10px] text-white/70 italic leading-relaxed pl-3 font-medium">
                                                          "{lead.ai_analysis}"
                                                      </p>
                                                  </div>
                                              </div>
 
-                                             {/* Action Grid */}
-                                             <div className="grid grid-cols-4 gap-px bg-white/5 border-t border-white/5">
-                                                 {/* WhatsApp - Coluna Larga */}
+                                             {/* Botões de Ação Grandes */}
+                                             <div className="grid grid-cols-2 gap-1 p-1 bg-[#111] mt-auto">
                                                  <button 
                                                     onClick={() => openWhatsApp(lead)}
-                                                    className="col-span-1 bg-[#0c0c0c] hover:bg-[#25D366]/10 text-white/40 hover:text-[#25D366] py-4 flex flex-col items-center justify-center transition-all gap-1 group/btn h-16"
-                                                    title="WhatsApp Direto"
+                                                    className="col-span-1 bg-[#0c0c0c] hover:bg-[#25D366] text-[#25D366] hover:text-black py-4 flex flex-col items-center justify-center transition-all gap-1 group/btn border border-white/5 rounded-xl"
                                                  >
-                                                     <div className="w-5 h-5"><PhoneIcon className="w-full h-full text-current" /></div>
-                                                     <span className="text-[7px] font-black uppercase tracking-wider">Whats</span>
+                                                     <PhoneIcon className="w-5 h-5 text-current mb-1" />
+                                                     <span className="text-[9px] font-black uppercase tracking-widest">WhatsApp</span>
                                                  </button>
 
-                                                 {/* Instagram - Coluna Larga */}
                                                  <button 
                                                     onClick={() => openInstagram(lead)}
-                                                    className="col-span-1 bg-[#0c0c0c] hover:bg-pink-600/10 text-white/40 hover:text-pink-500 py-4 flex flex-col items-center justify-center transition-all gap-1 h-16"
-                                                    title="Instagram (Busca Inteligente)"
+                                                    className="col-span-1 bg-[#0c0c0c] hover:bg-pink-600 text-pink-500 hover:text-white py-4 flex flex-col items-center justify-center transition-all gap-1 border border-white/5 rounded-xl"
                                                  >
                                                      <InstagramIcon />
-                                                     <span className="text-[7px] font-black uppercase tracking-wider">Insta</span>
+                                                     <span className="text-[9px] font-black uppercase tracking-widest mt-1">Instagram</span>
                                                  </button>
 
-                                                 {/* Copy - Coluna Média */}
                                                  <button 
                                                     onClick={() => copyPitch(lead)}
-                                                    className={`col-span-1 bg-[#0c0c0c] py-4 flex flex-col items-center justify-center transition-all gap-1 h-16
-                                                        ${copiedId === lead.id ? 'bg-green-600/20 text-green-500' : 'hover:bg-white/5 text-white/40 hover:text-white'}
+                                                    className={`col-span-1 py-4 flex flex-col items-center justify-center transition-all gap-1 border border-white/5 rounded-xl
+                                                        ${copiedId === lead.id ? 'bg-green-600 text-white' : 'bg-[#0c0c0c] hover:bg-white text-white hover:text-black'}
                                                     `}
-                                                    title="Copiar Script"
                                                  >
-                                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
-                                                     <span className="text-[7px] font-black uppercase tracking-wider">{copiedId === lead.id ? 'Copiado' : 'Script'}</span>
+                                                     <span className="text-lg font-black">{copiedId === lead.id ? '✓' : '☷'}</span>
+                                                     <span className="text-[9px] font-black uppercase tracking-widest">Copy Pitch</span>
                                                  </button>
 
-                                                 {/* Check / Marcar como feito */}
                                                  <button 
                                                     onClick={() => markAsContacted(lead)}
-                                                    className="col-span-1 bg-[#0c0c0c] hover:bg-blue-600/10 text-white/40 hover:text-blue-500 py-4 flex flex-col items-center justify-center transition-all gap-1 h-16 border-l border-white/5"
-                                                    title="Marcar como Contatado"
+                                                    className="col-span-1 bg-[#0c0c0c] hover:bg-blue-600 text-blue-500 hover:text-white py-4 flex flex-col items-center justify-center transition-all gap-1 border border-white/5 rounded-xl"
                                                  >
-                                                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                                                     <span className="text-[7px] font-black uppercase tracking-wider">OK</span>
+                                                     <span className="text-lg font-black">✕</span>
+                                                     <span className="text-[9px] font-black uppercase tracking-widest">Arquivar</span>
                                                  </button>
                                              </div>
                                          </div>

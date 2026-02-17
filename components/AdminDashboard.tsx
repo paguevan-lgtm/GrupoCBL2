@@ -40,28 +40,28 @@ type SearchMode = 'standard' | 'whale' | 'crisis' | 'ghost';
 // --- MODAL DE ESTRATÉGIA (RAIO-X) ---
 const LeadStrategyModal = ({ lead, onClose, onCopyPitch, onOpenWhatsapp }: { lead: Lead, onClose: () => void, onCopyPitch: (text: string) => void, onOpenWhatsapp: () => void }) => {
     
-    // Lógica de Precificação Baseada no "Bolso" do Cliente (Price Level)
+    // Lógica de Precificação - MODO DE ENTRADA (Preços mais acessíveis)
     const getPricingStrategy = () => {
         const level = lead.price_level || 1;
         if (level >= 3) { // Whale / High End
             return {
-                setup: "R$ 5.000 - R$ 15.000",
-                monthly: "R$ 1.500+",
-                label: "High Ticket",
+                setup: "R$ 2.500,00 (Entrada facilitada)",
+                monthly: "R$ 800,00 (Manutenção)",
+                label: "High Ticket (Oportunidade)",
                 color: "text-blue-400"
             };
         } else if (level === 2) { // Médio
             return {
-                setup: "R$ 2.500 - R$ 4.000",
-                monthly: "R$ 800,00",
-                label: "Mid Market",
+                setup: "R$ 1.200,00",
+                monthly: "R$ 450,00",
+                label: "Standard",
                 color: "text-green-400"
             };
         } else { // Pequeno / Popular
             return {
-                setup: "R$ 1.200 (Ou isento c/ fidelidade)",
-                monthly: "R$ 497,00",
-                label: "Volume",
+                setup: "Isento (Fidelidade 12 meses)",
+                monthly: "R$ 299,00",
+                label: "Volume / Escala",
                 color: "text-white"
             };
         }
@@ -73,31 +73,24 @@ const LeadStrategyModal = ({ lead, onClose, onCopyPitch, onOpenWhatsapp }: { lea
         
         // Estratégia de Site
         if (lead.status_site === 'sem_site') {
-            products.push({ name: "Site Institucional Pro", priority: "ALTA", reason: "Urgência: Invisível no Google." });
-            products.push({ name: "Google Meu Negócio", priority: "ALTA", reason: "Reivindicar ficha e proteger marca." });
+            products.push({ name: "Site Institucional Express", priority: "ALTA", reason: "Urgência: Invisível no Google." });
+            products.push({ name: "Ficha Google (GMB)", priority: "ALTA", reason: "Porta de entrada rápida." });
         } else if (lead.status_site === 'site_basico') {
-            products.push({ name: "Redesign Premium", priority: "MÉDIA", reason: "Site atual desvaloriza a marca (Amador)." });
-            products.push({ name: "Cardápio/Agendamento Próprio", priority: "ALTA", reason: "Eliminar taxas de plataformas terceiras." });
+            products.push({ name: "Profissionalização Visual", priority: "MÉDIA", reason: "Sair do amadorismo (Linktree/Wix)." });
+            products.push({ name: "Cardápio/Catálogo Digital", priority: "ALTA", reason: "Facilitar o pedido do cliente." });
         } else {
-            products.push({ name: "Landing Page de Alta Conversão", priority: "MÉDIA", reason: "Focar em campanhas de tráfego específicas." });
+            products.push({ name: "Landing Page de Oferta", priority: "MÉDIA", reason: "Página específica para vender um produto." });
         }
 
         // Estratégia de Reputação
         if (lead.rating < 4.2) {
-            products.push({ name: "Gestão de Reputação (Reviews)", priority: "CRÍTICA", reason: `Nota ${lead.rating} está queimando vendas diárias.` });
+            products.push({ name: "Gestão de Avaliações", priority: "CRÍTICA", reason: `Subir nota ${lead.rating} para atrair mais gente.` });
         } 
         
-        // Estratégia de Tráfego
-        if (lead.rating > 4.5 && lead.user_ratings_total > 50) {
-            products.push({ name: "Tráfego Pago (Ads)", priority: "ALTA", reason: "Empresa validada (Prova Social). Hora de escalar." });
-        } else if (lead.price_level && lead.price_level >= 3) {
-            products.push({ name: "Branding & Posicionamento", priority: "ALTA", reason: "Público alvo exige experiência digital de luxo." });
-        }
-
         return products;
     };
 
-    // Lógica de Pitch Humanizado
+    // Lógica de Pitch Anti-Porteiro (Gatekeeper)
     const generateSmartPitch = () => {
         const hour = new Date().getHours();
         const greeting = hour < 12 ? 'Bom dia' : (hour < 18 ? 'Boa tarde' : 'Boa noite');
@@ -109,50 +102,33 @@ const LeadStrategyModal = ({ lead, onClose, onCopyPitch, onOpenWhatsapp }: { lea
             .map(word => word.charAt(0).toUpperCase() + word.slice(1))
             .join(' '); // Title Case
 
-        const region = lead.address.split(',')[1]?.split('-')[0]?.trim() || lead.address.split(',')[0]; // Tenta pegar o Bairro ou Cidade
+        // Estratégia: Não vender o produto, vender a IMPORTÂNCIA de falar com o dono.
         
-        let hook = "";
-        let pain = "";
-        let solution = "";
-        let cta = "Podemos conversar 5 minutos?";
-
-        // --- LÓGICA DE CENÁRIOS ---
-
-        // 1. Cenário: CRISE (Nota Baixa)
+        let context = "";
+        
+        // Cenário 1: CRISE (Nota Baixa)
         if (lead.rating < 4.0) {
-            hook = `Estava fazendo um levantamento das empresas aqui em ${region} e a ${company} me chamou atenção pelo potencial.`;
-            pain = `Porém, notei um ponto de alerta: a nota de vocês no Google está ${lead.rating}. Hoje, o consumidor compara tudo pelo celular, e qualquer nota abaixo de 4.5 faz o cliente ir pro concorrente sem nem avisar.`;
-            solution = `Temos um sistema (CBL Intelligence) que automatiza o pedido de 5 estrelas para seus melhores clientes e "enterra" as notas ruins.`;
-            cta = "Faz sentido resolver isso essa semana?";
+            context = `Notei um problema nas avaliações do Google da ${company} que pode estar afastando clientes novos, e tenho uma solução rápida pra isso.`;
         } 
-        // 2. Cenário: INVISÍVEL (Sem Site)
+        // Cenário 2: INVISÍVEL (Sem Site)
         else if (lead.status_site === 'sem_site') {
-            hook = `Sou especialista em posicionamento digital e encontrei a ${company} nas minhas buscas aqui na região.`;
-            pain = `Vi que vocês não têm um site oficial indexado. Basicamente, vocês estão "invisíveis" para quem busca no Google, deixando todo o tráfego "de graça" para os concorrentes que aparecem primeiro.`;
-            solution = `Consigo colocar uma estrutura profissional no ar para vocês em 7 dias, garantindo que quem busca, encontra vocês e não o vizinho.`;
+            context = `Não encontrei o site oficial da ${company} no Google, e isso está jogando clientes para os concorrentes da região.`;
         }
-        // 3. Cenário: AMADOR (Linktree/AnotaAI/Wix)
+        // Cenário 3: AMADOR (Linktree/AnotaAI/Wix)
         else if (lead.status_site === 'site_basico') {
-            const platform = lead.website?.includes('anota') ? 'Anota AI' : (lead.website?.includes('linktr') ? 'Linktree' : 'plataforma básica');
-            hook = `Vi que vocês têm um produto excelente na ${company}, mas o digital não está acompanhando a qualidade física de vocês.`;
-            pain = `Usar apenas o ${platform} como site principal passa uma imagem amadora e limita muito sua venda. Vocês estão construindo o castelo em terreno alugado.`;
-            solution = `Podemos criar uma estrutura própria, sem taxas de plataforma e com a cara real da marca, aumentando a percepção de valor do cliente.`;
+            context = `Vi uma oportunidade de melhorar a apresentação digital da ${company} para passar mais profissionalismo e vender mais.`;
         }
-        // 4. Cenário: BALEIA (Ticket Alto)
+        // Cenário 4: BALEIA (Ticket Alto)
         else if (lead.price_level && lead.price_level >= 3) {
-            hook = `Estou selecionando poucas empresas de alto padrão em ${region} para um projeto de expansão digital e selecionei a ${company}.`;
-            pain = `Para o público High Ticket que vocês atendem, a experiência digital precisa ser impecável. O site atual não transmite a exclusividade e o valor que o produto de vocês tem.`;
-            solution = `Trabalhamos com "Digital Branding" focado em elevar a percepção de valor antes mesmo do cliente entrar em contato.`;
-            cta = "Tem agenda para uma apresentação rápida?";
+            context = `Tenho um projeto de posicionamento digital focado em público de alto padrão que se encaixa perfeitamente na ${company}.`;
         }
-        // 5. Cenário: GENÉRICO (Fallback)
+        // Fallback
         else {
-            hook = `Encontrei a ${company} aqui no Google e vi uma oportunidade de melhoria rápida no posicionamento.`;
-            pain = `O perfil de vocês tem potencial para atrair clientes mais qualificados, mas alguns ajustes técnicos estão faltando para converter quem visita em cliente pagante.`;
-            solution = `Tenho uma estratégia de funil que qualifica o lead antes dele chegar no WhatsApp.`;
+            context = `Trabalho com posicionamento digital aqui na região e vi alguns pontos que podem aumentar as vendas da ${company}.`;
         }
 
-        return `${greeting}, tudo bem?\n\n${hook}\n\n${pain}\n\n${solution}\n\n${cta}`;
+        // O Script final foca em passar pelo funcionário
+        return `${greeting}, tudo bem?\n\nPoderia me fazer uma gentileza? 🙏\n\nEstou tentando contato com o responsável pelo marketing ou o proprietário da ${company}.\n\n${context}\n\nVocê consegue me passar o contato de quem cuida dessa parte, ou encaminhar essa mensagem para ele(a)?\n\nObrigado!`;
     };
 
     const pricing = getPricingStrategy();
@@ -191,19 +167,19 @@ const LeadStrategyModal = ({ lead, onClose, onCopyPitch, onOpenWhatsapp }: { lea
                             
                             {/* Card de Precificação */}
                             <div className="bg-gradient-to-br from-white/5 to-transparent border border-white/10 rounded-2xl p-6 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 bg-red-600 text-white text-[9px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-widest">
-                                    {pricing.label}
+                                <div className="absolute top-0 right-0 bg-blue-600 text-white text-[9px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-widest">
+                                    Sugestão de Preço
                                 </div>
                                 <h3 className="text-white/40 text-[10px] uppercase tracking-[0.2em] font-black mb-4 flex items-center gap-2">
-                                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Potencial Financeiro
+                                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> {pricing.label}
                                 </h3>
                                 <div className="space-y-4">
                                     <div className="p-3 bg-black/40 rounded-xl border border-white/5">
-                                        <span className="block text-white/30 text-[9px] uppercase tracking-widest mb-1">Setup (Entrada)</span>
+                                        <span className="block text-white/30 text-[9px] uppercase tracking-widest mb-1">Setup (Criação)</span>
                                         <span className={`text-xl md:text-2xl font-black tracking-tight ${pricing.color}`}>{pricing.setup}</span>
                                     </div>
                                     <div className="p-3 bg-black/40 rounded-xl border border-white/5">
-                                        <span className="block text-white/30 text-[9px] uppercase tracking-widest mb-1">Recorrência (Mensal)</span>
+                                        <span className="block text-white/30 text-[9px] uppercase tracking-widest mb-1">Mensalidade (Recorrência)</span>
                                         <span className="text-lg md:text-xl font-bold text-white tracking-tight">{pricing.monthly}</span>
                                     </div>
                                 </div>
@@ -212,7 +188,7 @@ const LeadStrategyModal = ({ lead, onClose, onCopyPitch, onOpenWhatsapp }: { lea
                             {/* O Que Vender */}
                             <div>
                                 <h3 className="text-white/40 text-[10px] uppercase tracking-[0.2em] font-black mb-3 flex items-center gap-2">
-                                    <TargetIcon className="w-4 h-4 text-red-600" /> O Que Vender?
+                                    <TargetIcon className="w-4 h-4 text-red-600" /> Oportunidades
                                 </h3>
                                 <div className="space-y-2">
                                     {arsenal.map((item, idx) => (
@@ -237,7 +213,7 @@ const LeadStrategyModal = ({ lead, onClose, onCopyPitch, onOpenWhatsapp }: { lea
                         <div className="flex flex-col h-full mt-2 lg:mt-0">
                              <div className="flex items-center justify-between mb-3">
                                 <h3 className="text-white/40 text-[10px] uppercase tracking-[0.2em] font-black flex items-center gap-2">
-                                    <ZapIcon className="w-4 h-4 text-yellow-500" /> Pitch Gerado
+                                    <ZapIcon className="w-4 h-4 text-yellow-500" /> Abordagem (Falar com Dono)
                                 </h3>
                                 <button 
                                     onClick={() => onCopyPitch(pitch)}

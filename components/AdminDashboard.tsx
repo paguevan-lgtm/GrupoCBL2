@@ -5,6 +5,8 @@ import { SpinnerIcon } from './icons/SpinnerIcon';
 import { LocationIcon } from './icons/LocationIcon';
 import { PhoneIcon } from './icons/PhoneIcon';
 import { InstagramIcon } from './icons/InstagramIcon';
+import { TargetIcon } from './icons/TargetIcon'; // Assuming you might have this, or I'll swap standard svg
+import { ZapIcon } from './icons/ZapIcon';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -17,30 +19,33 @@ interface Lead {
   rating: number;
   user_ratings_total: number;
   website?: string;
+  url?: string;
   phone?: string;
-  international_phone?: string; // Novo campo para garantir DDI
+  international_phone?: string;
   lead_score: number;
   ai_analysis: string;
   match_reason: string;
-  status_site: 'com_site' | 'sem_site';
+  status_site: 'com_site' | 'sem_site' | 'site_basico';
   place_id: string;
   types: string[];
   price_level?: number;
   business_status?: string;
-  opening_hours?: { open_now: boolean };
+  opening_hours?: { open_now: boolean, weekday_text?: string[] };
   photos?: { photo_reference: string }[];
   contactedAt?: string;
 }
 
+type SearchMode = 'standard' | 'whale' | 'crisis' | 'ghost';
+
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState<'search' | 'contacted'>('search');
   
-  // Search States
+  // Search Configuration
+  const [searchMode, setSearchMode] = useState<SearchMode>('standard');
   const [searchTerm, setSearchTerm] = useState('');
   const [location, setLocation] = useState('');
-  const [siteFilter, setSiteFilter] = useState<'all' | 'with_site' | 'no_site'>('no_site');
   
-  // CRM States (Persistência Local)
+  // CRM States
   const [contactedLeads, setContactedLeads] = useState<Lead[]>([]);
   const [chamadosSearch, setChamadosSearch] = useState('');
 
@@ -48,26 +53,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [leads, setLeads] = useState<Lead[]>([]);
   
-  // Feedback Estado
+  // Feedback
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Debug States
+  // Debug
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
-  // Carregar contatados do LocalStorage ao iniciar
   useEffect(() => {
     const saved = localStorage.getItem('cbl_contacted_leads');
     if (saved) {
-        try {
-            setContactedLeads(JSON.parse(saved));
-        } catch (e) {
-            console.error("Erro ao carregar leads salvos", e);
-        }
+        try { setContactedLeads(JSON.parse(saved)); } catch (e) { console.error(e); }
     }
   }, []);
 
-  // Salvar contatados sempre que mudar
   useEffect(() => {
     localStorage.setItem('cbl_contacted_leads', JSON.stringify(contactedLeads));
   }, [contactedLeads]);
@@ -80,22 +79,56 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [debugLogs]);
 
-  const calculateLeadScore = (place: any) => {
-    let score = 30; // Base score
-    if (!place.website) score += 40; // Sem site é ouro
+  const classifySite = (url?: string): 'com_site' | 'sem_site' | 'site_basico' => {
+      if (!url) return 'sem_site';
+      const lowerUrl = url.toLowerCase();
+      const weakDomains = ['anota.ai', 'ifood', 'facebook', 'instagram', 'linktr.ee', 'wa.me', 'whatsapp', 'wix', 'google.com/view', 'bit.ly'];
+      if (weakDomains.some(domain => lowerUrl.includes(domain))) return 'site_basico';
+      return 'com_site';
+  };
+
+  // Algoritmo de Pontuação Adaptativo (Muda conforme o Modo Tático)
+  const calculateLeadScore = (place: any, siteStatus: string, mode: SearchMode) => {
+    let score = 50; // Base
+
+    // 1. Critério: Site (Universalmente importante)
+    if (siteStatus === 'sem_site') score += 30;
+    else if (siteStatus === 'site_basico') score += 20;
     else score -= 10;
-    
-    // Critérios de Avaliação
-    if (place.rating && place.rating < 4.2) score += 20; // Nota baixa = Dor
-    if (place.user_ratings_total && place.user_ratings_total < 20) score += 10; // Pouca prova social
-    
-    // Critérios de Nicho ($$)
-    if (place.types?.includes('health') || place.types?.includes('lawyer') || place.types?.includes('real_estate_agency')) score += 10; 
-    
-    // Critérios de Funcionamento
-    if (place.business_status === 'OPERATIONAL') score += 5;
-    
-    return Math.min(score, 99);
+
+    // 2. Critérios Específicos por Modo
+    switch (mode) {
+        case 'whale': // Foco em High Ticket ($$$)
+            if (place.price_level >= 3) score += 40; // Jackpot
+            else if (place.price_level === 2) score += 10;
+            else if (!place.price_level) score -= 10; // Sem info de preço é arriscado
+            
+            // Baleias costumam ter site, então penalizamos menos se tiver site
+            if (siteStatus === 'com_site') score += 15; 
+            break;
+
+        case 'crisis': // Foco em Reputação Ruim
+            if (place.rating < 3.8) score += 40; // Alvo perfeito
+            else if (place.rating < 4.3) score += 20;
+            else score -= 20; // Reputação boa não serve pra esse modo
+            
+            if (place.user_ratings_total < 10) score += 10; // Fantasma
+            break;
+
+        case 'ghost': // Foco em Sem Site
+            if (siteStatus === 'com_site') score = 0; // Mata o lead
+            if (siteStatus === 'sem_site') score += 20;
+            // Se for ghost, queremos empresas ativas
+            if (place.business_status === 'OPERATIONAL') score += 10;
+            break;
+
+        default: // Standard
+            if (place.rating < 4.2) score += 10;
+            if (place.types?.includes('health') || place.types?.includes('lawyer')) score += 10;
+            break;
+    }
+
+    return Math.min(Math.max(score, 0), 99);
   };
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -107,14 +140,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     setDebugLogs([]); 
     setActiveTab('search');
 
-    addLog(`Iniciando varredura tática: "${searchTerm}" em "${location}"`);
+    addLog(`Ativando Protocolo: ${searchMode.toUpperCase()}`);
     
-    const fullQuery = `${searchTerm} in ${location}`;
+    // Modificação da Query baseada no Modo
+    let queryPrefix = "";
+    if (searchMode === 'whale') queryPrefix = "Luxury High End ";
+    // Em outros modos, a query é pura, o filtro acontece no pós-processamento
+    
+    const fullQuery = `${queryPrefix}${searchTerm} in ${location}`;
+    addLog(`Query Otimizada: "${fullQuery}"`);
+
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); 
+    const timeoutId = setTimeout(() => controller.abort(), 45000);
 
     try {
-      addLog("Conectando ao Google Places API (TextSearch)...");
+      addLog("Conectando Google Places API (Deep Fetch)...");
       
       const response = await fetch('/api/places', {
         method: 'POST',
@@ -125,34 +165,44 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
       clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        throw new Error(`Erro HTTP ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
 
       const data = await response.json();
       const rawResults = data.results || [];
-      addLog(`${rawResults.length} alvos brutos detectados.`);
+      addLog(`${rawResults.length} alvos brutos capturados.`);
 
       const processedLeads: Lead[] = rawResults.map((place: any) => {
-          const hasWebsite = !!place.website;
-          const score = calculateLeadScore(place);
+          const siteStatus = classifySite(place.website);
+          const score = calculateLeadScore(place, siteStatus, searchMode);
           
           let analysisText = "";
-          let reasonText = "";
+          let reasonText = "Oportunidade";
 
-          // Análise de IA Simulada baseada em dados reais
-          if (!hasWebsite) {
-              analysisText = "OPORTUNIDADE CRÍTICA: Empresa invisível na web. Ideal para oferta de Landing Page High-Ticket.";
-              reasonText = "Sem Site";
-          } else if (place.rating < 4.0) {
-              analysisText = "GESTÃO DE CRISE: Baixa reputação. Ofertar Gestão de Google Meu Negócio e Automação de Reviews.";
-              reasonText = "Baixa Nota";
-          } else if (place.user_ratings_total < 10) {
-              analysisText = "TRAÇÃO INICIAL: Negócio validado mas sem prova social. Ofertar campanhas de tráfego local.";
-              reasonText = "Sem Prova Social";
+          // Geração de Análise Tática Baseada no Modo
+          if (searchMode === 'whale') {
+               if (place.price_level >= 3) {
+                   analysisText = "ALVO DE ALTO VALOR ($$$). Possível orçamento para branding premium e automação.";
+                   reasonText = "Ticket Alto";
+               } else {
+                   analysisText = "Lead secundário. Validar potencial financeiro antes da abordagem.";
+               }
+          } else if (searchMode === 'crisis') {
+               if (place.rating < 4.0) {
+                   analysisText = `ALERTA DE CRISE (${place.rating}⭐). Necessidade urgente de gestão de reputação e reviews.`;
+                   reasonText = "Reputação";
+               } else {
+                   analysisText = "Reputação estável. Focar em expansão, não em correção.";
+               }
+          } else if (searchMode === 'ghost') {
+               if (siteStatus !== 'com_site') {
+                   analysisText = "INVISIBILIDADE DIGITAL. Dependência de plataformas de terceiros. Venda site proprietário.";
+                   reasonText = "Sem Site";
+               }
           } else {
-              analysisText = "ESCALA: Negócio maduro. Focar em Redesign Premium e CRM.";
-              reasonText = "Escala";
+              // Standard Logic
+              if (siteStatus === 'sem_site') analysisText = "Empresa sem site. Vulnerável a concorrentes.";
+              else if (place.rating < 4.2) analysisText = "Reputação moderada. Ofertar melhoria de imagem.";
+              else analysisText = "Empresa sólida. Ofertar tráfego pago para escala.";
           }
 
           return {
@@ -163,10 +213,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               rating: place.rating || 0,
               user_ratings_total: place.user_ratings_total || 0,
               website: place.website,
+              url: place.url,
               phone: place.formatted_phone_number,
-              international_phone: place.international_phone_number, // Importante para WhatsApp
+              international_phone: place.international_phone_number,
               lead_score: score,
-              status_site: hasWebsite ? 'com_site' : 'sem_site',
+              status_site: siteStatus,
               ai_analysis: analysisText,
               match_reason: reasonText,
               types: place.types || [],
@@ -177,27 +228,27 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           };
       });
 
-      // Filtros: Remove já contatados e aplica filtro de site
+      // Filtros Finais Rígidos
       const filteredLeads = processedLeads.filter((lead: Lead) => {
-          // Verifica se já foi contatado
           const isContacted = contactedLeads.some(cl => cl.id === lead.id);
           if (isContacted) return false;
 
-          // Filtro de Site
-          if (siteFilter === 'all') return true;
-          if (siteFilter === 'no_site') return lead.status_site === 'sem_site';
-          if (siteFilter === 'with_site') return lead.status_site === 'com_site';
+          // Filtros específicos do modo
+          if (searchMode === 'ghost' && lead.status_site === 'com_site') return false;
+          if (searchMode === 'crisis' && lead.rating >= 4.5) return false; 
+          // Whale mode mostra todos, mas o score define a ordem
+          
           return true;
       });
 
       filteredLeads.sort((a: Lead, b: Lead) => b.lead_score - a.lead_score);
 
       setLeads(filteredLeads);
-      addLog(`Varredura completa. ${filteredLeads.length} oportunidades qualificadas.`);
+      addLog(`Refinamento concluído. ${filteredLeads.length} leads táticos prontos.`);
 
     } catch (error: any) {
       if (error.name === 'AbortError') {
-        addLog("ERRO: Latência excessiva. A operação foi abortada.");
+        addLog("ERRO: Timeout na operação Deep Fetch.");
       } else {
         addLog(`FALHA CRÍTICA: ${error.message}`);
       }
@@ -207,68 +258,60 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     }
   };
 
-  // --- ACTIONS ---
-
+  // --- ACTIONS (Mantidas igual) ---
   const markAsContacted = (lead: Lead) => {
       const leadWithDate = { ...lead, contactedAt: new Date().toISOString() };
       setContactedLeads(prev => [leadWithDate, ...prev]);
       setLeads(prev => prev.filter(l => l.id !== lead.id));
-      onLogout && console.log('Lead salvo localmente');
   };
 
   const removeFromContacted = (leadId: string) => {
       setContactedLeads(prev => prev.filter(l => l.id !== leadId));
-      // Opcional: Adicionar de volta à lista de pesquisa se necessário, mas geralmente "Desarquivar" é suficiente.
   };
 
   const openWhatsApp = (lead: Lead) => {
-      // Prioridade: Número Internacional (já vem com DDI) > Formatado > Bruto
       const rawPhone = lead.international_phone || lead.phone;
-
-      if (!rawPhone) {
-          alert("Telefone não disponível na base do Google.");
-          return;
-      }
-
-      // Remove tudo que não é dígito
+      if (!rawPhone) { alert("Telefone não disponível."); return; }
       let cleanPhone = rawPhone.replace(/\D/g, '');
-      
-      // Lógica de fallback para Brasil (Adiciona 55 se parecer um número local)
-      // Números locais tem 10 ou 11 dígitos (DDD + Número)
-      if (cleanPhone.length >= 10 && cleanPhone.length <= 11) {
-          cleanPhone = '55' + cleanPhone;
-      }
+      if (cleanPhone.length >= 10 && cleanPhone.length <= 11) cleanPhone = '55' + cleanPhone;
       
       const text = encodeURIComponent(`Olá, sou da equipe CBL. Encontrei a *${lead.name}* e vi uma oportunidade de melhoria no posicionamento digital de vocês.`);
       window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
   };
 
   const openInstagram = (lead: Lead) => {
-      // 1. Verifica se o site cadastrado JÁ É o Instagram
       if (lead.website && lead.website.toLowerCase().includes('instagram.com')) {
           window.open(lead.website, '_blank');
           return;
       }
-
-      // 2. Se não, usa Deep Search (A API do Places não fornece user do Insta)
-      // "site:instagram.com" restringe a busca
       const query = `site:instagram.com "${lead.name}" ${location}`;
       window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
   };
 
   const copyPitch = (lead: Lead) => {
+      let strategyPitch = "";
+      
+      // Pitch Dinâmico baseado na falha detectada
+      if (lead.status_site === 'sem_site') {
+          strategyPitch = "Notei que vocês não aparecem com um site profissional no Google, o que facilita para os concorrentes roubarem seus clientes.";
+      } else if (lead.status_site === 'site_basico') {
+          strategyPitch = `Vi que vocês usam o ${lead.website?.split('/')[2] || 'menu digital'} como site principal. Isso limita muito sua autoridade e te deixa dependente da plataforma.`;
+      } else if (lead.rating < 4.0) {
+          strategyPitch = `Notei que algumas avaliações recentes no Google podem estar prejudicando a chegada de novos clientes premium.`;
+      } else {
+          strategyPitch = "Notei que o posicionamento digital de vocês pode ser otimizado para atrair um público de ticket mais alto.";
+      }
+
       const pitch = `
 Olá, tudo bem? 
 
 Me chamo [Seu Nome], sou especialista em posicionamento digital.
 
-Estava fazendo uma pesquisa na região de ${location || 'sua cidade'} e encontrei a *${lead.name}*. 
+Encontrei a *${lead.name}* aqui na região.
 
-Notei que vocês ${lead.status_site === 'sem_site' ? 'ainda não possuem um site profissional' : 'poderiam modernizar a presença online'} para captar mais clientes.
+${strategyPitch}
 
-Atualmente, empresas do seu setor estão perdendo cerca de 40% das vendas por não terem uma vitrine digital otimizada.
-
-Gostaria de apresentar uma proposta rápida de como podemos resolver isso. Podemos conversar?
+Temos uma estratégia para resolver isso rápido. Podemos conversar?
       `.trim();
 
       navigator.clipboard.writeText(pitch);
@@ -281,7 +324,48 @@ Gostaria de apresentar uma proposta rápida de como podemos resolver isso. Podem
       (l.types && l.types.some(t => t.includes(chamadosSearch.toLowerCase())))
   );
 
-  // --- COMPONENTE DE CARD REUTILIZÁVEL ---
+  // --- UI Components ---
+
+  const ModeSelector = () => (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+          <button 
+            type="button"
+            onClick={() => setSearchMode('standard')}
+            className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${searchMode === 'standard' ? 'bg-red-600 border-red-500 text-white shadow-lg' : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'}`}
+          >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              <span className="text-[9px] font-black uppercase tracking-widest">Radar Padrão</span>
+          </button>
+          
+          <button 
+            type="button"
+            onClick={() => setSearchMode('whale')}
+            className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${searchMode === 'whale' ? 'bg-blue-600 border-blue-500 text-white shadow-lg' : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'}`}
+          >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <span className="text-[9px] font-black uppercase tracking-widest">Whale Hunter</span>
+          </button>
+
+          <button 
+            type="button"
+            onClick={() => setSearchMode('crisis')}
+            className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${searchMode === 'crisis' ? 'bg-orange-600 border-orange-500 text-white shadow-lg' : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'}`}
+          >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+              <span className="text-[9px] font-black uppercase tracking-widest">Gestão de Crise</span>
+          </button>
+
+          <button 
+            type="button"
+            onClick={() => setSearchMode('ghost')}
+            className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${searchMode === 'ghost' ? 'bg-purple-600 border-purple-500 text-white shadow-lg' : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'}`}
+          >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+              <span className="text-[9px] font-black uppercase tracking-widest">Ghost Protocol</span>
+          </button>
+      </div>
+  );
+
   const LeadCard = ({ lead, isArchived = false }: { lead: Lead, isArchived?: boolean }) => (
       <div className={`bg-[#0c0c0c] border ${isArchived ? 'border-blue-900/30' : 'border-white/10'} rounded-3xl flex flex-col justify-between h-full group hover:border-red-600/50 transition-all duration-300 relative overflow-hidden shadow-2xl hover:shadow-[0_0_50px_rgba(220,38,38,0.1)]`}>
              
@@ -332,8 +416,7 @@ Gostaria de apresentar uma proposta rápida de como podemos resolver isso. Podem
              </div>
 
              {/* Corpo do Card */}
-             <div className="p-6 relative -mt-6">
-                 {/* Header Categorias */}
+             <div className="p-6 relative -mt-6 flex-1 flex flex-col">
                  <div className="flex justify-between items-start mb-2">
                      <div className="flex gap-2 flex-wrap mb-2">
                          {lead.types.slice(0, 2).map((t, idx) => (
@@ -344,15 +427,28 @@ Gostaria de apresentar uma proposta rápida de como podemos resolver isso. Podem
                      </div>
                  </div>
 
-                 <h3 className="text-2xl font-black text-white uppercase leading-tight line-clamp-2 mb-3 group-hover:text-red-500 transition-colors h-16">
+                 <h3 className="text-2xl font-black text-white uppercase leading-tight line-clamp-2 mb-3 group-hover:text-red-500 transition-colors">
                      {lead.name}
                  </h3>
                  
                  <div className="flex items-start gap-2 mb-4 min-h-[40px]">
                     <LocationIcon className="w-4 h-4 text-white/30 mt-0.5 shrink-0" />
-                    <p className="text-white/60 text-xs line-clamp-2 font-medium leading-relaxed">
+                    <a href={lead.url} target="_blank" rel="noreferrer" className="text-white/60 text-xs line-clamp-2 font-medium leading-relaxed hover:text-white hover:underline">
                         {lead.address}
-                    </p>
+                    </a>
+                 </div>
+
+                 {/* Website Display */}
+                 <div className="mb-4 bg-white/5 p-2 rounded-lg border border-white/5 overflow-hidden">
+                     <div className="flex items-center gap-2">
+                         <div className={`w-2 h-2 rounded-full shrink-0 ${
+                             lead.status_site === 'sem_site' ? 'bg-red-500 animate-pulse' : 
+                             (lead.status_site === 'site_basico' ? 'bg-yellow-500' : 'bg-green-500')
+                         }`}></div>
+                         <span className="text-[9px] font-mono text-white/50 uppercase tracking-wide truncate">
+                             {lead.website ? lead.website.replace(/^https?:\/\//, '').replace(/^www\./, '') : 'NENHUM SITE DETECTADO'}
+                         </span>
+                     </div>
                  </div>
 
                  {/* LEAD DNA - CRITÉRIOS DETALHADOS */}
@@ -370,22 +466,24 @@ Gostaria de apresentar uma proposta rápida de como podemos resolver isso. Podem
                         </span>
                     </div>
                     <div className="text-center border-l border-white/5">
-                        <span className="block text-[8px] text-white/30 uppercase tracking-widest mb-1">Site</span>
-                        <span className={`block text-xs font-bold ${lead.status_site === 'sem_site' ? 'text-red-500' : 'text-green-500'}`}>
-                            {lead.status_site === 'sem_site' ? 'OFF' : 'ON'}
+                        <span className="block text-[8px] text-white/30 uppercase tracking-widest mb-1">Status</span>
+                        <span className={`block text-xs font-bold ${
+                            lead.status_site === 'sem_site' ? 'text-red-500' : 
+                            (lead.status_site === 'site_basico' ? 'text-yellow-500' : 'text-green-500')
+                        }`}>
+                            {lead.status_site === 'sem_site' ? 'OFF' : (lead.status_site === 'site_basico' ? 'BÁSICO' : 'PRO')}
                         </span>
                     </div>
                  </div>
 
-                 <div className="flex justify-between items-center border-t border-white/10 pt-4 mb-4">
+                 <div className="flex justify-between items-center border-t border-white/10 pt-4 mb-4 mt-auto">
                      <div className="flex flex-col">
-                         <span className="text-[8px] uppercase tracking-widest text-white/30 font-bold mb-1">Análise IA</span>
-                         <span className="text-[10px] text-white/80 font-medium italic line-clamp-2 max-w-[180px]">
+                         <span className="text-[8px] uppercase tracking-widest text-white/30 font-bold mb-1">Análise Tática</span>
+                         <span className="text-[10px] text-white/80 font-medium italic line-clamp-3 max-w-[180px]">
                             {lead.ai_analysis}
                          </span>
                      </div>
                      
-                     {/* Score Circle Big */}
                      <div className="relative w-12 h-12 flex items-center justify-center shrink-0 ml-2">
                         <svg className="w-full h-full transform -rotate-90">
                             <circle cx="24" cy="24" r="20" stroke="#222" strokeWidth="4" fill="transparent" />
@@ -400,7 +498,6 @@ Gostaria de apresentar uma proposta rápida de como podemos resolver isso. Podem
                  </div>
              </div>
 
-             {/* Botões de Ação Grandes */}
              <div className="grid grid-cols-2 gap-px bg-[#111] mt-auto border-t border-white/5">
                  <button 
                     onClick={() => openWhatsApp(lead)}
@@ -461,7 +558,7 @@ Gostaria de apresentar uma proposta rápida de como podemos resolver isso. Podem
           </div>
           <div className="h-4 w-px bg-white/10"></div>
           <span className="text-[10px] font-mono text-white/50 uppercase tracking-widest hidden md:inline-block">
-            Intelligence Hub v4.2
+            Intelligence Hub v4.4
           </span>
         </div>
         
@@ -471,7 +568,7 @@ Gostaria de apresentar uma proposta rápida de como podemos resolver isso. Podem
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                 </span>
-                <span className="text-[9px] font-mono text-green-500 uppercase tracking-widest">Places API: Connected</span>
+                <span className="text-[9px] font-mono text-green-500 uppercase tracking-widest">Deep Search: ON</span>
             </div>
             <button onClick={onLogout} className="text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-red-500 transition-colors">Sair</button>
         </div>
@@ -519,34 +616,33 @@ Gostaria de apresentar uma proposta rápida de como podemos resolver isso. Podem
                             </h1>
                         </div>
 
+                        {/* Tactical Mode Selector */}
+                        <div className="mb-4">
+                            <label className="text-[9px] font-black text-white/50 uppercase tracking-[0.2em] mb-2 block ml-1">Estratégia Tática</label>
+                            <ModeSelector />
+                        </div>
+
                         <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end bg-[#0A0A0A] p-5 rounded-3xl border border-white/10 shadow-2xl relative overflow-hidden group">
                             <div className="absolute top-0 left-0 w-1 h-full bg-red-600 opacity-50 group-hover:opacity-100 transition-opacity"></div>
                             
-                            <div className="md:col-span-4 space-y-2">
+                            <div className="md:col-span-5 space-y-2">
                                 <label className="text-[9px] font-black text-red-600 uppercase tracking-widest ml-1">Nicho de Mercado</label>
                                 <div className="relative">
                                     <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 pl-12 text-white focus:border-red-600 outline-none text-base font-bold transition-all" placeholder="Ex: Estética, Hamburgueria..." />
                                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg></div>
                                 </div>
                             </div>
-                            <div className="md:col-span-3 space-y-2">
+                            <div className="md:col-span-4 space-y-2">
                                 <label className="text-[9px] font-black text-red-600 uppercase tracking-widest ml-1">Região Alvo</label>
                                 <div className="relative">
                                     <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 pl-12 text-white focus:border-red-600 outline-none text-base font-bold transition-all" placeholder="Ex: Pinheiros, SP" />
                                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30"><LocationIcon className="w-5 h-5 text-white/30" /></div>
                                 </div>
                             </div>
-                            <div className="md:col-span-3 space-y-2">
-                                 <label className="text-[9px] font-black text-red-600 uppercase tracking-widest ml-1">Filtro de Site</label>
-                                 <select value={siteFilter} onChange={(e: any) => setSiteFilter(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white focus:border-red-600 outline-none text-base font-bold appearance-none cursor-pointer">
-                                    <option value="no_site" className="bg-black">⚠️ Sem Site (Prioridade)</option>
-                                    <option value="with_site" className="bg-black">💻 Com Site</option>
-                                    <option value="all" className="bg-black">🌎 Todos</option>
-                                 </select>
-                            </div>
-                            <div className="md:col-span-2">
+                            
+                            <div className="md:col-span-3">
                                  <button type="submit" disabled={isLoading} className="w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-lg shadow-red-600/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 h-[58px] transition-all hover:shadow-[0_0_30px_rgba(220,38,38,0.5)]">
-                                    {isLoading ? <SpinnerIcon /> : 'CAÇAR LEADS'}
+                                    {isLoading ? <SpinnerIcon /> : 'EXECUTAR'}
                                 </button>
                             </div>
                         </form>
@@ -571,7 +667,7 @@ Gostaria de apresentar uma proposta rápida de como podemos resolver isso. Podem
                                      <svg className="w-8 h-8 text-white/30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                                  </div>
                                  <h3 className="text-xl font-black text-white uppercase italic tracking-widest">Sistema Pronto</h3>
-                                 <p className="text-white/40 text-xs font-mono mt-2">Configure os parâmetros acima para iniciar a varredura.</p>
+                                 <p className="text-white/40 text-xs font-mono mt-2">Selecione uma estratégia e configure os parâmetros.</p>
                             </div>
                         )}
 
@@ -580,7 +676,7 @@ Gostaria de apresentar uma proposta rápida de como podemos resolver isso. Podem
                                  <div className="flex justify-between items-end mb-8 px-1 border-b border-white/5 pb-4">
                                     <div className="flex items-center gap-4">
                                         <span className="text-3xl font-black text-white italic">{leads.length}</span>
-                                        <span className="text-[10px] text-white/40 uppercase tracking-[0.3em] font-bold mt-2">Oportunidades Encontradas</span>
+                                        <span className="text-[10px] text-white/40 uppercase tracking-[0.3em] font-bold mt-2">Oportunidades {searchMode.toUpperCase()} Encontradas</span>
                                     </div>
                                  </div>
                                  

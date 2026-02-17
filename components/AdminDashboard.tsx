@@ -5,8 +5,9 @@ import { SpinnerIcon } from './icons/SpinnerIcon';
 import { LocationIcon } from './icons/LocationIcon';
 import { PhoneIcon } from './icons/PhoneIcon';
 import { InstagramIcon } from './icons/InstagramIcon';
-import { TargetIcon } from './icons/TargetIcon'; // Assuming you might have this, or I'll swap standard svg
+import { TargetIcon } from './icons/TargetIcon';
 import { ZapIcon } from './icons/ZapIcon';
+import { XIcon } from './icons/XIcon';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -23,8 +24,6 @@ interface Lead {
   phone?: string;
   international_phone?: string;
   lead_score: number;
-  ai_analysis: string;
-  match_reason: string;
   status_site: 'com_site' | 'sem_site' | 'site_basico';
   place_id: string;
   types: string[];
@@ -33,9 +32,248 @@ interface Lead {
   opening_hours?: { open_now: boolean, weekday_text?: string[] };
   photos?: { photo_reference: string }[];
   contactedAt?: string;
+  ai_analysis?: string;
 }
 
 type SearchMode = 'standard' | 'whale' | 'crisis' | 'ghost';
+
+// --- MODAL DE ESTRATÉGIA (RAIO-X) ---
+const LeadStrategyModal = ({ lead, onClose, onCopyPitch, onOpenWhatsapp }: { lead: Lead, onClose: () => void, onCopyPitch: (text: string) => void, onOpenWhatsapp: () => void }) => {
+    
+    // Lógica de Precificação Baseada no "Bolso" do Cliente (Price Level)
+    const getPricingStrategy = () => {
+        const level = lead.price_level || 1;
+        if (level >= 3) { // Whale / High End
+            return {
+                setup: "R$ 5.000 - R$ 15.000",
+                monthly: "R$ 1.500+",
+                label: "High Ticket",
+                color: "text-blue-400"
+            };
+        } else if (level === 2) { // Médio
+            return {
+                setup: "R$ 2.500 - R$ 4.000",
+                monthly: "R$ 800,00",
+                label: "Mid Market",
+                color: "text-green-400"
+            };
+        } else { // Pequeno / Popular
+            return {
+                setup: "R$ 1.200 (Ou isento c/ fidelidade)",
+                monthly: "R$ 497,00",
+                label: "Volume",
+                color: "text-white"
+            };
+        }
+    };
+
+    // Lógica de Produtos para Vender
+    const getSalesArsenal = () => {
+        const products = [];
+        
+        // Estratégia de Site
+        if (lead.status_site === 'sem_site') {
+            products.push({ name: "Site Institucional Pro", priority: "ALTA", reason: "Urgência: Invisível no Google." });
+            products.push({ name: "Google Meu Negócio", priority: "ALTA", reason: "Reivindicar ficha e proteger marca." });
+        } else if (lead.status_site === 'site_basico') {
+            products.push({ name: "Redesign Premium", priority: "MÉDIA", reason: "Site atual desvaloriza a marca (Amador)." });
+            products.push({ name: "Cardápio/Agendamento Próprio", priority: "ALTA", reason: "Eliminar taxas de plataformas terceiras." });
+        } else {
+            products.push({ name: "Landing Page de Alta Conversão", priority: "MÉDIA", reason: "Focar em campanhas de tráfego específicas." });
+        }
+
+        // Estratégia de Reputação
+        if (lead.rating < 4.2) {
+            products.push({ name: "Gestão de Reputação (Reviews)", priority: "CRÍTICA", reason: `Nota ${lead.rating} está queimando vendas diárias.` });
+        } 
+        
+        // Estratégia de Tráfego
+        if (lead.rating > 4.5 && lead.user_ratings_total > 50) {
+            products.push({ name: "Tráfego Pago (Ads)", priority: "ALTA", reason: "Empresa validada (Prova Social). Hora de escalar." });
+        } else if (lead.price_level && lead.price_level >= 3) {
+            products.push({ name: "Branding & Posicionamento", priority: "ALTA", reason: "Público alvo exige experiência digital de luxo." });
+        }
+
+        return products;
+    };
+
+    // Lógica de Pitch Humanizado
+    const generateSmartPitch = () => {
+        const hour = new Date().getHours();
+        const greeting = hour < 12 ? 'Bom dia' : (hour < 18 ? 'Boa tarde' : 'Boa noite');
+        
+        // Dados Reais para Humanização
+        const company = lead.name
+            .toLowerCase()
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' '); // Title Case
+
+        const region = lead.address.split(',')[1]?.split('-')[0]?.trim() || lead.address.split(',')[0]; // Tenta pegar o Bairro ou Cidade
+        
+        let hook = "";
+        let pain = "";
+        let solution = "";
+        let cta = "Podemos conversar 5 minutos?";
+
+        // --- LÓGICA DE CENÁRIOS ---
+
+        // 1. Cenário: CRISE (Nota Baixa)
+        if (lead.rating < 4.0) {
+            hook = `Estava fazendo um levantamento das empresas aqui em ${region} e a ${company} me chamou atenção pelo potencial.`;
+            pain = `Porém, notei um ponto de alerta: a nota de vocês no Google está ${lead.rating}. Hoje, o consumidor compara tudo pelo celular, e qualquer nota abaixo de 4.5 faz o cliente ir pro concorrente sem nem avisar.`;
+            solution = `Temos um sistema (CBL Intelligence) que automatiza o pedido de 5 estrelas para seus melhores clientes e "enterra" as notas ruins.`;
+            cta = "Faz sentido resolver isso essa semana?";
+        } 
+        // 2. Cenário: INVISÍVEL (Sem Site)
+        else if (lead.status_site === 'sem_site') {
+            hook = `Sou especialista em posicionamento digital e encontrei a ${company} nas minhas buscas aqui na região.`;
+            pain = `Vi que vocês não têm um site oficial indexado. Basicamente, vocês estão "invisíveis" para quem busca no Google, deixando todo o tráfego "de graça" para os concorrentes que aparecem primeiro.`;
+            solution = `Consigo colocar uma estrutura profissional no ar para vocês em 7 dias, garantindo que quem busca, encontra vocês e não o vizinho.`;
+        }
+        // 3. Cenário: AMADOR (Linktree/AnotaAI/Wix)
+        else if (lead.status_site === 'site_basico') {
+            const platform = lead.website?.includes('anota') ? 'Anota AI' : (lead.website?.includes('linktr') ? 'Linktree' : 'plataforma básica');
+            hook = `Vi que vocês têm um produto excelente na ${company}, mas o digital não está acompanhando a qualidade física de vocês.`;
+            pain = `Usar apenas o ${platform} como site principal passa uma imagem amadora e limita muito sua venda. Vocês estão construindo o castelo em terreno alugado.`;
+            solution = `Podemos criar uma estrutura própria, sem taxas de plataforma e com a cara real da marca, aumentando a percepção de valor do cliente.`;
+        }
+        // 4. Cenário: BALEIA (Ticket Alto)
+        else if (lead.price_level && lead.price_level >= 3) {
+            hook = `Estou selecionando poucas empresas de alto padrão em ${region} para um projeto de expansão digital e selecionei a ${company}.`;
+            pain = `Para o público High Ticket que vocês atendem, a experiência digital precisa ser impecável. O site atual não transmite a exclusividade e o valor que o produto de vocês tem.`;
+            solution = `Trabalhamos com "Digital Branding" focado em elevar a percepção de valor antes mesmo do cliente entrar em contato.`;
+            cta = "Tem agenda para uma apresentação rápida?";
+        }
+        // 5. Cenário: GENÉRICO (Fallback)
+        else {
+            hook = `Encontrei a ${company} aqui no Google e vi uma oportunidade de melhoria rápida no posicionamento.`;
+            pain = `O perfil de vocês tem potencial para atrair clientes mais qualificados, mas alguns ajustes técnicos estão faltando para converter quem visita em cliente pagante.`;
+            solution = `Tenho uma estratégia de funil que qualifica o lead antes dele chegar no WhatsApp.`;
+        }
+
+        return `${greeting}, tudo bem?\n\n${hook}\n\n${pain}\n\n${solution}\n\n${cta}`;
+    };
+
+    const pricing = getPricingStrategy();
+    const arsenal = getSalesArsenal();
+    const pitch = generateSmartPitch();
+
+    return (
+        <div className="fixed inset-0 z-[200] flex items-end md:items-center justify-center bg-black/90 backdrop-blur-sm md:p-4 animate-in fade-in duration-200" onClick={onClose}>
+            <div 
+                className="w-full md:max-w-4xl h-[90vh] md:h-auto md:max-h-[90vh] bg-[#0c0c0c] border-t md:border border-white/10 rounded-t-3xl md:rounded-3xl overflow-hidden flex flex-col shadow-2xl" 
+                onClick={e => e.stopPropagation()}
+            >
+                
+                {/* Header Modal */}
+                <div className="p-5 md:p-6 border-b border-white/5 bg-[#111] flex justify-between items-start shrink-0">
+                    <div>
+                        <div className="flex items-center gap-3 mb-1">
+                            <h2 className="text-xl md:text-2xl font-black text-white uppercase italic tracking-tighter truncate max-w-[250px]">{lead.name}</h2>
+                            {lead.business_status === 'OPERATIONAL' && <span className="bg-green-500/10 text-green-500 text-[8px] font-bold px-2 py-0.5 rounded uppercase border border-green-500/20">Ativo</span>}
+                        </div>
+                        <p className="text-white/50 text-[10px] md:text-xs flex items-center gap-2 truncate">
+                            <LocationIcon className="w-3 h-3 text-white/30"/> {lead.address}
+                        </p>
+                    </div>
+                    <button onClick={onClose} className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-white/50 hover:text-white transition-colors">
+                        <XIcon />
+                    </button>
+                </div>
+
+                {/* Conteúdo Scrollável */}
+                <div className="flex-1 overflow-y-auto p-5 md:p-8 custom-scrollbar bg-[#0c0c0c]">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        
+                        {/* Coluna da Esquerda: Dados Financeiros e Produtos */}
+                        <div className="space-y-6">
+                            
+                            {/* Card de Precificação */}
+                            <div className="bg-gradient-to-br from-white/5 to-transparent border border-white/10 rounded-2xl p-6 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 bg-red-600 text-white text-[9px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-widest">
+                                    {pricing.label}
+                                </div>
+                                <h3 className="text-white/40 text-[10px] uppercase tracking-[0.2em] font-black mb-4 flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Potencial Financeiro
+                                </h3>
+                                <div className="space-y-4">
+                                    <div className="p-3 bg-black/40 rounded-xl border border-white/5">
+                                        <span className="block text-white/30 text-[9px] uppercase tracking-widest mb-1">Setup (Entrada)</span>
+                                        <span className={`text-xl md:text-2xl font-black tracking-tight ${pricing.color}`}>{pricing.setup}</span>
+                                    </div>
+                                    <div className="p-3 bg-black/40 rounded-xl border border-white/5">
+                                        <span className="block text-white/30 text-[9px] uppercase tracking-widest mb-1">Recorrência (Mensal)</span>
+                                        <span className="text-lg md:text-xl font-bold text-white tracking-tight">{pricing.monthly}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* O Que Vender */}
+                            <div>
+                                <h3 className="text-white/40 text-[10px] uppercase tracking-[0.2em] font-black mb-3 flex items-center gap-2">
+                                    <TargetIcon className="w-4 h-4 text-red-600" /> O Que Vender?
+                                </h3>
+                                <div className="space-y-2">
+                                    {arsenal.map((item, idx) => (
+                                        <div key={idx} className="bg-[#111] border border-white/5 p-3 rounded-xl flex justify-between items-center group hover:border-white/10 transition-colors">
+                                            <div className="pr-2">
+                                                <span className="block text-white font-bold text-xs md:text-sm">{item.name}</span>
+                                                <span className="block text-white/40 text-[10px] mt-0.5 leading-tight">{item.reason}</span>
+                                            </div>
+                                            <span className={`shrink-0 text-[8px] font-black px-2 py-1 rounded uppercase tracking-wider ${
+                                                item.priority === 'CRÍTICA' ? 'bg-red-600/20 text-red-500 border border-red-600/30' : 
+                                                (item.priority === 'ALTA' ? 'bg-orange-500/20 text-orange-500 border border-orange-500/30' : 'bg-blue-500/20 text-blue-500 border border-blue-500/30')
+                                            }`}>
+                                                {item.priority}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Coluna da Direita: Script de Vendas */}
+                        <div className="flex flex-col h-full mt-2 lg:mt-0">
+                             <div className="flex items-center justify-between mb-3">
+                                <h3 className="text-white/40 text-[10px] uppercase tracking-[0.2em] font-black flex items-center gap-2">
+                                    <ZapIcon className="w-4 h-4 text-yellow-500" /> Pitch Gerado
+                                </h3>
+                                <button 
+                                    onClick={() => onCopyPitch(pitch)}
+                                    className="text-[9px] text-white/40 hover:text-white uppercase font-bold tracking-widest flex items-center gap-1 transition-colors bg-white/5 px-2 py-1 rounded-lg"
+                                >
+                                    Copiar
+                                </button>
+                             </div>
+                             
+                             <div 
+                                className="flex-1 bg-[#151515] border border-white/10 rounded-2xl p-4 md:p-6 relative group cursor-pointer hover:border-yellow-500/30 transition-colors min-h-[250px]" 
+                                onClick={() => onCopyPitch(pitch)}
+                             >
+                                 <pre className="whitespace-pre-wrap font-sans text-xs md:text-sm text-white/80 leading-relaxed h-full overflow-y-auto custom-scrollbar">
+                                    {pitch}
+                                 </pre>
+                                 <div className="absolute bottom-3 right-3 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity text-[9px] text-black uppercase font-bold bg-white/90 px-2 py-1 rounded shadow-lg pointer-events-none">
+                                     Toque para Copiar
+                                 </div>
+                             </div>
+
+                             <button 
+                                onClick={onOpenWhatsapp}
+                                className="w-full bg-[#25D366] hover:bg-[#20b858] text-black py-4 rounded-xl font-black uppercase text-xs tracking-[0.2em] shadow-lg shadow-green-600/20 active:scale-[0.98] mt-4 flex items-center justify-center gap-2 transition-all"
+                             >
+                                <PhoneIcon className="w-4 h-4 text-black fill-current" />
+                                Abrir WhatsApp
+                             </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState<'search' | 'contacted'>('search');
@@ -52,6 +290,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   // Results States
   const [isLoading, setIsLoading] = useState(false);
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   
   // Feedback
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -145,7 +384,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     // Modificação da Query baseada no Modo
     let queryPrefix = "";
     if (searchMode === 'whale') queryPrefix = "Luxury High End ";
-    // Em outros modos, a query é pura, o filtro acontece no pós-processamento
     
     const fullQuery = `${queryPrefix}${searchTerm} in ${location}`;
     addLog(`Query Otimizada: "${fullQuery}"`);
@@ -176,33 +414,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           const score = calculateLeadScore(place, siteStatus, searchMode);
           
           let analysisText = "";
-          let reasonText = "Oportunidade";
 
-          // Geração de Análise Tática Baseada no Modo
           if (searchMode === 'whale') {
-               if (place.price_level >= 3) {
-                   analysisText = "ALVO DE ALTO VALOR ($$$). Possível orçamento para branding premium e automação.";
-                   reasonText = "Ticket Alto";
-               } else {
-                   analysisText = "Lead secundário. Validar potencial financeiro antes da abordagem.";
-               }
+               if (place.price_level >= 3) analysisText = "Ticket $$$ detectado. Potencial alto.";
+               else analysisText = "Ticket incerto. Verificar visualmente.";
           } else if (searchMode === 'crisis') {
-               if (place.rating < 4.0) {
-                   analysisText = `ALERTA DE CRISE (${place.rating}⭐). Necessidade urgente de gestão de reputação e reviews.`;
-                   reasonText = "Reputação";
-               } else {
-                   analysisText = "Reputação estável. Focar em expansão, não em correção.";
-               }
+               if (place.rating < 4.0) analysisText = `Reputação crítica (${place.rating}). Urgente.`;
+               else analysisText = "Reputação estável.";
           } else if (searchMode === 'ghost') {
-               if (siteStatus !== 'com_site') {
-                   analysisText = "INVISIBILIDADE DIGITAL. Dependência de plataformas de terceiros. Venda site proprietário.";
-                   reasonText = "Sem Site";
-               }
+               if (siteStatus !== 'com_site') analysisText = "Sem presença digital sólida.";
+               else analysisText = "Possui site.";
           } else {
-              // Standard Logic
-              if (siteStatus === 'sem_site') analysisText = "Empresa sem site. Vulnerável a concorrentes.";
-              else if (place.rating < 4.2) analysisText = "Reputação moderada. Ofertar melhoria de imagem.";
-              else analysisText = "Empresa sólida. Ofertar tráfego pago para escala.";
+              if (siteStatus === 'sem_site') analysisText = "Sem site. Vulnerável.";
+              else if (place.rating < 4.2) analysisText = "Reputação moderada.";
+              else analysisText = "Empresa sólida.";
           }
 
           return {
@@ -219,7 +444,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               lead_score: score,
               status_site: siteStatus,
               ai_analysis: analysisText,
-              match_reason: reasonText,
               types: place.types || [],
               price_level: place.price_level,
               business_status: place.business_status,
@@ -236,7 +460,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           // Filtros específicos do modo
           if (searchMode === 'ghost' && lead.status_site === 'com_site') return false;
           if (searchMode === 'crisis' && lead.rating >= 4.5) return false; 
-          // Whale mode mostra todos, mas o score define a ordem
           
           return true;
       });
@@ -258,11 +481,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     }
   };
 
-  // --- ACTIONS (Mantidas igual) ---
+  // --- ACTIONS ---
   const markAsContacted = (lead: Lead) => {
       const leadWithDate = { ...lead, contactedAt: new Date().toISOString() };
       setContactedLeads(prev => [leadWithDate, ...prev]);
       setLeads(prev => prev.filter(l => l.id !== lead.id));
+      if (selectedLead?.id === lead.id) setSelectedLead(null);
   };
 
   const removeFromContacted = (leadId: string) => {
@@ -288,33 +512,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
   };
 
-  const copyPitch = (lead: Lead) => {
-      let strategyPitch = "";
-      
-      // Pitch Dinâmico baseado na falha detectada
-      if (lead.status_site === 'sem_site') {
-          strategyPitch = "Notei que vocês não aparecem com um site profissional no Google, o que facilita para os concorrentes roubarem seus clientes.";
-      } else if (lead.status_site === 'site_basico') {
-          strategyPitch = `Vi que vocês usam o ${lead.website?.split('/')[2] || 'menu digital'} como site principal. Isso limita muito sua autoridade e te deixa dependente da plataforma.`;
-      } else if (lead.rating < 4.0) {
-          strategyPitch = `Notei que algumas avaliações recentes no Google podem estar prejudicando a chegada de novos clientes premium.`;
-      } else {
-          strategyPitch = "Notei que o posicionamento digital de vocês pode ser otimizado para atrair um público de ticket mais alto.";
+  const copyPitch = (lead: Lead, pitchText?: string) => {
+      if (pitchText) {
+          navigator.clipboard.writeText(pitchText);
+          setCopiedId(lead.id);
+          setTimeout(() => setCopiedId(null), 2000);
+          return;
       }
-
-      const pitch = `
-Olá, tudo bem? 
-
-Me chamo [Seu Nome], sou especialista em posicionamento digital.
-
-Encontrei a *${lead.name}* aqui na região.
-
-${strategyPitch}
-
-Temos uma estratégia para resolver isso rápido. Podemos conversar?
-      `.trim();
-
-      navigator.clipboard.writeText(pitch);
+      // Fallback simples se não vier do modal
+      navigator.clipboard.writeText(`Olá ${lead.name}, vi seu perfil e tenho uma proposta.`);
       setCopiedId(lead.id);
       setTimeout(() => setCopiedId(null), 2000);
   };
@@ -331,10 +537,13 @@ Temos uma estratégia para resolver isso rápido. Podemos conversar?
           <button 
             type="button"
             onClick={() => setSearchMode('standard')}
-            className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${searchMode === 'standard' ? 'bg-red-600 border-red-500 text-white shadow-lg' : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'}`}
+            className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all group ${searchMode === 'standard' ? 'bg-red-600 border-red-500 text-white shadow-lg' : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'}`}
           >
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-              <span className="text-[9px] font-black uppercase tracking-widest">Radar Padrão</span>
+              <div className="text-center">
+                  <span className="block text-[9px] font-black uppercase tracking-widest">Radar Padrão</span>
+                  <span className="block text-[8px] text-white/50 mt-1">Varredura Equilibrada</span>
+              </div>
           </button>
           
           <button 
@@ -343,7 +552,10 @@ Temos uma estratégia para resolver isso rápido. Podemos conversar?
             className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${searchMode === 'whale' ? 'bg-blue-600 border-blue-500 text-white shadow-lg' : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'}`}
           >
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              <span className="text-[9px] font-black uppercase tracking-widest">Whale Hunter</span>
+              <div className="text-center">
+                  <span className="block text-[9px] font-black uppercase tracking-widest">Whale Hunter</span>
+                  <span className="block text-[8px] text-white/50 mt-1">Ticket Alto / Luxo</span>
+              </div>
           </button>
 
           <button 
@@ -352,7 +564,10 @@ Temos uma estratégia para resolver isso rápido. Podemos conversar?
             className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${searchMode === 'crisis' ? 'bg-orange-600 border-orange-500 text-white shadow-lg' : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'}`}
           >
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-              <span className="text-[9px] font-black uppercase tracking-widest">Gestão de Crise</span>
+              <div className="text-center">
+                  <span className="block text-[9px] font-black uppercase tracking-widest">Gestão de Crise</span>
+                  <span className="block text-[8px] text-white/50 mt-1">Reputação Baixa</span>
+              </div>
           </button>
 
           <button 
@@ -361,7 +576,10 @@ Temos uma estratégia para resolver isso rápido. Podemos conversar?
             className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${searchMode === 'ghost' ? 'bg-purple-600 border-purple-500 text-white shadow-lg' : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'}`}
           >
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
-              <span className="text-[9px] font-black uppercase tracking-widest">Ghost Protocol</span>
+              <div className="text-center">
+                  <span className="block text-[9px] font-black uppercase tracking-widest">Ghost Protocol</span>
+                  <span className="block text-[8px] text-white/50 mt-1">Sem Site / Invisíveis</span>
+              </div>
           </button>
       </div>
   );
@@ -451,37 +669,15 @@ Temos uma estratégia para resolver isso rápido. Podemos conversar?
                      </div>
                  </div>
 
-                 {/* LEAD DNA - CRITÉRIOS DETALHADOS */}
-                 <div className="grid grid-cols-3 gap-2 mb-4 bg-white/[0.03] p-2 rounded-xl border border-white/5">
-                    <div className="text-center">
-                        <span className="block text-[8px] text-white/30 uppercase tracking-widest mb-1">Ticket</span>
-                        <span className="block text-xs font-bold text-white">
-                            {lead.price_level ? Array(lead.price_level).fill('$').join('') : 'N/A'}
-                        </span>
-                    </div>
-                    <div className="text-center border-l border-white/5">
-                        <span className="block text-[8px] text-white/30 uppercase tracking-widest mb-1">Reviews</span>
-                        <span className={`block text-xs font-bold ${lead.user_ratings_total > 50 ? 'text-green-500' : 'text-yellow-500'}`}>
-                            {lead.user_ratings_total > 100 ? 'Alto' : (lead.user_ratings_total > 20 ? 'Médio' : 'Baixo')}
-                        </span>
-                    </div>
-                    <div className="text-center border-l border-white/5">
-                        <span className="block text-[8px] text-white/30 uppercase tracking-widest mb-1">Status</span>
-                        <span className={`block text-xs font-bold ${
-                            lead.status_site === 'sem_site' ? 'text-red-500' : 
-                            (lead.status_site === 'site_basico' ? 'text-yellow-500' : 'text-green-500')
-                        }`}>
-                            {lead.status_site === 'sem_site' ? 'OFF' : (lead.status_site === 'site_basico' ? 'BÁSICO' : 'PRO')}
-                        </span>
-                    </div>
-                 </div>
-
                  <div className="flex justify-between items-center border-t border-white/10 pt-4 mb-4 mt-auto">
                      <div className="flex flex-col">
                          <span className="text-[8px] uppercase tracking-widest text-white/30 font-bold mb-1">Análise Tática</span>
-                         <span className="text-[10px] text-white/80 font-medium italic line-clamp-3 max-w-[180px]">
-                            {lead.ai_analysis}
-                         </span>
+                         <button 
+                            onClick={() => setSelectedLead(lead)} 
+                            className="bg-white/5 hover:bg-white/10 text-red-500 text-[10px] font-black uppercase tracking-[0.15em] px-3 py-1.5 rounded-lg border border-red-900/30 hover:border-red-600 transition-all flex items-center gap-2"
+                         >
+                            Ver Raio-X Completo <span className="text-xs">→</span>
+                         </button>
                      </div>
                      
                      <div className="relative w-12 h-12 flex items-center justify-center shrink-0 ml-2">
@@ -518,7 +714,7 @@ Temos uma estratégia para resolver isso rápido. Podemos conversar?
                  </button>
 
                  <button 
-                    onClick={() => copyPitch(lead)}
+                    onClick={() => copyPitch(lead, undefined)}
                     className={`col-span-1 py-4 flex flex-col items-center justify-center transition-all gap-1 border-t border-white/5
                         ${copiedId === lead.id ? 'bg-green-600 text-white' : 'bg-[#0c0c0c] hover:bg-white text-white hover:text-black'}
                     `}
@@ -573,6 +769,16 @@ Temos uma estratégia para resolver isso rápido. Podemos conversar?
             <button onClick={onLogout} className="text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-red-500 transition-colors">Sair</button>
         </div>
       </header>
+
+      {/* LEAD STRATEGY MODAL */}
+      {selectedLead && (
+        <LeadStrategyModal 
+            lead={selectedLead} 
+            onClose={() => setSelectedLead(null)} 
+            onCopyPitch={(text) => copyPitch(selectedLead, text)}
+            onOpenWhatsapp={() => openWhatsApp(selectedLead)}
+        />
+      )}
 
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar Navigation */}

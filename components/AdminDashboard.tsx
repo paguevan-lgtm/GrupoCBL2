@@ -1,7 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Logo } from './icons/Logo';
-import { ZapIcon } from './icons/ZapIcon';
 import { SpinnerIcon } from './icons/SpinnerIcon';
 import { LocationIcon } from './icons/LocationIcon';
 import { PhoneIcon } from './icons/PhoneIcon';
@@ -19,6 +18,7 @@ interface Lead {
   user_ratings_total: number;
   website?: string;
   phone?: string;
+  international_phone?: string; // Novo campo para garantir DDI
   lead_score: number;
   ai_analysis: string;
   match_reason: string;
@@ -84,10 +84,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     let score = 30; // Base score
     if (!place.website) score += 40; // Sem site é ouro
     else score -= 10;
-    if (place.rating && place.rating < 4.2) score += 20; // Nota baixa
-    if (place.user_ratings_total && place.user_ratings_total < 20) score += 10; // Pouca avaliação
-    if (place.types?.includes('health') || place.types?.includes('lawyer')) score += 5; // Nichos caros
+    
+    // Critérios de Avaliação
+    if (place.rating && place.rating < 4.2) score += 20; // Nota baixa = Dor
+    if (place.user_ratings_total && place.user_ratings_total < 20) score += 10; // Pouca prova social
+    
+    // Critérios de Nicho ($$)
+    if (place.types?.includes('health') || place.types?.includes('lawyer') || place.types?.includes('real_estate_agency')) score += 10; 
+    
+    // Critérios de Funcionamento
     if (place.business_status === 'OPERATIONAL') score += 5;
+    
     return Math.min(score, 99);
   };
 
@@ -133,14 +140,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           let analysisText = "";
           let reasonText = "";
 
+          // Análise de IA Simulada baseada em dados reais
           if (!hasWebsite) {
-              analysisText = "ALTA PRIORIDADE: Sem site detectado. Cliente vulnerável.";
+              analysisText = "OPORTUNIDADE CRÍTICA: Empresa invisível na web. Ideal para oferta de Landing Page High-Ticket.";
               reasonText = "Sem Site";
           } else if (place.rating < 4.0) {
-              analysisText = "REPUTAÇÃO FRÁGIL: Nota baixa no Google. Precisa de gestão.";
+              analysisText = "GESTÃO DE CRISE: Baixa reputação. Ofertar Gestão de Google Meu Negócio e Automação de Reviews.";
               reasonText = "Baixa Nota";
+          } else if (place.user_ratings_total < 10) {
+              analysisText = "TRAÇÃO INICIAL: Negócio validado mas sem prova social. Ofertar campanhas de tráfego local.";
+              reasonText = "Sem Prova Social";
           } else {
-              analysisText = "EXPANSÃO: Negócio validado. Oferecer tráfego pago.";
+              analysisText = "ESCALA: Negócio maduro. Focar em Redesign Premium e CRM.";
               reasonText = "Escala";
           }
 
@@ -153,6 +164,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               user_ratings_total: place.user_ratings_total || 0,
               website: place.website,
               phone: place.formatted_phone_number,
+              international_phone: place.international_phone_number, // Importante para WhatsApp
               lead_score: score,
               status_site: hasWebsite ? 'com_site' : 'sem_site',
               ai_analysis: analysisText,
@@ -204,25 +216,42 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       onLogout && console.log('Lead salvo localmente');
   };
 
+  const removeFromContacted = (leadId: string) => {
+      setContactedLeads(prev => prev.filter(l => l.id !== leadId));
+      // Opcional: Adicionar de volta à lista de pesquisa se necessário, mas geralmente "Desarquivar" é suficiente.
+  };
+
   const openWhatsApp = (lead: Lead) => {
-      if (!lead.phone) {
-          alert("Telefone não disponível.");
+      // Prioridade: Número Internacional (já vem com DDI) > Formatado > Bruto
+      const rawPhone = lead.international_phone || lead.phone;
+
+      if (!rawPhone) {
+          alert("Telefone não disponível na base do Google.");
           return;
       }
-      let cleanPhone = lead.phone.replace(/\D/g, '');
+
+      // Remove tudo que não é dígito
+      let cleanPhone = rawPhone.replace(/\D/g, '');
+      
+      // Lógica de fallback para Brasil (Adiciona 55 se parecer um número local)
+      // Números locais tem 10 ou 11 dígitos (DDD + Número)
       if (cleanPhone.length >= 10 && cleanPhone.length <= 11) {
           cleanPhone = '55' + cleanPhone;
       }
       
-      const text = encodeURIComponent(`Olá, sou da equipe CBL. Encontrei a *${lead.name}* no Google e vi uma oportunidade de melhoria no posicionamento digital de vocês.`);
+      const text = encodeURIComponent(`Olá, sou da equipe CBL. Encontrei a *${lead.name}* e vi uma oportunidade de melhoria no posicionamento digital de vocês.`);
       window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
   };
 
   const openInstagram = (lead: Lead) => {
-      if (lead.website && lead.website.includes('instagram.com')) {
+      // 1. Verifica se o site cadastrado JÁ É o Instagram
+      if (lead.website && lead.website.toLowerCase().includes('instagram.com')) {
           window.open(lead.website, '_blank');
           return;
       }
+
+      // 2. Se não, usa Deep Search (A API do Places não fornece user do Insta)
+      // "site:instagram.com" restringe a busca
       const query = `site:instagram.com "${lead.name}" ${location}`;
       window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
   };
@@ -252,6 +281,176 @@ Gostaria de apresentar uma proposta rápida de como podemos resolver isso. Podem
       (l.types && l.types.some(t => t.includes(chamadosSearch.toLowerCase())))
   );
 
+  // --- COMPONENTE DE CARD REUTILIZÁVEL ---
+  const LeadCard = ({ lead, isArchived = false }: { lead: Lead, isArchived?: boolean }) => (
+      <div className={`bg-[#0c0c0c] border ${isArchived ? 'border-blue-900/30' : 'border-white/10'} rounded-3xl flex flex-col justify-between h-full group hover:border-red-600/50 transition-all duration-300 relative overflow-hidden shadow-2xl hover:shadow-[0_0_50px_rgba(220,38,38,0.1)]`}>
+             
+             {/* Imagem de Capa do Local */}
+             <div className="h-48 w-full bg-gray-900 relative overflow-hidden shrink-0">
+                 {lead.photos && lead.photos.length > 0 ? (
+                     <img 
+                        src={`/api/photo?ref=${lead.photos[0].photo_reference}`} 
+                        className={`w-full h-full object-cover transition-all duration-700 ${isArchived ? 'grayscale hover:grayscale-0' : 'opacity-60 group-hover:opacity-100 group-hover:scale-110'}`}
+                        alt={lead.name}
+                     />
+                 ) : (
+                     <div className="w-full h-full bg-gradient-to-br from-gray-800 to-black flex items-center justify-center opacity-50">
+                         <Logo className="scale-75 opacity-20" />
+                     </div>
+                 )}
+                 
+                 {/* Overlay Gradient */}
+                 <div className="absolute inset-0 bg-gradient-to-t from-[#0c0c0c] via-[#0c0c0c]/60 to-transparent"></div>
+
+                 {/* Badges Flutuantes */}
+                 <div className="absolute top-4 left-4 flex gap-2">
+                     {isArchived && (
+                         <span className="bg-blue-600 text-white text-[9px] font-black px-2 py-1 rounded uppercase tracking-wide flex items-center gap-1 shadow-lg">
+                             Processado
+                         </span>
+                     )}
+                     {lead.opening_hours?.open_now ? (
+                         <span className="bg-green-500/90 backdrop-blur text-black text-[9px] font-black px-2 py-1 rounded uppercase tracking-wide flex items-center gap-1">
+                             <span className="w-1.5 h-1.5 bg-black rounded-full animate-pulse"></span> Aberto
+                         </span>
+                     ) : (
+                         lead.opening_hours && (
+                             <span className="bg-red-600/90 backdrop-blur text-white text-[9px] font-black px-2 py-1 rounded uppercase tracking-wide">
+                                 Fechado
+                             </span>
+                         )
+                     )}
+                 </div>
+                 
+                 <div className="absolute top-4 right-4">
+                     <div className="bg-black/80 backdrop-blur border border-white/10 px-2 py-1 rounded-lg flex items-center gap-1">
+                         <span className="text-yellow-500 text-xs">★</span>
+                         <span className="text-white text-xs font-bold">{lead.rating}</span>
+                         <span className="text-white/40 text-[9px]">({lead.user_ratings_total})</span>
+                     </div>
+                 </div>
+             </div>
+
+             {/* Corpo do Card */}
+             <div className="p-6 relative -mt-6">
+                 {/* Header Categorias */}
+                 <div className="flex justify-between items-start mb-2">
+                     <div className="flex gap-2 flex-wrap mb-2">
+                         {lead.types.slice(0, 2).map((t, idx) => (
+                             <span key={idx} className="bg-white/5 text-[8px] font-mono text-white/50 px-2 py-0.5 rounded border border-white/5 uppercase tracking-wide">
+                                 {t.replace(/_/g, ' ')}
+                             </span>
+                         ))}
+                     </div>
+                 </div>
+
+                 <h3 className="text-2xl font-black text-white uppercase leading-tight line-clamp-2 mb-3 group-hover:text-red-500 transition-colors h-16">
+                     {lead.name}
+                 </h3>
+                 
+                 <div className="flex items-start gap-2 mb-4 min-h-[40px]">
+                    <LocationIcon className="w-4 h-4 text-white/30 mt-0.5 shrink-0" />
+                    <p className="text-white/60 text-xs line-clamp-2 font-medium leading-relaxed">
+                        {lead.address}
+                    </p>
+                 </div>
+
+                 {/* LEAD DNA - CRITÉRIOS DETALHADOS */}
+                 <div className="grid grid-cols-3 gap-2 mb-4 bg-white/[0.03] p-2 rounded-xl border border-white/5">
+                    <div className="text-center">
+                        <span className="block text-[8px] text-white/30 uppercase tracking-widest mb-1">Ticket</span>
+                        <span className="block text-xs font-bold text-white">
+                            {lead.price_level ? Array(lead.price_level).fill('$').join('') : 'N/A'}
+                        </span>
+                    </div>
+                    <div className="text-center border-l border-white/5">
+                        <span className="block text-[8px] text-white/30 uppercase tracking-widest mb-1">Reviews</span>
+                        <span className={`block text-xs font-bold ${lead.user_ratings_total > 50 ? 'text-green-500' : 'text-yellow-500'}`}>
+                            {lead.user_ratings_total > 100 ? 'Alto' : (lead.user_ratings_total > 20 ? 'Médio' : 'Baixo')}
+                        </span>
+                    </div>
+                    <div className="text-center border-l border-white/5">
+                        <span className="block text-[8px] text-white/30 uppercase tracking-widest mb-1">Site</span>
+                        <span className={`block text-xs font-bold ${lead.status_site === 'sem_site' ? 'text-red-500' : 'text-green-500'}`}>
+                            {lead.status_site === 'sem_site' ? 'OFF' : 'ON'}
+                        </span>
+                    </div>
+                 </div>
+
+                 <div className="flex justify-between items-center border-t border-white/10 pt-4 mb-4">
+                     <div className="flex flex-col">
+                         <span className="text-[8px] uppercase tracking-widest text-white/30 font-bold mb-1">Análise IA</span>
+                         <span className="text-[10px] text-white/80 font-medium italic line-clamp-2 max-w-[180px]">
+                            {lead.ai_analysis}
+                         </span>
+                     </div>
+                     
+                     {/* Score Circle Big */}
+                     <div className="relative w-12 h-12 flex items-center justify-center shrink-0 ml-2">
+                        <svg className="w-full h-full transform -rotate-90">
+                            <circle cx="24" cy="24" r="20" stroke="#222" strokeWidth="4" fill="transparent" />
+                            <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="4" fill="transparent"
+                                className={lead.lead_score > 70 ? 'text-green-500' : 'text-red-600'}
+                                strokeDasharray={126}
+                                strokeDashoffset={126 - (126 * lead.lead_score) / 100}
+                            />
+                        </svg>
+                        <span className="absolute text-sm font-black text-white">{lead.lead_score}</span>
+                     </div>
+                 </div>
+             </div>
+
+             {/* Botões de Ação Grandes */}
+             <div className="grid grid-cols-2 gap-px bg-[#111] mt-auto border-t border-white/5">
+                 <button 
+                    onClick={() => openWhatsApp(lead)}
+                    className="col-span-1 bg-[#0c0c0c] hover:bg-[#25D366] text-[#25D366] hover:text-black py-4 flex flex-col items-center justify-center transition-all gap-1 group/btn"
+                 >
+                     <PhoneIcon className="w-4 h-4 text-current mb-0.5" />
+                     <span className="text-[9px] font-black uppercase tracking-widest">WhatsApp</span>
+                 </button>
+
+                 <button 
+                    onClick={() => openInstagram(lead)}
+                    className="col-span-1 bg-[#0c0c0c] hover:bg-pink-600 text-pink-500 hover:text-white py-4 flex flex-col items-center justify-center transition-all gap-1"
+                 >
+                     <InstagramIcon />
+                     <span className="text-[9px] font-black uppercase tracking-widest mt-1">
+                        {lead.website?.includes('instagram') ? 'Abrir Insta' : 'Buscar Insta'}
+                     </span>
+                 </button>
+
+                 <button 
+                    onClick={() => copyPitch(lead)}
+                    className={`col-span-1 py-4 flex flex-col items-center justify-center transition-all gap-1 border-t border-white/5
+                        ${copiedId === lead.id ? 'bg-green-600 text-white' : 'bg-[#0c0c0c] hover:bg-white text-white hover:text-black'}
+                    `}
+                 >
+                     <span className="text-sm font-black">{copiedId === lead.id ? 'Copiado!' : 'Copy'}</span>
+                     <span className="text-[8px] font-black uppercase tracking-widest">Pitch</span>
+                 </button>
+
+                 {isArchived ? (
+                     <button 
+                        onClick={() => removeFromContacted(lead.id)}
+                        className="col-span-1 bg-[#0c0c0c] hover:bg-red-600 text-red-500 hover:text-white py-4 flex flex-col items-center justify-center transition-all gap-1 border-t border-white/5"
+                     >
+                         <span className="text-sm font-black">↩</span>
+                         <span className="text-[8px] font-black uppercase tracking-widest">Remover</span>
+                     </button>
+                 ) : (
+                     <button 
+                        onClick={() => markAsContacted(lead)}
+                        className="col-span-1 bg-[#0c0c0c] hover:bg-blue-600 text-blue-500 hover:text-white py-4 flex flex-col items-center justify-center transition-all gap-1 border-t border-white/5"
+                     >
+                         <span className="text-sm font-black">✓</span>
+                         <span className="text-[8px] font-black uppercase tracking-widest">Arquivar</span>
+                     </button>
+                 )}
+             </div>
+      </div>
+  );
+
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans flex flex-col overflow-hidden selection:bg-red-600 selection:text-white">
       {/* Top Bar Tech */}
@@ -262,7 +461,7 @@ Gostaria de apresentar uma proposta rápida de como podemos resolver isso. Podem
           </div>
           <div className="h-4 w-px bg-white/10"></div>
           <span className="text-[10px] font-mono text-white/50 uppercase tracking-widest hidden md:inline-block">
-            Intelligence Hub v4.1
+            Intelligence Hub v4.2
           </span>
         </div>
         
@@ -388,154 +587,7 @@ Gostaria de apresentar uma proposta rápida de como podemos resolver isso. Podem
                                  {/* GRID DE CARDS HIGH END - MAIOR E COM FOTOS */}
                                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8">
                                      {leads.map((lead) => (
-                                         <div key={lead.id} className="bg-[#0c0c0c] border border-white/10 rounded-3xl flex flex-col justify-between h-full group hover:border-red-600/50 transition-all duration-300 relative overflow-hidden shadow-2xl hover:shadow-[0_0_50px_rgba(220,38,38,0.1)]">
-                                             
-                                             {/* Imagem de Capa do Local */}
-                                             <div className="h-48 w-full bg-gray-900 relative overflow-hidden shrink-0">
-                                                 {lead.photos && lead.photos.length > 0 ? (
-                                                     <img 
-                                                        src={`/api/photo?ref=${lead.photos[0].photo_reference}`} 
-                                                        className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700"
-                                                        alt={lead.name}
-                                                     />
-                                                 ) : (
-                                                     <div className="w-full h-full bg-gradient-to-br from-gray-800 to-black flex items-center justify-center opacity-50">
-                                                         <Logo className="scale-75 opacity-20" />
-                                                     </div>
-                                                 )}
-                                                 
-                                                 {/* Overlay Gradient */}
-                                                 <div className="absolute inset-0 bg-gradient-to-t from-[#0c0c0c] via-[#0c0c0c]/60 to-transparent"></div>
-
-                                                 {/* Badges Flutuantes */}
-                                                 <div className="absolute top-4 left-4 flex gap-2">
-                                                     {lead.opening_hours?.open_now ? (
-                                                         <span className="bg-green-500/90 backdrop-blur text-black text-[9px] font-black px-2 py-1 rounded uppercase tracking-wide flex items-center gap-1">
-                                                             <span className="w-1.5 h-1.5 bg-black rounded-full animate-pulse"></span> Aberto
-                                                         </span>
-                                                     ) : (
-                                                         lead.opening_hours && (
-                                                             <span className="bg-red-600/90 backdrop-blur text-white text-[9px] font-black px-2 py-1 rounded uppercase tracking-wide">
-                                                                 Fechado
-                                                             </span>
-                                                         )
-                                                     )}
-                                                     {lead.price_level && (
-                                                         <span className="bg-black/60 backdrop-blur text-white text-[9px] font-black px-2 py-1 rounded uppercase tracking-wide border border-white/10">
-                                                             {Array(lead.price_level).fill('$').join('')}
-                                                         </span>
-                                                     )}
-                                                 </div>
-                                                 
-                                                 <div className="absolute top-4 right-4">
-                                                     <div className="bg-black/80 backdrop-blur border border-white/10 px-2 py-1 rounded-lg flex items-center gap-1">
-                                                         <span className="text-yellow-500 text-xs">★</span>
-                                                         <span className="text-white text-xs font-bold">{lead.rating}</span>
-                                                         <span className="text-white/40 text-[9px]">({lead.user_ratings_total})</span>
-                                                     </div>
-                                                 </div>
-                                             </div>
-
-                                             {/* Corpo do Card */}
-                                             <div className="p-6 relative -mt-6">
-                                                 <div className="flex justify-between items-start mb-2">
-                                                     <div className="flex gap-2 flex-wrap mb-2">
-                                                         {lead.types.slice(0, 3).map((t, idx) => (
-                                                             <span key={idx} className="bg-white/5 text-[8px] font-mono text-white/50 px-2 py-0.5 rounded border border-white/5 uppercase tracking-wide">
-                                                                 {t.replace(/_/g, ' ')}
-                                                             </span>
-                                                         ))}
-                                                     </div>
-                                                 </div>
-
-                                                 <h3 className="text-2xl font-black text-white uppercase leading-tight line-clamp-2 mb-3 group-hover:text-red-500 transition-colors h-16">
-                                                     {lead.name}
-                                                 </h3>
-                                                 
-                                                 <div className="flex items-start gap-2 mb-4 min-h-[40px]">
-                                                    <LocationIcon className="w-4 h-4 text-white/30 mt-0.5 shrink-0" />
-                                                    <p className="text-white/60 text-xs line-clamp-2 font-medium leading-relaxed">
-                                                        {lead.address}
-                                                    </p>
-                                                 </div>
-
-                                                 <div className="flex justify-between items-center border-t border-white/10 pt-4 mb-4">
-                                                     {lead.status_site === 'sem_site' ? (
-                                                         <div className="flex flex-col">
-                                                             <span className="text-[8px] uppercase tracking-widest text-red-500 font-bold mb-1">Status Web</span>
-                                                             <span className="flex items-center gap-1.5 text-red-500 font-black text-xs uppercase tracking-wider">
-                                                                 <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span> Sem Site
-                                                             </span>
-                                                         </div>
-                                                     ) : (
-                                                         <div className="flex flex-col">
-                                                             <span className="text-[8px] uppercase tracking-widest text-blue-400 font-bold mb-1">Status Web</span>
-                                                             <span className="flex items-center gap-1.5 text-blue-400 font-black text-xs uppercase tracking-wider">
-                                                                 <span className="w-2 h-2 bg-blue-400 rounded-full"></span> Online
-                                                             </span>
-                                                         </div>
-                                                     )}
-                                                     
-                                                     {/* Score Circle Big */}
-                                                     <div className="relative w-12 h-12 flex items-center justify-center">
-                                                        <svg className="w-full h-full transform -rotate-90">
-                                                            <circle cx="24" cy="24" r="20" stroke="#222" strokeWidth="4" fill="transparent" />
-                                                            <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="4" fill="transparent"
-                                                                className={lead.lead_score > 70 ? 'text-green-500' : 'text-red-600'}
-                                                                strokeDasharray={126}
-                                                                strokeDashoffset={126 - (126 * lead.lead_score) / 100}
-                                                            />
-                                                        </svg>
-                                                        <span className="absolute text-sm font-black text-white">{lead.lead_score}</span>
-                                                     </div>
-                                                 </div>
-
-                                                 {/* AI Analysis Box */}
-                                                 <div className="bg-white/[0.03] rounded-xl p-3 border border-white/5 relative mb-2">
-                                                     <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-xl ${lead.lead_score > 70 ? 'bg-green-600' : 'bg-red-600'}`}></div>
-                                                     <p className="text-[10px] text-white/70 italic leading-relaxed pl-3 font-medium">
-                                                         "{lead.ai_analysis}"
-                                                     </p>
-                                                 </div>
-                                             </div>
-
-                                             {/* Botões de Ação Grandes */}
-                                             <div className="grid grid-cols-2 gap-1 p-1 bg-[#111] mt-auto">
-                                                 <button 
-                                                    onClick={() => openWhatsApp(lead)}
-                                                    className="col-span-1 bg-[#0c0c0c] hover:bg-[#25D366] text-[#25D366] hover:text-black py-4 flex flex-col items-center justify-center transition-all gap-1 group/btn border border-white/5 rounded-xl"
-                                                 >
-                                                     <PhoneIcon className="w-5 h-5 text-current mb-1" />
-                                                     <span className="text-[9px] font-black uppercase tracking-widest">WhatsApp</span>
-                                                 </button>
-
-                                                 <button 
-                                                    onClick={() => openInstagram(lead)}
-                                                    className="col-span-1 bg-[#0c0c0c] hover:bg-pink-600 text-pink-500 hover:text-white py-4 flex flex-col items-center justify-center transition-all gap-1 border border-white/5 rounded-xl"
-                                                 >
-                                                     <InstagramIcon />
-                                                     <span className="text-[9px] font-black uppercase tracking-widest mt-1">Instagram</span>
-                                                 </button>
-
-                                                 <button 
-                                                    onClick={() => copyPitch(lead)}
-                                                    className={`col-span-1 py-4 flex flex-col items-center justify-center transition-all gap-1 border border-white/5 rounded-xl
-                                                        ${copiedId === lead.id ? 'bg-green-600 text-white' : 'bg-[#0c0c0c] hover:bg-white text-white hover:text-black'}
-                                                    `}
-                                                 >
-                                                     <span className="text-lg font-black">{copiedId === lead.id ? '✓' : '☷'}</span>
-                                                     <span className="text-[9px] font-black uppercase tracking-widest">Copy Pitch</span>
-                                                 </button>
-
-                                                 <button 
-                                                    onClick={() => markAsContacted(lead)}
-                                                    className="col-span-1 bg-[#0c0c0c] hover:bg-blue-600 text-blue-500 hover:text-white py-4 flex flex-col items-center justify-center transition-all gap-1 border border-white/5 rounded-xl"
-                                                 >
-                                                     <span className="text-lg font-black">✕</span>
-                                                     <span className="text-[9px] font-black uppercase tracking-widest">Arquivar</span>
-                                                 </button>
-                                             </div>
-                                         </div>
+                                         <LeadCard key={lead.id} lead={lead} />
                                      ))}
                                  </div>
                             </div>
@@ -581,26 +633,9 @@ Gostaria de apresentar uma proposta rápida de como podemos resolver isso. Podem
                                     <p className="text-sm font-black uppercase tracking-widest">Nenhum registro encontrado</p>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pb-20">
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8 pb-20">
                                     {filteredContactedLeads.map((lead) => (
-                                        <div key={lead.id} className="bg-[#0c0c0c] border border-white/5 rounded-xl p-4 opacity-60 hover:opacity-100 transition-opacity flex flex-col justify-between">
-                                            <div>
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <span className="text-[8px] font-mono text-blue-500 uppercase border border-blue-900/30 px-1.5 py-0.5 rounded">Processado</span>
-                                                    <span className="text-[8px] text-white/30">{new Date(lead.contactedAt || '').toLocaleDateString()}</span>
-                                                </div>
-                                                <h4 className="text-white font-bold uppercase line-clamp-1 mb-1">{lead.name}</h4>
-                                                <p className="text-white/40 text-[10px] line-clamp-1">{lead.address}</p>
-                                            </div>
-                                            <div className="mt-4 pt-3 border-t border-white/5 flex justify-end gap-2">
-                                                <button onClick={() => openWhatsApp(lead)} className="text-white/20 hover:text-green-500 transition-colors" title="Chamar Novamente">
-                                                    <PhoneIcon className="w-4 h-4 text-current" />
-                                                </button>
-                                                <button onClick={() => openInstagram(lead)} className="text-white/20 hover:text-pink-500 transition-colors" title="Ver Instagram">
-                                                    <InstagramIcon />
-                                                </button>
-                                            </div>
-                                        </div>
+                                        <LeadCard key={lead.id} lead={lead} isArchived={true} />
                                     ))}
                                 </div>
                             )}

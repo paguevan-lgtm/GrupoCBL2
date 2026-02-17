@@ -10,6 +10,7 @@ import { ZapIcon } from './icons/ZapIcon';
 import { XIcon } from './icons/XIcon';
 import { ConsultingIcon } from './icons/ConsultingIcon'; 
 import { BrainIcon } from './icons/BrainIcon';
+import { MegaphoneIcon } from './icons/MegaphoneIcon';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -60,7 +61,283 @@ interface FinancialGoal {
     current: number;
 }
 
+// Interface para Marketing
+interface AdsStrategy {
+    niche: string;
+    total_budget: string;
+    allocation: {
+        google_percent: number;
+        meta_percent: number;
+        google_value: string;
+        meta_value: string;
+    };
+    google_ads: {
+        campaign_type: string;
+        keywords: string[];
+        headline: string;
+        description: string;
+    };
+    meta_ads: {
+        objective: string;
+        audience_interests: string[];
+        creative_idea: string;
+        copy_hook: string;
+        copy_body: string;
+    };
+    tactical_tip: string;
+}
+
 type SearchMode = 'standard' | 'whale' | 'crisis' | 'ghost';
+
+// --- COMPONENTE: MARKETING COMMAND ---
+const MarketingCommand = () => {
+    const [formData, setFormData] = useState({ niche: '', city: '', budget: '' });
+    const [isLoading, setIsLoading] = useState(false);
+    const [strategy, setStrategy] = useState<AdsStrategy | null>(null);
+
+    const generateStrategy = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!formData.niche || !formData.budget) return;
+
+        setIsLoading(true);
+        setStrategy(null);
+
+        const prompt = `
+            Atue como um Gestor de Tráfego Sênior do Grupo CBL.
+            Crie uma estratégia de ADS REALISTA e DETALHADA para:
+            Nicho: ${formData.niche}
+            Cidade: ${formData.city || 'Geral'}
+            Verba Mensal: R$ ${formData.budget}
+
+            JSON ESTRITO DE SAÍDA:
+            {
+                "niche": "${formData.niche}",
+                "total_budget": "R$ ${formData.budget}",
+                "allocation": {
+                    "google_percent": (número ex: 40),
+                    "meta_percent": (número ex: 60),
+                    "google_value": "Valor em R$",
+                    "meta_value": "Valor em R$"
+                },
+                "google_ads": {
+                    "campaign_type": "Ex: Rede de Pesquisa - Fundo de Funil",
+                    "keywords": ["palavra1", "palavra2", "palavra3"],
+                    "headline": "Título Matador para o Anúncio (Max 30 chars)",
+                    "description": "Descrição persuasiva para o Google (Max 90 chars)"
+                },
+                "meta_ads": {
+                    "objective": "Ex: Mensagens no WhatsApp",
+                    "audience_interests": ["Interesse 1", "Interesse 2"],
+                    "creative_idea": "Descreva visualmente a imagem ou vídeo que deve ser feito. Seja específico.",
+                    "copy_hook": "A primeira frase para prender atenção (Atenção)",
+                    "copy_body": "O restante do texto focando em desejo e chamada para ação."
+                },
+                "tactical_tip": "Uma dica de ouro sobre como converter esses leads (ex: tempo de resposta, script de vendas)."
+            }
+        `;
+
+        try {
+            const response = await fetch('/api/gemini', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: prompt,
+                    model: 'gemini-3-flash-preview',
+                    config: { responseMimeType: 'application/json' }
+                })
+            });
+
+            const data = await response.json();
+            const cleanText = data.text.replace(/^```json/, '').replace(/```$/, '').trim();
+            setStrategy(JSON.parse(cleanText));
+        } catch (error) {
+            console.error(error);
+            alert("Erro ao gerar estratégia. Tente novamente.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <div className="h-full flex flex-col bg-[#0c0c0c] overflow-hidden animate-in fade-in">
+            <div className="p-6 border-b border-white/10 bg-[#111] shrink-0 flex justify-between items-center">
+                <div>
+                    <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter flex items-center gap-3">
+                        <MegaphoneIcon className="w-6 h-6 text-red-600" />
+                        Marketing Command
+                    </h2>
+                    <p className="text-white/40 text-[10px] uppercase tracking-widest mt-1">Gerador de Campanhas de Alta Performance</p>
+                </div>
+            </div>
+
+            <div className="flex-1 flex overflow-hidden">
+                {/* Sidebar Input */}
+                <div className="w-80 bg-[#0a0a0a] border-r border-white/10 p-6 flex flex-col gap-6 shrink-0 overflow-y-auto">
+                    <form onSubmit={generateStrategy} className="space-y-5">
+                        <div className="space-y-1">
+                            <label className="text-[9px] font-black text-red-600 uppercase tracking-widest">Nicho do Cliente</label>
+                            <input 
+                                type="text" 
+                                placeholder="Ex: Hamburgueria Artesanal" 
+                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-red-600 outline-none"
+                                value={formData.niche}
+                                onChange={e => setFormData({...formData, niche: e.target.value})}
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[9px] font-black text-white/40 uppercase tracking-widest">Cidade / Região</label>
+                            <input 
+                                type="text" 
+                                placeholder="Ex: Santos, SP" 
+                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-white/30 outline-none"
+                                value={formData.city}
+                                onChange={e => setFormData({...formData, city: e.target.value})}
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[9px] font-black text-white/40 uppercase tracking-widest">Verba Mensal (R$)</label>
+                            <input 
+                                type="number" 
+                                placeholder="1000" 
+                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-white/30 outline-none"
+                                value={formData.budget}
+                                onChange={e => setFormData({...formData, budget: e.target.value})}
+                            />
+                        </div>
+                        <button 
+                            type="submit" 
+                            disabled={isLoading}
+                            className="w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-xl font-black uppercase text-xs tracking-[0.2em] shadow-lg shadow-red-600/20 active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                        >
+                            {isLoading ? <SpinnerIcon /> : 'GERAR ESTRATÉGIA'}
+                        </button>
+                    </form>
+                    
+                    <div className="mt-auto p-4 bg-white/5 rounded-xl border border-white/5">
+                        <p className="text-[9px] text-white/30 leading-relaxed">
+                            <strong className="text-white">Dica:</strong> Use isso para fechar contratos. Mostre ao cliente exatamente como você vai investir o dinheiro dele. Isso gera autoridade imediata.
+                        </p>
+                    </div>
+                </div>
+
+                {/* Output Area */}
+                <div className="flex-1 overflow-y-auto p-8 bg-[#0c0c0c] custom-scrollbar">
+                    {!strategy && !isLoading && (
+                        <div className="h-full flex flex-col items-center justify-center text-white/20">
+                            <MegaphoneIcon className="w-24 h-24 mb-6 opacity-20" />
+                            <p className="text-sm font-mono uppercase tracking-widest">Aguardando dados da missão...</p>
+                        </div>
+                    )}
+
+                    {isLoading && (
+                        <div className="h-full flex flex-col items-center justify-center space-y-6">
+                            <div className="relative w-20 h-20">
+                                <div className="absolute inset-0 border-t-2 border-red-600 rounded-full animate-spin"></div>
+                                <div className="absolute inset-2 border-r-2 border-white/20 rounded-full animate-spin"></div>
+                            </div>
+                            <p className="text-red-500 font-black uppercase tracking-[0.3em] animate-pulse text-xs">Calculando ROI Previsível...</p>
+                        </div>
+                    )}
+
+                    {strategy && (
+                        <div className="max-w-4xl mx-auto space-y-8 animate-in slide-in-from-bottom-10 duration-500">
+                            
+                            {/* Budget Allocation */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="bg-[#111] border border-white/10 p-6 rounded-2xl relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 p-4 opacity-10"><Logo /></div>
+                                    <h3 className="text-white/50 text-[10px] uppercase tracking-[0.2em] font-black mb-4">Google Ads (Captura)</h3>
+                                    <div className="text-3xl font-black text-white mb-1">{strategy.allocation.google_value}</div>
+                                    <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden mb-2">
+                                        <div className="h-full bg-blue-500" style={{ width: `${strategy.allocation.google_percent}%` }}></div>
+                                    </div>
+                                    <span className="text-blue-500 text-xs font-bold">{strategy.allocation.google_percent}% do Budget</span>
+                                </div>
+                                <div className="bg-[#111] border border-white/10 p-6 rounded-2xl relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 p-4 opacity-10"><Logo /></div>
+                                    <h3 className="text-white/50 text-[10px] uppercase tracking-[0.2em] font-black mb-4">Meta Ads (Atração)</h3>
+                                    <div className="text-3xl font-black text-white mb-1">{strategy.allocation.meta_value}</div>
+                                    <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden mb-2">
+                                        <div className="h-full bg-purple-500" style={{ width: `${strategy.allocation.meta_percent}%` }}></div>
+                                    </div>
+                                    <span className="text-purple-500 text-xs font-bold">{strategy.allocation.meta_percent}% do Budget</span>
+                                </div>
+                            </div>
+
+                            {/* Google Strategy */}
+                            <div className="bg-[#111] border-l-2 border-blue-500 p-6 rounded-r-2xl space-y-4">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="bg-blue-500/10 text-blue-500 px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest">Google Search</span>
+                                    <span className="text-white/40 text-[10px] uppercase font-bold">{strategy.google_ads.campaign_type}</span>
+                                </div>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-[9px] text-white/30 uppercase tracking-widest mb-1">Palavras-Chave</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {strategy.google_ads.keywords.map((kw, i) => (
+                                                <span key={i} className="bg-white/5 text-white text-xs px-3 py-1 rounded border border-white/10">{kw}</span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="bg-[#050505] p-4 rounded-xl border border-white/5">
+                                        <p className="text-blue-400 text-sm font-bold mb-1 hover:underline cursor-pointer">{strategy.google_ads.headline}</p>
+                                        <p className="text-green-500 text-xs mb-1">Anúncio • www.seusite.com.br</p>
+                                        <p className="text-white/60 text-xs">{strategy.google_ads.description}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Meta Strategy */}
+                            <div className="bg-[#111] border-l-2 border-purple-500 p-6 rounded-r-2xl space-y-6">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="bg-purple-500/10 text-purple-500 px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest">Instagram / Facebook</span>
+                                    <span className="text-white/40 text-[10px] uppercase font-bold">{strategy.meta_ads.objective}</span>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-[9px] text-white/30 uppercase tracking-widest mb-2">Criativo (Imagem/Vídeo)</label>
+                                            <p className="text-white text-sm font-light leading-relaxed bg-white/5 p-3 rounded-lg border border-white/5 italic">
+                                                "{strategy.meta_ads.creative_idea}"
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[9px] text-white/30 uppercase tracking-widest mb-2">Público (Interesses)</label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {strategy.meta_ads.audience_interests.map((int, i) => (
+                                                    <span key={i} className="bg-purple-900/20 text-purple-300 text-[10px] px-2 py-1 rounded border border-purple-500/20 uppercase">{int}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <label className="block text-[9px] text-white/30 uppercase tracking-widest mb-2">Copy (Legenda)</label>
+                                        <div className="bg-[#050505] p-4 rounded-xl border border-white/5 text-sm text-white/80 h-full">
+                                            <p className="font-bold text-white mb-2">{strategy.meta_ads.copy_hook}</p>
+                                            <p className="whitespace-pre-wrap text-xs text-white/60 leading-relaxed">{strategy.meta_ads.copy_body}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Tactical Tip */}
+                            <div className="bg-gradient-to-r from-yellow-900/20 to-transparent border border-yellow-600/30 p-4 rounded-xl flex gap-4 items-start">
+                                <div className="mt-1"><ZapIcon className="w-5 h-5 text-yellow-500" /></div>
+                                <div>
+                                    <h4 className="text-yellow-500 font-black uppercase text-[10px] tracking-widest mb-1">Dica Tática CBL</h4>
+                                    <p className="text-white text-xs leading-relaxed">{strategy.tactical_tip}</p>
+                                </div>
+                            </div>
+
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
 
 // --- COMPONENTE: STRATEGIC WAR ROOM ---
 const StrategicWarRoom = () => {
@@ -343,43 +620,25 @@ const LeadStrategyModal = ({
     const [editablePitch, setEditablePitch] = useState('');
     const [showAiReasoning, setShowAiReasoning] = useState(false);
 
-    // Lógica de Precificação - MODO DE ENTRADA (Preços mais acessíveis)
+    // Lógica de Precificação
     const getPricingStrategy = () => {
         const level = lead.price_level || 1;
-        if (level >= 3) { // Whale / High End
-            return {
-                setup: "R$ 2.500,00",
-                monthly: "R$ 800,00",
-                label: "High Ticket",
-                color: "text-blue-400"
-            };
-        } else if (level === 2) { // Médio
-            return {
-                setup: "R$ 1.200,00",
-                monthly: "R$ 450,00",
-                label: "Standard",
-                color: "text-green-400"
-            };
-        } else { // Pequeno / Popular
-            return {
-                setup: "Isento (12 meses)",
-                monthly: "R$ 299,00",
-                label: "Entrada",
-                color: "text-white"
-            };
+        if (level >= 3) {
+            return { setup: "R$ 2.500,00", monthly: "R$ 800,00", label: "High Ticket", color: "text-blue-400" };
+        } else if (level === 2) {
+            return { setup: "R$ 1.200,00", monthly: "R$ 450,00", label: "Standard", color: "text-green-400" };
+        } else {
+            return { setup: "Isento (12 meses)", monthly: "R$ 299,00", label: "Entrada", color: "text-white" };
         }
     };
 
-    // Gera o Pitch baseado no template salvo
     useEffect(() => {
         let template = customScripts.standard;
-        
         if (lead.rating < 4.0) template = customScripts.crisis;
         else if (lead.status_site === 'sem_site') template = customScripts.ghost;
         else if (lead.status_site === 'site_basico') template = customScripts.basic;
         else if (lead.price_level && lead.price_level >= 3) template = customScripts.whale;
 
-        // Replace variáveis
         const companyName = lead.name.split('-')[0].trim();
         const neighborhood = lead.address.split(',')[1]?.split('-')[0]?.trim() || "sua região";
         const platform = lead.website?.includes('anota') ? 'Anota AI' : (lead.website?.includes('linktr') ? 'Linktree' : 'Link na Bio');
@@ -393,10 +652,9 @@ const LeadStrategyModal = ({
         setEditablePitch(finalPitch);
     }, [lead, customScripts]);
 
-    // Lógica de Produtos para Vender
+    // Arsenal de Vendas
     const getSalesArsenal = () => {
         const products = [];
-        
         if (lead.status_site === 'sem_site') {
             products.push({ name: "Site Institucional", priority: "ALTA", reason: "Urgência: Invisível no Google." });
             products.push({ name: "Google Meu Negócio", priority: "ALTA", reason: "Fundamental para ser achado." });
@@ -406,28 +664,58 @@ const LeadStrategyModal = ({
         } else {
             products.push({ name: "Landing Page", priority: "MÉDIA", reason: "Vender produto específico." });
         }
-
         if (lead.rating < 4.2) {
             products.push({ name: "Gestão de Reviews", priority: "CRÍTICA", reason: `Nota ${lead.rating} espanta clientes.` });
         } 
-        
         return products;
     };
 
+    // Lógica IA Expandida com Táticas
     const getAiReasoning = () => {
-        const points = [];
-        if (lead.rating < 4.0) points.push(`🔴 CRÍTICO: Nota ${lead.rating} está abaixo da linha de confiança (4.2).`);
-        if (lead.user_ratings_total < 10) points.push(`⚠️ ALERTA: Poucas avaliações (${lead.user_ratings_total}). Empresa parece fantasma.`);
-        if (lead.status_site === 'sem_site') points.push(`👻 OPORTUNIDADE: Empresa sem site perde 30% de tráfego orgânico.`);
-        if (lead.status_site === 'site_basico') points.push(`📉 MELHORIA: Usa link básico. Site próprio aumenta conversão em 200%.`);
-        if (lead.price_level && lead.price_level >= 3) points.push(`💰 POTENCIAL: Ticket alto ($$$) indica verba para marketing.`);
+        const insights = [];
         
-        return points;
+        if (lead.rating < 4.0) {
+            insights.push({
+                type: 'critical',
+                title: `Reputação Comprometida (${lead.rating})`,
+                tactic: "Implementar automação de reviews via QR Code no balcão e disparo de WhatsApp pós-venda para clientes satisfeitos."
+            });
+        }
+        if (lead.user_ratings_total < 10) {
+            insights.push({
+                type: 'warning',
+                title: "Invisibilidade Social",
+                tactic: "Campanha 'Avalie e Ganhe': Oferecer um benefício imediato (café, desconto) em troca da primeira avaliação no Google."
+            });
+        }
+        if (lead.status_site === 'sem_site') {
+            insights.push({
+                type: 'opportunity',
+                title: "Perda de Tráfego Orgânico",
+                tactic: "Criar One-Page Site otimizado para SEO local ('Melhor [Nicho] em [Bairro]') para capturar buscas de intenção."
+            });
+        }
+        if (lead.status_site === 'site_basico') {
+            insights.push({
+                type: 'improvement',
+                title: "Experiência Amadora (Linktree/Básico)",
+                tactic: "Substituir por Site Institucional com fotos profissionais para aumentar percepção de valor e justificar preços maiores."
+            });
+        }
+        if (lead.price_level && lead.price_level >= 3) {
+            insights.push({
+                type: 'money',
+                title: "Público High Ticket",
+                tactic: "Focar pitch em 'Exclusividade' e 'Posicionamento Premium'. Oferecer Landing Page de luxo."
+            });
+        }
+        
+        return insights;
     };
 
     const pricing = getPricingStrategy();
     const arsenal = getSalesArsenal();
-    const logicPoints = getAiReasoning();
+    const insights = getAiReasoning();
 
     return (
         <div className="fixed inset-0 z-[200] flex items-end md:items-center justify-center bg-black/90 backdrop-blur-sm md:p-4 animate-in fade-in duration-200" onClick={onClose}>
@@ -524,7 +812,7 @@ const LeadStrategyModal = ({
                         {/* Coluna Direita: Editor de Script e Lógica IA (8 cols) */}
                         <div className="lg:col-span-8 flex flex-col h-full">
                              
-                             {/* AI Reasoning Expander */}
+                             {/* AI Reasoning Expander - MELHORADO */}
                              <div className="mb-4">
                                 <button 
                                     onClick={() => setShowAiReasoning(!showAiReasoning)}
@@ -532,17 +820,27 @@ const LeadStrategyModal = ({
                                 >
                                     <div className="flex items-center gap-2">
                                         <ZapIcon className="w-4 h-4 text-red-500" />
-                                        <span className="text-xs font-bold text-white uppercase tracking-wider">Por que a IA escolheu este lead?</span>
+                                        <span className="text-xs font-bold text-white uppercase tracking-wider">Análise Tática & Implementação</span>
                                     </div>
                                     <span className={`text-white/40 transition-transform ${showAiReasoning ? 'rotate-180' : ''}`}>▼</span>
                                 </button>
                                 {showAiReasoning && (
-                                    <div className="mt-2 bg-[#080808] border border-white/5 rounded-xl p-4 animate-in slide-in-from-top-2">
-                                        <ul className="space-y-2">
-                                            {logicPoints.map((point, i) => (
-                                                <li key={i} className="text-xs text-white/70 font-mono border-l-2 border-white/10 pl-3">{point}</li>
-                                            ))}
-                                        </ul>
+                                    <div className="mt-2 bg-[#080808] border border-white/5 rounded-xl p-4 animate-in slide-in-from-top-2 space-y-3">
+                                        {insights.map((insight, i) => (
+                                            <div key={i} className="flex gap-3 items-start pb-3 border-b border-white/5 last:border-0 last:pb-0">
+                                                <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${
+                                                    insight.type === 'critical' ? 'bg-red-500 shadow-[0_0_5px_red]' : 
+                                                    (insight.type === 'money' ? 'bg-green-500' : 'bg-blue-500')
+                                                }`}></div>
+                                                <div>
+                                                    <p className="text-xs font-bold text-white mb-1 uppercase tracking-wide">{insight.title}</p>
+                                                    <div className="bg-white/5 p-2 rounded-lg border border-white/5">
+                                                        <span className="block text-[9px] text-white/40 font-black uppercase tracking-widest mb-1">Como Resolver (Tática):</span>
+                                                        <p className="text-[11px] text-white/70 font-light leading-relaxed">{insight.tactic}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
                              </div>
@@ -659,7 +957,7 @@ const ScriptManager = ({ scripts, onSave }: { scripts: typeof DEFAULT_SCRIPTS, o
 
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
-  const [activeTab, setActiveTab] = useState<'search' | 'contacted' | 'scripts' | 'brainstorm'>('search');
+  const [activeTab, setActiveTab] = useState<'search' | 'contacted' | 'scripts' | 'brainstorm' | 'marketing'>('search');
   
   // Script State
   const [customScripts, setCustomScripts] = useState<typeof DEFAULT_SCRIPTS>(DEFAULT_SCRIPTS);
@@ -965,6 +1263,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
              <button onClick={() => setActiveTab('search')} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 relative group ${activeTab === 'search' ? 'bg-red-600 text-white shadow-[0_0_20px_rgba(220,38,38,0.4)]' : 'text-white/40 hover:bg-white/10 hover:text-white'}`} title="Pesquisar Leads"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" /></svg></button>
              <button onClick={() => setActiveTab('contacted')} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 relative group ${activeTab === 'contacted' ? 'bg-blue-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.4)]' : 'text-white/40 hover:bg-white/10 hover:text-white'}`} title="Chamados / Histórico"><div className="absolute -top-1 -right-1 w-4 h-4 bg-black border border-white/20 rounded-full flex items-center justify-center text-[8px] font-bold text-white z-10">{contactedLeads.length}</div><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" /><path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" /></svg></button>
              <button onClick={() => setActiveTab('brainstorm')} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 relative group ${activeTab === 'brainstorm' ? 'bg-purple-600 text-white shadow-[0_0_20px_rgba(147,51,234,0.4)]' : 'text-white/40 hover:bg-white/10 hover:text-white'}`} title="War Room"><BrainIcon className="w-5 h-5" /></button>
+             <button onClick={() => setActiveTab('marketing')} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 relative group ${activeTab === 'marketing' ? 'bg-yellow-600 text-white shadow-[0_0_20px_rgba(202,138,4,0.4)]' : 'text-white/40 hover:bg-white/10 hover:text-white'}`} title="Marketing Command"><MegaphoneIcon className="w-5 h-5" /></button>
              <button onClick={() => setActiveTab('scripts')} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 relative group ${activeTab === 'scripts' ? 'bg-green-600 text-white shadow-[0_0_20px_rgba(34,197,94,0.4)]' : 'text-white/40 hover:bg-white/10 hover:text-white'}`} title="Configurar Scripts"><ConsultingIcon /></button>
         </aside>
 
@@ -1026,6 +1325,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             {activeTab === 'brainstorm' && (
                 <div className="flex-1 overflow-hidden h-full">
                     <StrategicWarRoom />
+                </div>
+            )}
+
+            {activeTab === 'marketing' && (
+                <div className="flex-1 overflow-hidden h-full">
+                    <MarketingCommand />
                 </div>
             )}
             

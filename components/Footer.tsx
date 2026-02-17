@@ -6,7 +6,11 @@ import { LocationIcon } from './icons/LocationIcon';
 import { InstagramIcon } from './icons/InstagramIcon';
 import { EmailIcon } from './icons/EmailIcon';
 
-const Footer: React.FC = () => {
+interface FooterProps {
+    onOpenAdmin?: () => void;
+}
+
+const Footer: React.FC<FooterProps> = ({ onOpenAdmin }) => {
   return (
     <footer className="bg-black py-24 border-t border-white/5 relative overflow-hidden">
       {/* Background Element - Adjusted for mobile visibility */}
@@ -68,9 +72,21 @@ const Footer: React.FC = () => {
             <p className="text-[10px] text-white/20 font-black uppercase tracking-[0.3em] text-center md:text-left">
               &copy; {new Date().getFullYear()} Grupo CBL Soluções Digitais. All Rights Reserved.
             </p>
-            <div className="flex flex-wrap justify-center gap-6 md:gap-10">
+            <div className="flex flex-wrap justify-center items-center gap-6 md:gap-10">
                 <a href="#" className="text-[9px] text-white/20 hover:text-white font-black uppercase tracking-widest transition-colors">Políticas de Segurança</a>
-                <a href="#" className="text-[9px] text-white/20 hover:text-white font-black uppercase tracking-widest transition-colors">Termos de Atendimento</a>
+                
+                {/* Botão de Admin Discreto */}
+                {onOpenAdmin && (
+                    <button 
+                        onClick={(e) => { e.preventDefault(); onOpenAdmin(); }}
+                        className="text-white/10 hover:text-white/40 transition-colors p-2"
+                        title="Acesso Administrativo"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                        </svg>
+                    </button>
+                )}
             </div>
         </div>
 

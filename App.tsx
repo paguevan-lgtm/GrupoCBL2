@@ -10,27 +10,22 @@ import Footer from './components/Footer';
 import DiagnosticModal from './components/DiagnosticModal';
 import ImagineSiteModal from './components/ImagineSiteModal';
 import NeuroSalesModal from './components/NeuroSalesModal';
+import AdminLoginModal from './components/AdminLoginModal';
+import AdminDashboard from './components/AdminDashboard';
 import IntroAnimation from './components/IntroAnimation';
-import AdminPanel from './components/AdminPanel';
 import { Toast } from './components/Toast';
 import { ScrollProgress } from './components/ui/ScrollProgress';
 
 const App: React.FC = () => {
-  // Verificação de Rota Administrativa
-  const [isAdminRoute, setIsAdminRoute] = useState(false);
-
-  useEffect(() => {
-    // Verifica se a URL contém /PAINEL ou /painel
-    const path = window.location.pathname;
-    if (path === '/PAINEL' || path === '/painel') {
-      setIsAdminRoute(true);
-    }
-  }, []);
-
+  // Estados do Site Público
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isImagineModalOpen, setIsImagineModalOpen] = useState(false);
   const [isNeuroModalOpen, setIsNeuroModalOpen] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
+  
+  // Estados Administrativos
+  const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   
   // Toast State
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -41,18 +36,30 @@ const App: React.FC = () => {
 
   // Impede a rolagem durante a introdução E quando modais estão abertos
   useEffect(() => {
-    if (!isAdminRoute && (showIntro || isModalOpen || isImagineModalOpen || isNeuroModalOpen)) {
+    if (showIntro || isModalOpen || isImagineModalOpen || isNeuroModalOpen || isAdminLoginOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
     }
-  }, [showIntro, isModalOpen, isImagineModalOpen, isNeuroModalOpen, isAdminRoute]);
+  }, [showIntro, isModalOpen, isImagineModalOpen, isNeuroModalOpen, isAdminLoginOpen]);
 
-  // Se for rota administrativa, renderiza apenas o painel
-  if (isAdminRoute) {
-    return <AdminPanel />;
+  // Se o Admin estiver logado, renderiza APENAS o Dashboard (O site principal "some")
+  if (isAdminLoggedIn) {
+    return (
+      <>
+        {toast && (
+          <Toast 
+            message={toast.message} 
+            type={toast.type} 
+            onClose={() => setToast(null)} 
+          />
+        )}
+        <AdminDashboard onLogout={() => setIsAdminLoggedIn(false)} />
+      </>
+    );
   }
 
+  // Renderização do Site Público
   return (
     <div className="bg-[#1A1A1A] text-white antialiased selection:bg-red-600 selection:text-white">
       {/* Componentes de UI Globais */}
@@ -81,7 +88,9 @@ const App: React.FC = () => {
         <DifferentiatorsSection />
         <CtaSection onOpenModal={() => setIsModalOpen(true)} />
       </main>
-      <Footer />
+      
+      {/* Footer recebe a função para abrir o login admin */}
+      <Footer onOpenAdmin={() => setIsAdminLoginOpen(true)} />
       
       <DiagnosticModal 
         isOpen={isModalOpen} 
@@ -101,6 +110,17 @@ const App: React.FC = () => {
         onOpenDiagnostic={() => {
           setIsNeuroModalOpen(false);
           setTimeout(() => setIsModalOpen(true), 300);
+        }}
+        onShowToast={showToast}
+      />
+
+      {/* Modal de Login Admin */}
+      <AdminLoginModal 
+        isOpen={isAdminLoginOpen}
+        onClose={() => setIsAdminLoginOpen(false)}
+        onLoginSuccess={() => {
+            setIsAdminLoginOpen(false);
+            setIsAdminLoggedIn(true);
         }}
         onShowToast={showToast}
       />

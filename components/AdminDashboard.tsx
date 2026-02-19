@@ -135,11 +135,32 @@ const HistoryMap = ({ leads }: { leads: Lead[] }) => {
             return;
         }
 
-        // Cria e injeta o script
+        // TENTA RECUPERAR A CHAVE DE FORMA ROBUSTA (VITE OU NEXT.JS)
+        let apiKey = '';
+        
+        // 1. Tenta VITE (Padrão para projetos React modernos/Vite)
+        try {
+            // @ts-ignore
+            if (import.meta && import.meta.env && import.meta.env.VITE_API_KEY) {
+                // @ts-ignore
+                apiKey = import.meta.env.VITE_API_KEY;
+            }
+        } catch (e) {}
+
+        // 2. Tenta Next.js ou Node Standard (Fallback)
+        if (!apiKey && typeof process !== 'undefined' && process.env) {
+            apiKey = process.env.NEXT_PUBLIC_API_KEY || process.env.API_KEY || '';
+        }
+
+        if (!apiKey) {
+            console.error("Google Maps API Key not found. Please set VITE_API_KEY or NEXT_PUBLIC_API_KEY.");
+            setMapError(true);
+            return;
+        }
+
+        // Cria e injeta o script com loading=async para evitar warnings
         const script = document.createElement('script');
-        // Usa process.env.API_KEY. Se estiver usando Next.js, certifique-se de que essa variável é exposta ao cliente 
-        // (geralmente prefixada com NEXT_PUBLIC_ no .env e chamada aqui, ou configurada no next.config.js)
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.API_KEY}&libraries=places`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async&v=weekly`;
         script.async = true;
         script.defer = true;
         script.onload = () => setIsLoaded(true);
@@ -310,7 +331,7 @@ const HistoryMap = ({ leads }: { leads: Lead[] }) => {
             <div className="w-full h-full flex flex-col items-center justify-center bg-[#0c0c0c] border border-white/10 rounded-3xl p-8 text-center">
                 <LocationIcon className="w-12 h-12 text-white/20 mb-4" />
                 <h3 className="text-white font-black uppercase tracking-widest mb-2">Erro no Mapa</h3>
-                <p className="text-white/40 text-xs">Não foi possível carregar o Google Maps. Verifique sua chave de API.</p>
+                <p className="text-white/40 text-xs">Chave de API inválida ou não encontrada.<br/>Verifique: VITE_API_KEY ou NEXT_PUBLIC_API_KEY.</p>
             </div>
         );
     }

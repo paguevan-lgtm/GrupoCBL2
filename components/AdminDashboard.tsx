@@ -154,12 +154,19 @@ const MarketingCommand = () => {
                     config: { responseMimeType: 'application/json' }
                 })
             });
+            
             const data = await response.json();
+            
+            // Correção de Segurança: Verifica se data.text existe
+            if (!data || !data.text) {
+                throw new Error("A IA não retornou uma resposta válida. Tente novamente.");
+            }
+
             const cleanText = data.text.replace(/```json/g, '').replace(/```/g, '');
             setStrategy(JSON.parse(cleanText));
         } catch (error) {
             console.error(error);
-            alert("Erro ao gerar estratégia.");
+            alert("Erro ao gerar estratégia. Tente novamente.");
         } finally {
             setIsLoading(false);
         }
@@ -329,25 +336,35 @@ const LeadStrategyModal = ({
             const priceLevel = lead.price_level ? '$$$ (Alto Padrão)' : 'N/A';
 
             const prompt = `
-                ATUE COMO: Consultor Sênior de Vendas B2B e Estrategista Digital do Grupo CBL.
+                ATUE COMO: O melhor e mais persuasivo Copywriter de Vendas B2B do Brasil, especialista em Cold Messaging.
                 
-                DADOS DO LEAD (CLIENTE EM PROSPECÇÃO):
-                Nome: ${companyName}
-                Nota Google: ${rating} (${reviewCount} avaliações)
-                Endereço: ${address}
-                Presença Digital: ${hasSite ? "Sim" : "Não"} (${siteType})
-                Nível de Preço Estimado: ${priceLevel}
+                CONTEXTO: Você está prospectando o cliente "${companyName}" localizado em "${address}".
                 
-                TAREFA: Gere uma análise estratégica COMPLETA para fechar este cliente.
+                DADOS DO ALVO:
+                - Nota Google: ${rating} (${reviewCount} avaliações).
+                - Presença Digital: ${hasSite ? "Tem site ("+siteType+")" : "NÃO TEM SITE (Isso é uma falha grave)"}.
+                - Nível: ${priceLevel}.
 
-                RETORNE UM JSON ESTRITO COM ESTA ESTRUTURA:
+                MISSÃO: Escreva uma abordagem de venda (Pitch) ÚNICA e EXCLUSIVA para este cliente.
+                
+                REGRAS ABSOLUTAS (LEIA COM ATENÇÃO):
+                1. PROIBIDO USAR TEMPLATES PRONTOS. Não use frases genéricas como "Olá, vi sua empresa no Google".
+                2. SEJA ESPECÍFICO: Tente inferir o nicho pelo nome. Se for "Pizzaria X", fale de fome/pedidos. Se for "Clínica Y", fale de pacientes/agenda. Se for "Oficina Z", fale de carros.
+                3. USE OS DADOS:
+                   - Se a nota for baixa (< 4.2), comece falando: "Vi que vocês têm algumas reclamações recentes no Google..." (Toque na ferida).
+                   - Se não tiver site, comece: "Procurei o site da ${companyName} pra fazer um pedido/agendamento e não achei nada..."
+                   - Se for tudo perfeito, elogie a reputação e ofereça escala.
+                4. TOM DE VOZ: Casual, direto, como um cliente oculto ou consultor preocupado. Não pareça um robô de telemarketing.
+                5. FECHAMENTO: Termine com uma pergunta que force resposta (ex: "Vocês cuidam disso aí ou é terceirizado?").
+
+                SAÍDA JSON ESTRITA:
                 {
-                    "pitch": "Texto curto para WhatsApp (max 300 chars). Deve ser PESSOAL, citar o bairro/cidade, tocar na dor (ex: nota baixa = reputação; sem site = invisibilidade) e terminar com pergunta de fechamento.",
-                    "products_to_sell": ["Lista de 3 produtos ideais (ex: Gestão de Tráfego, Site High-End, Automação de Reviews)"],
-                    "sales_strategy": "Qual abordagem usar? (ex: Medo da concorrência, Ganância por escala, Vaidade da marca)",
-                    "suggested_pricing": "Sugestão de valor (ex: Setup R$ 1.500 + Recorrência R$ 500)",
-                    "conquest_tip": "Uma dica psicológica ou 'hack' para ganhar a confiança desse dono específico.",
-                    "pain_points": ["Lista curta de 3 dores prováveis"]
+                    "pitch": "A mensagem de WhatsApp pronta para enviar (sem aspas extras no início/fim).",
+                    "products_to_sell": ["Produto 1 focado na dor", "Produto 2 focado no desejo", "Produto 3 de ticket alto"],
+                    "sales_strategy": "Qual emoção usar? (ex: Medo de perder clientes, Ganância por crescer, Orgulho da marca)",
+                    "suggested_pricing": "Sugestão de valor (ex: Setup R$ 1.500 + R$ 500/mês)",
+                    "conquest_tip": "Uma dica psicológica suja para fazer esse dono específico responder.",
+                    "pain_points": ["Dor 1 (ex: Invisível no Google)", "Dor 2 (ex: Reputação em risco)", "Dor 3 (ex: Perda para concorrente)"]
                 }
             `;
 
@@ -361,7 +378,11 @@ const LeadStrategyModal = ({
                         config: { responseMimeType: 'application/json' }
                     })
                 });
+                
                 const data = await response.json();
+                
+                if (!data || !data.text) throw new Error("Resposta vazia da IA");
+                
                 let cleanText = data.text.replace(/```json/g, '').replace(/```/g, '');
                 setAnalysis(JSON.parse(cleanText));
             } catch (error) {
@@ -370,9 +391,9 @@ const LeadStrategyModal = ({
                 setAnalysis({
                     pitch: customScripts.standard.replace('{EMPRESA}', companyName),
                     products_to_sell: ["Site Profissional", "Google Meu Negócio"],
-                    sales_strategy: "Autoridade",
+                    sales_strategy: "Autoridade (Fallback)",
                     suggested_pricing: "Sob Consulta",
-                    conquest_tip: "Foque na profissionalização.",
+                    conquest_tip: "Tente ligar diretamente.",
                     pain_points: ["Baixa visibilidade"]
                 });
             } finally {

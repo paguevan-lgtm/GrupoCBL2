@@ -12,6 +12,7 @@ import { ConsultingIcon } from './icons/ConsultingIcon';
 import { BrainIcon } from './icons/BrainIcon';
 import { MegaphoneIcon } from './icons/MegaphoneIcon';
 import { MenuIcon } from './icons/MenuIcon';
+import { LocalDB, Task, WarRoomData, MarketingData } from '../utils/localDb';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -37,49 +38,7 @@ interface Lead {
   photos?: { photo_reference: string }[];
   contactedAt?: string;
   ai_analysis?: string;
-  // Feature 7: Pipeline Status
   pipelineStatus?: 'contacted' | 'negotiating' | 'closed' | 'lost';
-}
-
-// Interfaces para o War Room
-interface StrategyTask {
-    id: string;
-    title: string;
-    desc: string;
-    status: 'backlog' | 'doing' | 'done';
-    priority: 'high' | 'medium' | 'low';
-    value?: string;
-}
-
-// Interface para Marketing (Mantida)
-interface AdsStrategy {
-    niche: string;
-    total_budget: string;
-    allocation: {
-        google_percent: number;
-        meta_percent: number;
-        google_value: string;
-        meta_value: string;
-    };
-    projections: {
-        clicks: string;
-        leads: string;
-        cpm: string;
-    };
-    google_ads: {
-        campaign_type: string;
-        keywords: string[];
-        headline: string;
-        description: string;
-    };
-    meta_ads: {
-        creative_idea: string;
-        copy_hook: string;
-    };
-    tactical_plan: {
-        phase1: string;
-        phase2: string;
-    };
 }
 
 interface IAAnalysisResult {
@@ -89,6 +48,27 @@ interface IAAnalysisResult {
     suggested_pricing: string;
     conquest_tip: string;
     pain_points: string[];
+}
+
+// Interface para o Plano de Marketing Gerado
+interface MarketingPlan {
+    summary: {
+        total_days: number;
+        projected_leads_min: number;
+        projected_leads_max: number;
+        recommended_split: string; // Ex: "70% Meta / 30% Google"
+    };
+    phases: {
+        phase_name: string;
+        days_range: string; // Ex: "Dia 1 ao 5"
+        budget_allocation: string; // Ex: "R$ 200,00"
+        objective: string;
+        actions: string[];
+    }[];
+    tactical_advice: {
+        do: string[];
+        dont: string[];
+    };
 }
 
 type SearchMode = 'standard' | 'whale' | 'crisis' | 'ghost';
@@ -169,21 +149,380 @@ const HunterRank = ({ count }: { count: number }) => {
     );
 };
 
-// --- COMPONENTE: MARKETING COMMAND (Mantido) ---
+// --- COMPONENTE: MARKETING COMMAND (REFORMULADO - PLANNED SURGICAL) ---
 const MarketingCommand = () => {
-    // ... (Código do MarketingCommand mantido igual, apenas renderizado quando a aba é selecionada)
-    return <div className="p-6 text-white text-center opacity-50 uppercase tracking-widest mt-20">Módulo Marketing (Aba Integrada)</div>; 
+    const [inputs, setInputs] = useState({ budget: 1000, days: 30, niche: '', objective: 'Leads no WhatsApp' });
+    const [plan, setPlan] = useState<MarketingPlan | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Carregar plano salvo anteriormente
+    useEffect(() => {
+        const savedData = LocalDB.getMarketingData();
+        // @ts-ignore - Adaptando para ler o formato novo se existir, ou ignorar
+        if (savedData.currentPlan) {
+             // @ts-ignore
+             setPlan(savedData.currentPlan);
+             // @ts-ignore
+             setInputs(savedData.lastInputs || inputs);
+        }
+    }, []);
+
+    const generatePlan = async () => {
+        if (!inputs.niche) return;
+        setIsLoading(true);
+
+        const prompt = `
+            ATUE COMO: Diretor de Tráfego Pago Sênior (Ex-Facebook/Google).
+            Crie um PLANO CIRÚRGICO de investimento para o cliente.
+            
+            DADOS:
+            - Nicho: ${inputs.niche}
+            - Verba Total: R$ ${inputs.budget}
+            - Duração: ${inputs.days} dias
+            - Objetivo: ${inputs.objective}
+
+            REGRAS ESTRATÉGICAS:
+            1. Divida em fases claras (ex: Validação, Otimização, Escala).
+            2. Dê valores EXATOS de quanto gastar por dia em cada fase.
+            3. Seja específico nas ações (ex: "Criar Público Lookalike 1%", "Excluir Visitantes 7D").
+            4. Inclua estimativas realistas (conservadoras) de leads.
+
+            RETORNE JSON ESTRITO:
+            {
+                "summary": {
+                    "total_days": ${inputs.days},
+                    "projected_leads_min": (int),
+                    "projected_leads_max": (int),
+                    "recommended_split": "Ex: 60% Meta Ads (Instagram/FB) / 40% Google Search"
+                },
+                "phases": [
+                    {
+                        "phase_name": "Fase 1: [Nome da Fase]",
+                        "days_range": "Dia 1 ao 7",
+                        "budget_allocation": "R$ X/dia",
+                        "objective": "Objetivo curto",
+                        "actions": ["Ação prática 1", "Ação prática 2", "Ação prática 3"]
+                    }
+                    // Adicione quantas fases fizerem sentido para o periodo
+                ],
+                "tactical_advice": {
+                    "do": ["Conselho tático 1", "Conselho tático 2"],
+                    "dont": ["Erro fatal a evitar 1", "Erro fatal a evitar 2"]
+                }
+            }
+        `;
+
+        try {
+            const response = await fetch('/api/gemini', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: prompt,
+                    model: 'gemini-3-flash-preview',
+                    config: { responseMimeType: 'application/json' }
+                })
+            });
+
+            const data = await response.json();
+            const generatedPlan = JSON.parse(data.text);
+            
+            setPlan(generatedPlan);
+            
+            // Salvar no LocalDB (Gambiarra estrutural para manter compatibilidade com o arquivo utils existente sem quebrá-lo, 
+            // idealmente atualizaríamos a interface no utils/localDb.ts)
+            const dbData = LocalDB.getMarketingData();
+            // @ts-ignore
+            LocalDB.saveMarketingData({ ...dbData, currentPlan: generatedPlan, lastInputs: inputs });
+
+        } catch (error) {
+            console.error("Erro ao gerar plano:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <div className="h-full flex flex-col bg-[#050505] p-4 md:p-6 overflow-hidden">
+            <div className="flex items-center gap-3 mb-6 shrink-0">
+                <div className="p-2 bg-blue-600/20 rounded-lg text-blue-500"><MegaphoneIcon className="w-6 h-6"/></div>
+                <div>
+                    <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter">Marketing Command</h2>
+                    <p className="text-[9px] text-white/40 uppercase tracking-widest">Gerador de Estratégia de Tráfego Cirúrgico</p>
+                </div>
+            </div>
+
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0">
+                {/* Coluna da Esquerda: Inputs */}
+                <div className="lg:col-span-4 bg-[#0c0c0c] border border-white/10 rounded-3xl p-6 flex flex-col overflow-y-auto custom-scrollbar h-auto max-h-full">
+                    <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6 border-b border-white/5 pb-2">Briefing Tático</h3>
+                    
+                    <div className="space-y-5">
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-black uppercase text-blue-500 tracking-widest">Nicho do Cliente</label>
+                            <input 
+                                type="text" 
+                                value={inputs.niche}
+                                onChange={e => setInputs({...inputs, niche: e.target.value})}
+                                placeholder="Ex: Clínica Odontológica"
+                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 transition-colors"
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black uppercase text-white/40 tracking-widest">Verba (R$)</label>
+                                <input 
+                                    type="number" 
+                                    value={inputs.budget}
+                                    onChange={e => setInputs({...inputs, budget: Number(e.target.value)})}
+                                    className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 transition-colors"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black uppercase text-white/40 tracking-widest">Duração (Dias)</label>
+                                <input 
+                                    type="number" 
+                                    value={inputs.days}
+                                    onChange={e => setInputs({...inputs, days: Number(e.target.value)})}
+                                    className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 transition-colors"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-black uppercase text-white/40 tracking-widest">Objetivo Principal</label>
+                            <select 
+                                value={inputs.objective}
+                                onChange={e => setInputs({...inputs, objective: e.target.value})}
+                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 transition-colors appearance-none"
+                            >
+                                <option>Leads no WhatsApp</option>
+                                <option>Venda Direta (E-commerce)</option>
+                                <option>Seguidores / Branding</option>
+                                <option>Agendamentos</option>
+                            </select>
+                        </div>
+
+                        <button 
+                            onClick={generatePlan}
+                            disabled={isLoading || !inputs.niche}
+                            className="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-xl font-black uppercase text-xs tracking-[0.2em] shadow-lg shadow-blue-600/20 active:scale-95 disabled:opacity-50 mt-4 flex items-center justify-center gap-2"
+                        >
+                            {isLoading ? <SpinnerIcon /> : 'GERAR PLANO TÁTICO'}
+                        </button>
+                    </div>
+
+                    {/* Dicas Rápidas Estáticas */}
+                    <div className="mt-8 pt-6 border-t border-white/5">
+                        <p className="text-[9px] text-white/30 uppercase tracking-widest mb-2 font-mono">Dica do Especialista:</p>
+                        <p className="text-xs text-white/60 font-light italic">"Nunca comece com a verba total. Use 20% para validar o criativo antes de escalar."</p>
+                    </div>
+                </div>
+
+                {/* Coluna da Direita: O Plano (Resultado) */}
+                <div className="lg:col-span-8 bg-[#0c0c0c] border border-white/10 rounded-3xl p-1 overflow-hidden flex flex-col h-full relative">
+                    {!plan && !isLoading && (
+                        <div className="h-full flex flex-col items-center justify-center text-white/20 p-10 text-center">
+                            <TargetIcon className="w-16 h-16 mb-4 opacity-20" />
+                            <p className="uppercase tracking-widest text-xs font-bold">Aguardando Parâmetros</p>
+                            <p className="text-[10px] mt-2 max-w-md">Insira os dados ao lado para gerar um cronograma de investimento otimizado por IA.</p>
+                        </div>
+                    )}
+
+                    {isLoading && (
+                        <div className="h-full flex flex-col items-center justify-center space-y-4">
+                            <SpinnerIcon />
+                            <p className="text-blue-500 font-black text-xs uppercase tracking-widest animate-pulse">Calculando Rotas de Investimento...</p>
+                        </div>
+                    )}
+
+                    {plan && !isLoading && (
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            
+                            {/* Header do Plano */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="bg-blue-900/10 border border-blue-500/20 p-4 rounded-xl">
+                                    <span className="block text-[9px] text-blue-400 uppercase tracking-widest font-bold">Investimento Sugerido</span>
+                                    <span className="block text-xl font-black text-white mt-1">{plan.summary.recommended_split}</span>
+                                </div>
+                                <div className="bg-green-900/10 border border-green-500/20 p-4 rounded-xl">
+                                    <span className="block text-[9px] text-green-400 uppercase tracking-widest font-bold">Projeção de Leads</span>
+                                    <span className="block text-xl font-black text-white mt-1">{plan.summary.projected_leads_min} - {plan.summary.projected_leads_max}</span>
+                                </div>
+                                <div className="bg-white/5 border border-white/10 p-4 rounded-xl">
+                                    <span className="block text-[9px] text-white/40 uppercase tracking-widest font-bold">Ciclo Total</span>
+                                    <span className="block text-xl font-black text-white mt-1">{plan.summary.total_days} Dias</span>
+                                </div>
+                            </div>
+
+                            {/* Timeline de Fases */}
+                            <div>
+                                <h3 className="text-sm font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2">
+                                    <span className="w-2 h-2 bg-blue-500 rounded-full"></span> Cronograma de Execução
+                                </h3>
+                                <div className="space-y-4 relative before:absolute before:left-4 before:top-4 before:bottom-4 before:w-0.5 before:bg-white/10">
+                                    {plan.phases.map((phase, idx) => (
+                                        <div key={idx} className="relative pl-10">
+                                            <div className="absolute left-[13px] top-6 w-1.5 h-1.5 bg-blue-500 rounded-full shadow-[0_0_10px_#3b82f6]"></div>
+                                            <div className="bg-[#151515] border border-white/5 rounded-xl p-5 hover:border-white/20 transition-all group">
+                                                <div className="flex justify-between items-start mb-3">
+                                                    <div>
+                                                        <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest bg-blue-500/10 px-2 py-0.5 rounded">{phase.days_range}</span>
+                                                        <h4 className="text-lg font-bold text-white mt-2">{phase.phase_name}</h4>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className="block text-[9px] text-white/40 uppercase tracking-widest">Budget Diário</span>
+                                                        <span className="block text-sm font-black text-white">{phase.budget_allocation}</span>
+                                                    </div>
+                                                </div>
+                                                <p className="text-xs text-white/60 mb-4 italic">Meta: {phase.objective}</p>
+                                                <div className="space-y-2 border-t border-white/5 pt-3">
+                                                    {phase.actions.map((action, i) => (
+                                                        <div key={i} className="flex gap-3 text-xs text-white/80">
+                                                            <span className="text-blue-500 font-bold">→</span>
+                                                            {action}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Dos and Donts */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-white/5">
+                                <div>
+                                    <h4 className="text-[10px] font-black text-green-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                        <span className="text-lg">✓</span> Essencial (Faça)
+                                    </h4>
+                                    <ul className="space-y-2">
+                                        {plan.tactical_advice.do.map((item, i) => (
+                                            <li key={i} className="text-xs text-white/70 bg-green-500/5 p-2 rounded border border-green-500/10">{item}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h4 className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                        <span className="text-lg">✕</span> Crítico (Evite)
+                                    </h4>
+                                    <ul className="space-y-2">
+                                        {plan.tactical_advice.dont.map((item, i) => (
+                                            <li key={i} className="text-xs text-white/70 bg-red-500/5 p-2 rounded border border-red-500/10">{item}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
 };
 
-// --- COMPONENTE: STRATEGIC WAR ROOM (Mantido) ---
+// --- COMPONENTE: STRATEGIC WAR ROOM (REFORMULADO - DB LOCAL) ---
 const StrategicWarRoom = () => {
-    const [notes, setNotes] = useState('');
-    useEffect(() => { const saved = localStorage.getItem('cbl_war_room_notes'); if (saved) setNotes(saved); }, []);
-    const handleChange = (e: any) => { setNotes(e.target.value); localStorage.setItem('cbl_war_room_notes', e.target.value); };
+    const [data, setData] = useState<WarRoomData>({ notes: '', tasks: [] });
+    const [newTaskText, setNewTaskText] = useState('');
+
+    useEffect(() => {
+        setData(LocalDB.getWarRoomData());
+    }, []);
+
+    const updateDB = (newData: WarRoomData) => {
+        setData(newData);
+        LocalDB.saveWarRoomData(newData);
+    };
+
+    const addTask = (status: Task['status']) => {
+        if (!newTaskText) return;
+        const newTask: Task = {
+            id: Date.now().toString(),
+            content: newTaskText,
+            status,
+            priority: 'medium'
+        };
+        updateDB({ ...data, tasks: [...data.tasks, newTask] });
+        setNewTaskText('');
+    };
+
+    const moveTask = (id: string, newStatus: Task['status']) => {
+        const updatedTasks = data.tasks.map(t => t.id === id ? { ...t, status: newStatus } : t);
+        updateDB({ ...data, tasks: updatedTasks });
+    };
+
+    const deleteTask = (id: string) => {
+        updateDB({ ...data, tasks: data.tasks.filter(t => t.id !== id) });
+    };
+
+    const KanbanColumn = ({ title, status, color }: { title: string, status: Task['status'], color: string }) => (
+        <div className="flex-1 bg-[#0c0c0c] border border-white/10 rounded-2xl flex flex-col overflow-hidden h-full">
+            <div className={`p-3 border-b border-white/5 ${color} bg-opacity-10 flex justify-between items-center`}>
+                <h3 className={`text-[10px] font-black uppercase tracking-[0.2em] ${color}`}>{title}</h3>
+                <span className="text-white/30 text-[9px] font-mono">{data.tasks.filter(t => t.status === status).length}</span>
+            </div>
+            <div className="flex-1 p-2 space-y-2 overflow-y-auto custom-scrollbar">
+                {data.tasks.filter(t => t.status === status).map(task => (
+                    <div key={task.id} className="bg-[#151515] p-3 rounded-xl border border-white/5 group hover:border-white/20 transition-all">
+                        <p className="text-white text-xs font-medium leading-relaxed mb-2">{task.content}</p>
+                        <div className="flex justify-between items-center border-t border-white/5 pt-2">
+                            <button onClick={() => deleteTask(task.id)} className="text-red-500/50 hover:text-red-500"><XIcon /></button>
+                            <div className="flex gap-1">
+                                {status !== 'backlog' && <button onClick={() => moveTask(task.id, 'backlog')} className="text-[8px] uppercase text-white/30 hover:text-white bg-white/5 px-2 py-1 rounded">←</button>}
+                                {status !== 'done' && <button onClick={() => moveTask(task.id, status === 'backlog' ? 'doing' : 'done')} className="text-[8px] uppercase text-white/30 hover:text-white bg-white/5 px-2 py-1 rounded">→</button>}
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+            {status === 'backlog' && (
+                <div className="p-3 border-t border-white/5">
+                    <input 
+                        type="text" 
+                        value={newTaskText}
+                        onChange={e => setNewTaskText(e.target.value)}
+                        placeholder="+ Nova Ideia"
+                        className="w-full bg-[#151515] text-white text-xs px-3 py-2 rounded-lg outline-none border border-transparent focus:border-white/20"
+                        onKeyDown={e => e.key === 'Enter' && addTask('backlog')}
+                    />
+                </div>
+            )}
+        </div>
+    );
+
     return (
-        <div className="h-full bg-[#050505] p-6 flex flex-col">
-             <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter mb-4">War Room</h2>
-             <textarea value={notes} onChange={handleChange} className="flex-1 bg-[#0c0c0c] border border-white/10 rounded-2xl p-6 text-white/80 font-mono text-sm resize-none outline-none focus:border-white/20 custom-scrollbar" placeholder="// Estratégias e anotações..." />
+        <div className="h-full flex flex-col bg-[#050505] p-6 overflow-hidden">
+             <div className="flex items-center justify-between mb-6 shrink-0">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-600/20 rounded-lg text-purple-500"><BrainIcon className="w-6 h-6"/></div>
+                    <div>
+                        <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter">War Room</h2>
+                        <p className="text-[9px] text-white/40 uppercase tracking-widest">Base de Operações & Estratégia</p>
+                    </div>
+                </div>
+             </div>
+
+             <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-0">
+                {/* Kanban Board */}
+                <div className="lg:col-span-2 flex flex-col md:flex-row gap-4 h-[500px] lg:h-auto">
+                    <KanbanColumn title="Ideias (Backlog)" status="backlog" color="text-gray-400" />
+                    <KanbanColumn title="Executando" status="doing" color="text-yellow-500" />
+                    <KanbanColumn title="Concluído" status="done" color="text-green-500" />
+                </div>
+
+                {/* Bloco de Notas */}
+                <div className="bg-[#0c0c0c] border border-white/10 rounded-2xl p-4 flex flex-col h-full">
+                    <h3 className="text-[10px] font-black text-white/50 uppercase tracking-[0.2em] mb-3">Notas Rápidas (Salvo Localmente)</h3>
+                    <textarea 
+                        value={data.notes} 
+                        onChange={e => updateDB({...data, notes: e.target.value})} 
+                        className="flex-1 bg-[#151515] border border-white/5 rounded-xl p-4 text-white/80 font-mono text-sm resize-none outline-none focus:border-white/20 custom-scrollbar leading-relaxed" 
+                        placeholder="// Cole links, rascunhos e insights aqui..." 
+                    />
+                </div>
+             </div>
         </div>
     );
 };
@@ -224,12 +563,6 @@ const LeadStrategyModal = ({ lead, onClose, onCopyPitch, onOpenWhatsapp, customS
             const toneInstruction = pitchTone === 'consultive' 
                 ? "Seja um consultor parceiro, focado em ajudar." 
                 : "Seja direto, focado em resultado rápido.";
-
-            const prompt = `
-                ATUE COMO: Consultor Comercial Sênior. TOM: ${toneInstruction}
-                CLIENTE: "${lead.name}" (${lead.rating} estrelas).
-                Crie um script de venda curto e educado.
-            `;
 
             // Simulação de chamada (substituir por fetch real na produção)
             setTimeout(() => {
@@ -326,7 +659,6 @@ const LeadStrategyModal = ({ lead, onClose, onCopyPitch, onOpenWhatsapp, customS
 
 // --- COMPONENTE: SCRIPT MANAGER (Mantido) ---
 const ScriptManager = ({ scripts, onSave }: any) => {
-    // ... (Código do ScriptManager mantido, apenas placeholder para brevidade do XML)
     return <div className="p-6 text-white">Gerenciador de Scripts (Ativo)</div>;
 };
 
@@ -344,12 +676,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [chamadosSearch, setChamadosSearch] = useState('');
   
-  // CRM Data
+  // CRM Data (Loaded from LocalDB)
   const [contactedLeads, setContactedLeads] = useState<Lead[]>([]);
-  const [ignoredLeads, setIgnoredLeads] = useState<Lead[]>([]);
   
   // Feature 6: CSV Export
   const downloadCSV = () => {
@@ -363,15 +693,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       a.click();
   };
 
-  // Carregar dados locais
+  // Carregar dados locais (Substituindo o useEffect antigo)
   useEffect(() => {
-      const saved = localStorage.getItem('cbl_contacted_leads');
-      if (saved) setContactedLeads(JSON.parse(saved));
+      setContactedLeads(LocalDB.getContactedLeads());
   }, []);
 
-  useEffect(() => {
-      localStorage.setItem('cbl_contacted_leads', JSON.stringify(contactedLeads));
-  }, [contactedLeads]);
+  const saveLeadsToDB = (updatedLeads: Lead[]) => {
+      setContactedLeads(updatedLeads);
+      if (typeof window !== 'undefined') {
+          localStorage.setItem('cbl_contacted_leads', JSON.stringify(updatedLeads));
+      }
+  };
 
   // Função Search
   const executeSearch = async (token?: string) => {
@@ -386,13 +718,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           });
           const data = await response.json();
           
-          const newLeads = (data.results || []).map((p: any) => ({
+          let newLeads = (data.results || []).map((p: any) => ({
               ...p,
               id: p.place_id,
-              lead_score: Math.floor(Math.random() * 40) + 40 + (p.rating || 0) * 5, // Mock score logic
+              lead_score: Math.floor(Math.random() * 40) + 40 + (p.rating || 0) * 5, 
               status_site: p.website ? 'com_site' : 'sem_site',
               phone: p.formatted_phone_number
           }));
+
+          // FILTER LOGIC BASED ON SEARCH MODE
+          if (searchMode === 'whale') {
+             // Whale: Foco em empresas com site (possivelmente mais estruturadas) e score alto
+             newLeads = newLeads.filter((l: any) => l.rating >= 4.0 && l.status_site === 'com_site');
+          } else if (searchMode === 'crisis') {
+             // Crisis: Reputação baixa (< 4.0)
+             newLeads = newLeads.filter((l: any) => l.rating < 4.0);
+          } else if (searchMode === 'ghost') {
+             // Ghost: Sem site
+             newLeads = newLeads.filter((l: any) => l.status_site === 'sem_site');
+          }
+
           setLeads(newLeads);
       } catch (e) {
           console.error(e);
@@ -405,14 +750,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
   // Feature 7: Pipeline Status Update
   const updateStatus = (id: string, status: Lead['pipelineStatus']) => {
-      setContactedLeads(prev => prev.map(l => l.id === id ? { ...l, pipelineStatus: status } : l));
+      const updated = contactedLeads.map(l => l.id === id ? { ...l, pipelineStatus: status } : l);
+      saveLeadsToDB(updated);
   };
   
   // Feature 10: Mark as Contacted logic
   const markAsContacted = (lead: Lead) => {
       if (contactedLeads.some(l => l.id === lead.id)) return;
       const newLead = { ...lead, contactedAt: new Date().toISOString(), pipelineStatus: 'contacted' as const };
-      setContactedLeads(prev => [newLead, ...prev]);
+      const updated = [newLead, ...contactedLeads];
+      saveLeadsToDB(updated);
   };
 
   const NavButton = ({ tab, icon, label }: any) => (
@@ -469,6 +816,28 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                                     <span className="text-lg">↓</span> Exportar CSV
                                 </button>
                             )}
+                        </div>
+
+                        {/* Search Mode Toggles - REINTRODUZIDO */}
+                        <div className="flex gap-2 mb-6 overflow-x-auto pb-2 no-scrollbar">
+                            {[
+                                { id: 'standard', label: 'Padrão', icon: '🎯' },
+                                { id: 'whale', label: 'Whale (High Ticket)', icon: '🐋' },
+                                { id: 'crisis', label: 'Crise (<3.5★)', icon: '📉' },
+                                { id: 'ghost', label: 'Ghost (Sem Site)', icon: '👻' },
+                            ].map((mode) => (
+                                <button
+                                    key={mode.id}
+                                    onClick={() => setSearchMode(mode.id as SearchMode)}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-full border text-[10px] uppercase font-bold tracking-widest whitespace-nowrap transition-all ${
+                                        searchMode === mode.id 
+                                        ? 'bg-red-600 border-red-600 text-white shadow-lg' 
+                                        : 'bg-transparent border-white/10 text-white/40 hover:border-white/30'
+                                    }`}
+                                >
+                                    <span>{mode.icon}</span> {mode.label}
+                                </button>
+                            ))}
                         </div>
 
                         {/* Formulário (Agora dentro do scroll, então some ao rolar) */}

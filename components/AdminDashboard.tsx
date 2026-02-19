@@ -346,28 +346,33 @@ const LeadStrategyModal = ({
             setGeneratedScript(''); // Limpa script anterior
             
             try {
+                // PROMPT DE ALTA CONVERSÃO - PATTERN INTERRUPT
                 const prompt = `
-                    ATUE COMO: Um humano real, brasileiro, casual e direto.
-                    OBJETIVO: Iniciar uma conversa no WhatsApp com o dono da empresa "${lead.name}".
-                    CONTEXTO: Você quer oferecer melhorias digitais (site/tráfego) mas NÃO quer parecer um vendedor chato.
+                    ATUE COMO: Um parceiro de negócios local (Brasileiro), casual e extremamente natural.
+                    OBJETIVO: Mandar uma mensagem no WhatsApp para o dono da "${lead.name}" que gere curiosidade imediata e force uma resposta.
                     
-                    DADOS DO LEAD:
-                    Nicho: ${lead.types?.[0] || 'Comércio Local'}
-                    Nota Google: ${lead.rating} (${lead.user_ratings_total} avaliações)
-                    Localização: ${lead.address?.split(',')[1] || lead.address}
-                    Site: ${lead.website || 'Não possui'}
-                    Status Site: ${lead.status_site} (sem_site = grave, site_basico = linktree/wix, com_site = tem site).
+                    DADOS:
+                    - Nicho: ${lead.types?.[0]}
+                    - Nota: ${lead.rating} (${lead.user_ratings_total} reviews)
+                    - Bairro: ${lead.address?.split(',')[1] || 'da região'}
+                    - Site: ${lead.website || 'Sem site'}
+                    - Status: ${lead.status_site}
                     
-                    REGRAS ABSOLUTAS (TOM DE VOZ):
-                    1. PROIBIDO PARECER ROBÔ: Não use "Prezados", "Venho por meio desta", "Gostaria de apresentar".
-                    2. SEJA CONVERSACIONAL: Use "Opa", "Tudo bem?", "Vi aqui". Escreva como se estivesse mandando msg para um conhecido.
-                    3. USE O GANCHO:
-                       - Se nota baixa (<4.0): "Vi que a nota no Google tá meio baixa, aconteceu algo?"
-                       - Se sem site: "Tentei achar o site de vocês e não consegui."
-                       - Se nota boa: "Parabéns pelas avaliações, vi aqui que o pessoal elogia muito."
-                    4. FINALIZAÇÃO ABERTA: Termine com uma pergunta simples. "Você que cuida disso aí?", "Pode falar rapidinho?".
+                    ESTRATÉGIA DE COPY (PATTERN INTERRUPT):
+                    Não pareça vendedor. Pareça um cliente confuso ou um parceiro querendo ajudar. Aja como se houvesse algo ERRADO.
                     
-                    TAMANHO: Curto. 2 ou 3 frases no máximo.
+                    CENÁRIOS (Escolha o melhor baseado nos dados):
+                    1. SEM SITE (Crítico): "Fala [Nome], tudo bom? Tentei indicar a [Empresa] pra um conhecido aqui no [Bairro] mas não achei link nenhum no Google pra mandar. Vocês tão atendendo normal pelo Whats?" (Gera urgência social + dúvida).
+                    2. NOTA BAIXA (<4.0): "Opa, tudo joia? Sou vizinho aqui da [Empresa]. Vi umas avaliações recentes no Google que tão queimando a imagem de vocês de graça. Você que cuida disso?" (Gera proteção/medo).
+                    3. NOTA ALTA + SITE: "Fala! Parabéns pelas reviews da [Empresa]. Tô com uma estratégia que uns concorrentes aqui de [Bairro] tão usando pra dobrar isso e captar mais gente do nicho [Nicho]. Queria te mostrar a diferença, rapidão."
+                    
+                    REGRAS DE OURO:
+                    - Zero formalidade corporativa. Use "Opa", "Fala", "Cara" (se couber), "Tudo bom?".
+                    - Texto CURTO (Max 2 linhas de WhatsApp visualmente).
+                    - Termine com uma pergunta.
+                    - NUNCA use: "Gostaria de oferecer", "Somos uma agência", "Desculpe o incômodo", "Venho por meio desta".
+                    
+                    Gere apenas o texto da mensagem final.
                 `;
 
                 const response = await fetch('/api/gemini', {
@@ -387,12 +392,12 @@ const LeadStrategyModal = ({
                         setGeneratedScript(data.text.trim());
                     } else {
                         // Fallback genérico caso IA falhe, mas ainda natural
-                        setGeneratedScript(`Opa, tudo bem? Tentei achar o site da ${lead.name} no Google e não encontrei. Vocês estão sem?`);
+                        setGeneratedScript(`Fala, tudo bom? Tentei indicar a ${lead.name} pra um amigo aqui da região e não achei o link do site pra mandar. Vocês tão sem site mesmo?`);
                     }
                 }
             } catch (error) {
                 console.error("Erro script IA:", error);
-                if (isMounted) setGeneratedScript(`Opa, tudo bem? Vi a ${lead.name} aqui no Google e queria tirar uma dúvida.`);
+                if (isMounted) setGeneratedScript(`Opa, tudo bem? Vi a ${lead.name} aqui no Google e queria tirar uma dúvida sobre o cadastro de vocês.`);
             } finally {
                 if (isMounted) setIsScriptLoading(false);
             }

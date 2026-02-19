@@ -112,7 +112,7 @@ const MarketingCommand = () => {
             Cidade: ${formData.city || 'Brasil'}
             Verba Mensal: R$ ${formData.budget}
 
-            SAÍDA JSON ESTRITA:
+            SAÍDA JSON ESTRITA (APENAS JSON, SEM MARKDOWN):
             {
                 "niche": "${formData.niche}",
                 "total_budget": "R$ ${formData.budget}",
@@ -149,7 +149,7 @@ const MarketingCommand = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    contents: { parts: [{ text: prompt }] },
+                    contents: prompt,
                     model: 'gemini-3-flash-preview',
                     config: { responseMimeType: 'application/json' }
                 })
@@ -157,12 +157,18 @@ const MarketingCommand = () => {
             
             const data = await response.json();
             
-            // Correção de Segurança: Verifica se data.text existe
             if (!data || !data.text) {
                 throw new Error("A IA não retornou uma resposta válida. Tente novamente.");
             }
 
-            const cleanText = data.text.replace(/```json/g, '').replace(/```/g, '');
+            let cleanText = data.text.trim();
+            // Remove markdown code blocks if present
+            if (cleanText.includes("```json")) {
+                cleanText = cleanText.split("```json")[1].split("```")[0].trim();
+            } else if (cleanText.includes("```")) {
+                cleanText = cleanText.split("```")[1].split("```")[0].trim();
+            }
+
             setStrategy(JSON.parse(cleanText));
         } catch (error) {
             console.error(error);
@@ -190,6 +196,10 @@ const MarketingCommand = () => {
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-white/40 uppercase tracking-widest">Verba Mensal (R$)</label>
                                 <input type="number" value={formData.budget} onChange={e => setFormData({...formData, budget: e.target.value})} className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-red-600 outline-none" placeholder="Ex: 1500" />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-white/40 uppercase tracking-widest">Cidade (Opcional)</label>
+                                <input type="text" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-red-600 outline-none" placeholder="Ex: São Paulo" />
                             </div>
                         </div>
                         <button type="submit" disabled={isLoading} className="w-full bg-white text-black py-4 rounded-xl font-black uppercase text-xs tracking-[0.2em] hover:bg-gray-200 transition-all flex items-center justify-center gap-2">
@@ -357,7 +367,7 @@ const LeadStrategyModal = ({
                 4. TOM DE VOZ: Casual, direto, como um cliente oculto ou consultor preocupado. Não pareça um robô de telemarketing.
                 5. FECHAMENTO: Termine com uma pergunta que force resposta (ex: "Vocês cuidam disso aí ou é terceirizado?").
 
-                SAÍDA JSON ESTRITA:
+                SAÍDA JSON ESTRITA (APENAS JSON, SEM MARKDOWN):
                 {
                     "pitch": "A mensagem de WhatsApp pronta para enviar (sem aspas extras no início/fim).",
                     "products_to_sell": ["Produto 1 focado na dor", "Produto 2 focado no desejo", "Produto 3 de ticket alto"],
@@ -373,7 +383,7 @@ const LeadStrategyModal = ({
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        contents: { parts: [{ text: prompt }] },
+                        contents: prompt,
                         model: 'gemini-3-flash-preview',
                         config: { responseMimeType: 'application/json' }
                     })
@@ -383,7 +393,13 @@ const LeadStrategyModal = ({
                 
                 if (!data || !data.text) throw new Error("Resposta vazia da IA");
                 
-                let cleanText = data.text.replace(/```json/g, '').replace(/```/g, '');
+                let cleanText = data.text.trim();
+                if (cleanText.includes("```json")) {
+                    cleanText = cleanText.split("```json")[1].split("```")[0].trim();
+                } else if (cleanText.includes("```")) {
+                    cleanText = cleanText.split("```")[1].split("```")[0].trim();
+                }
+
                 setAnalysis(JSON.parse(cleanText));
             } catch (error) {
                 console.error("Erro na IA", error);

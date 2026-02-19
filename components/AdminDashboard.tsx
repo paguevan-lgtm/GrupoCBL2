@@ -1124,87 +1124,87 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             </header>
 
             {activeTab === 'search' && (
-                <>
-                <div className="p-4 md:p-6 border-b border-white/5 bg-[#050505]/95 backdrop-blur z-10 shrink-0">
-                    <div className="max-w-7xl mx-auto w-full">
-                        <div className="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                            <h1 className="text-2xl md:text-3xl font-black uppercase italic tracking-tighter text-white">Busca <span className="text-red-600">Deep Dive</span></h1>
-                            <ModeSelector />
+                <div className="flex-1 flex flex-col h-full overflow-y-auto md:overflow-hidden custom-scrollbar md:custom-scrollbar-none">
+                    <div className="p-4 md:p-6 border-b border-white/5 bg-[#050505]/95 backdrop-blur z-10 shrink-0">
+                        <div className="max-w-7xl mx-auto w-full">
+                            <div className="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                <h1 className="text-2xl md:text-3xl font-black uppercase italic tracking-tighter text-white">Busca <span className="text-red-600">Deep Dive</span></h1>
+                                <ModeSelector />
+                            </div>
+                            
+                            <form onSubmit={handleSearchButton} className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 items-end bg-[#0A0A0A] p-4 md:p-5 rounded-3xl border border-white/10 relative overflow-hidden group">
+                                <div className="absolute top-0 left-0 w-1 h-full bg-red-600 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                                <div className="md:col-span-3 space-y-2">
+                                    <label className="text-[9px] font-black text-red-600 uppercase tracking-widest ml-1">Nicho</label>
+                                    <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 md:py-4 text-white focus:border-red-600 outline-none text-sm md:text-base font-bold transition-all placeholder-white/20" placeholder="Ex: Estética" />
+                                </div>
+                                <div className="md:col-span-3 space-y-2">
+                                    <label className="text-[9px] font-black text-red-600 uppercase tracking-widest ml-1">Região</label>
+                                    <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 md:py-4 text-white focus:border-red-600 outline-none text-sm md:text-base font-bold transition-all placeholder-white/20" placeholder="Ex: Pinheiros, SP" />
+                                </div>
+                                <div className="md:col-span-3 space-y-2 flex flex-col justify-end h-full">
+                                    <label className="text-[9px] font-black text-red-600 uppercase tracking-widest ml-1 flex justify-between">
+                                        <span>Score Min: {minScore}</span>
+                                        <span>+70 = Alta Qualidade</span>
+                                    </label>
+                                    <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3 md:py-4 flex items-center">
+                                        <input 
+                                            type="range" 
+                                            min="0" 
+                                            max="99" 
+                                            value={minScore} 
+                                            onChange={(e) => setMinScore(Number(e.target.value))} 
+                                            className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer accent-red-600"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="md:col-span-3">
+                                    <button type="submit" disabled={isLoading} className="w-full bg-red-600 hover:bg-red-700 text-white py-3 md:py-4 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-lg shadow-red-600/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 h-[48px] md:h-[58px] transition-all hover:shadow-[0_0_30px_rgba(220,38,38,0.5)]">
+                                        {isLoading ? <SpinnerIcon /> : 'BUSCAR ALVOS'}
+                                    </button>
+                                </div>
+                            </form>
                         </div>
-                        
-                        <form onSubmit={handleSearchButton} className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 items-end bg-[#0A0A0A] p-4 md:p-5 rounded-3xl border border-white/10 relative overflow-hidden group">
-                            <div className="absolute top-0 left-0 w-1 h-full bg-red-600 opacity-50 group-hover:opacity-100 transition-opacity"></div>
-                            <div className="md:col-span-3 space-y-2">
-                                <label className="text-[9px] font-black text-red-600 uppercase tracking-widest ml-1">Nicho</label>
-                                <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 md:py-4 text-white focus:border-red-600 outline-none text-sm md:text-base font-bold transition-all placeholder-white/20" placeholder="Ex: Estética" />
-                            </div>
-                            <div className="md:col-span-3 space-y-2">
-                                <label className="text-[9px] font-black text-red-600 uppercase tracking-widest ml-1">Região</label>
-                                <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 md:py-4 text-white focus:border-red-600 outline-none text-sm md:text-base font-bold transition-all placeholder-white/20" placeholder="Ex: Pinheiros, SP" />
-                            </div>
-                            <div className="md:col-span-3 space-y-2 flex flex-col justify-end h-full">
-                                <label className="text-[9px] font-black text-red-600 uppercase tracking-widest ml-1 flex justify-between">
-                                    <span>Score Min: {minScore}</span>
-                                    <span>+70 = Alta Qualidade</span>
-                                </label>
-                                <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3 md:py-4 flex items-center">
-                                    <input 
-                                        type="range" 
-                                        min="0" 
-                                        max="99" 
-                                        value={minScore} 
-                                        onChange={(e) => setMinScore(Number(e.target.value))} 
-                                        className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer accent-red-600"
-                                    />
+                    </div>
+                    
+                    <div className="p-4 md:p-6 bg-[#050505] pb-24 md:pb-24 md:flex-1 md:overflow-y-auto md:custom-scrollbar">
+                        <div className="max-w-8xl mx-auto">
+                            {!isLoading && leads.length === 0 && (
+                                <div className="h-64 flex flex-col items-center justify-center text-center opacity-30">
+                                    <TargetIcon className="w-16 h-16 text-white mb-4" />
+                                    <p className="text-sm font-black uppercase tracking-widest">Nenhum alvo detectado</p>
+                                    <p className="text-xs mt-2 text-white/50 max-w-xs">Se já buscou antes, os resultados anteriores foram movidos para a aba "Visualizados" para não repetir.</p>
                                 </div>
-                            </div>
-                            <div className="md:col-span-3">
-                                <button type="submit" disabled={isLoading} className="w-full bg-red-600 hover:bg-red-700 text-white py-3 md:py-4 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-lg shadow-red-600/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 h-[48px] md:h-[58px] transition-all hover:shadow-[0_0_30px_rgba(220,38,38,0.5)]">
-                                    {isLoading ? <SpinnerIcon /> : 'BUSCAR ALVOS'}
-                                </button>
-                            </div>
-                        </form>
+                            )}
+                            
+                            {leads.length > 0 && (
+                                <>
+                                    <div className="flex justify-between items-end mb-6 px-1 border-b border-white/5 pb-4">
+                                        <div className="flex items-center gap-4">
+                                            <span className="text-3xl font-black text-white italic">{leads.length}</span>
+                                            <span className="text-[10px] text-white/40 uppercase tracking-[0.3em] font-bold mt-2 leading-tight">Leads Encontrados</span>
+                                        </div>
+                                        {minScore > 0 && <span className="text-[9px] text-red-500 border border-red-500/30 px-2 py-1 rounded uppercase tracking-widest">Filtro Score: &gt; {minScore}</span>}
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-8">
+                                        {leads.map((lead) => <LeadCard key={lead.id} lead={lead} />)}
+                                    </div>
+                                    {nextPageToken && (
+                                        <div className="mt-10 flex justify-center">
+                                            <button 
+                                                onClick={loadMore} 
+                                                disabled={isLoading}
+                                                className="bg-white/5 border border-white/10 text-white hover:bg-white/10 px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 transition-all hover:scale-105"
+                                            >
+                                                {isLoading ? <SpinnerIcon /> : '+ CARREGAR MAIS ALVOS'}
+                                            </button>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
-                
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 bg-[#050505] pb-24 md:pb-24">
-                    <div className="max-w-8xl mx-auto">
-                        {!isLoading && leads.length === 0 && (
-                            <div className="h-64 flex flex-col items-center justify-center text-center opacity-30">
-                                <TargetIcon className="w-16 h-16 text-white mb-4" />
-                                <p className="text-sm font-black uppercase tracking-widest">Nenhum alvo detectado</p>
-                                <p className="text-xs mt-2 text-white/50 max-w-xs">Se já buscou antes, os resultados anteriores foram movidos para a aba "Visualizados" para não repetir.</p>
-                            </div>
-                        )}
-                        
-                        {leads.length > 0 && (
-                            <>
-                                <div className="flex justify-between items-end mb-6 px-1 border-b border-white/5 pb-4">
-                                    <div className="flex items-center gap-4">
-                                        <span className="text-3xl font-black text-white italic">{leads.length}</span>
-                                        <span className="text-[10px] text-white/40 uppercase tracking-[0.3em] font-bold mt-2 leading-tight">Leads Encontrados</span>
-                                    </div>
-                                    {minScore > 0 && <span className="text-[9px] text-red-500 border border-red-500/30 px-2 py-1 rounded uppercase tracking-widest">Filtro Score: &gt; {minScore}</span>}
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-8">
-                                    {leads.map((lead) => <LeadCard key={lead.id} lead={lead} />)}
-                                </div>
-                                {nextPageToken && (
-                                    <div className="mt-10 flex justify-center">
-                                        <button 
-                                            onClick={loadMore} 
-                                            disabled={isLoading}
-                                            className="bg-white/5 border border-white/10 text-white hover:bg-white/10 px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 transition-all hover:scale-105"
-                                        >
-                                            {isLoading ? <SpinnerIcon /> : '+ CARREGAR MAIS ALVOS'}
-                                        </button>
-                                    </div>
-                                )}
-                            </>
-                        )}
-                    </div>
-                </div>
-                </>
             )}
 
             {/* Outras Abas (CRM e Ferramentas) */}

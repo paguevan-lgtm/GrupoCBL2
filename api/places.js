@@ -10,7 +10,12 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Query or pagetoken is required' });
   }
 
-  const apiKey = "AIzaSyC1mfIO67ZnVuMbbDoyibfX_A_O2D9eB5s";
+  const apiKey = process.env.API_KEY;
+
+  if (!apiKey) {
+    console.error("API Key is missing in environment variables");
+    return res.status(500).json({ error: 'Server configuration error' });
+  }
 
   try {
     let searchUrl;

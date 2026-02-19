@@ -39,6 +39,16 @@ interface Lead {
   ai_analysis?: string;
 }
 
+// Interfaces para o War Room
+interface StrategyTask {
+    id: string;
+    title: string;
+    desc: string;
+    status: 'backlog' | 'doing' | 'done';
+    priority: 'high' | 'medium' | 'low';
+    value?: string;
+}
+
 // Interface para Marketing
 interface AdsStrategy {
     niche: string;
@@ -70,9 +80,19 @@ interface AdsStrategy {
     };
 }
 
+// Interface detalhada da IA
+interface IAAnalysisResult {
+    pitch: string;
+    products_to_sell: string[];
+    sales_strategy: string;
+    suggested_pricing: string;
+    conquest_tip: string;
+    pain_points: string[];
+}
+
 type SearchMode = 'standard' | 'whale' | 'crisis' | 'ghost';
 
-// --- COMPONENTE: MARKETING COMMAND (FUNCIONAL) ---
+// --- COMPONENTE: MARKETING COMMAND ---
 const MarketingCommand = () => {
     const [formData, setFormData] = useState({ niche: '', city: '', budget: '' });
     const [isLoading, setIsLoading] = useState(false);
@@ -232,7 +252,7 @@ const MarketingCommand = () => {
     );
 };
 
-// --- COMPONENTE: STRATEGIC WAR ROOM (FUNCIONAL) ---
+// --- COMPONENTE: STRATEGIC WAR ROOM ---
 const StrategicWarRoom = () => {
     const [notes, setNotes] = useState('');
     
@@ -277,7 +297,7 @@ const DEFAULT_SCRIPTS = {
     standard: `Opa, tudo bem? Sou da CBL.\n\nEncontrei a {EMPRESA} aqui no Google e vi uns pontos que dão pra melhorar bastante pra atrair mais gente.\n\nVocê consegue encaminhar essa mensagem pro responsável ou pro dono? Obrigado!`
 };
 
-// --- MODAL DE ESTRATÉGIA (RAIO-X COM IA) ---
+// --- MODAL DE ESTRATÉGIA (RAIO-X DETALHADO COM IA) ---
 const LeadStrategyModal = ({ 
     lead, 
     onClose, 
@@ -292,41 +312,43 @@ const LeadStrategyModal = ({
     customScripts: typeof DEFAULT_SCRIPTS
 }) => {
     
-    const [editablePitch, setEditablePitch] = useState('');
+    const [analysis, setAnalysis] = useState<IAAnalysisResult | null>(null);
     const [isAiLoading, setIsAiLoading] = useState(false);
 
-    // Gera Pitch Personalizado ao abrir
     useEffect(() => {
-        const generateAiPitch = async () => {
+        const generateAiAnalysis = async () => {
             setIsAiLoading(true);
             
-            // Dados brutos
+            // Dados brutos para o Prompt
             const companyName = lead.name;
             const rating = lead.rating;
+            const reviewCount = lead.user_ratings_total;
             const address = lead.address;
             const hasSite = lead.status_site !== 'sem_site';
-            
-            const prompt = `
-                ATUE COMO: Especialista em Prospecção B2B via WhatsApp.
-                
-                DADOS DO LEAD:
-                Nome: ${companyName}
-                Nota Google: ${rating} estrelas
-                Endereço: ${address}
-                Tem Site: ${hasSite ? "Sim" : "Não"}
-                Nicho: (Infira pelo nome da empresa)
+            const siteType = lead.status_site === 'site_basico' ? 'Site Básico (Linktree/AnotaAI)' : 'Site Próprio';
+            const priceLevel = lead.price_level ? '$$$ (Alto Padrão)' : 'N/A';
 
-                TAREFA: Escreva uma mensagem de abordagem fria (Cold Message) curta e altamente personalizada.
+            const prompt = `
+                ATUE COMO: Consultor Sênior de Vendas B2B e Estrategista Digital do Grupo CBL.
                 
-                REGRAS:
-                1. Não seja robótico. Pareça um humano mandando mensagem rápida.
-                2. Use o bairro para criar proximidade ("Vi que vcs são aí da região de X").
-                3. Se a nota for baixa (< 4.2), mencione delicadamente que isso afeta clientes.
-                4. Se não tiver site, foque nisso.
-                5. Termine com uma pergunta fácil de responder ("Tem alguém responsável por isso?").
-                6. MÁXIMO 300 caracteres.
+                DADOS DO LEAD (CLIENTE EM PROSPECÇÃO):
+                Nome: ${companyName}
+                Nota Google: ${rating} (${reviewCount} avaliações)
+                Endereço: ${address}
+                Presença Digital: ${hasSite ? "Sim" : "Não"} (${siteType})
+                Nível de Preço Estimado: ${priceLevel}
                 
-                Apenas o texto da mensagem, sem aspas.
+                TAREFA: Gere uma análise estratégica COMPLETA para fechar este cliente.
+
+                RETORNE UM JSON ESTRITO COM ESTA ESTRUTURA:
+                {
+                    "pitch": "Texto curto para WhatsApp (max 300 chars). Deve ser PESSOAL, citar o bairro/cidade, tocar na dor (ex: nota baixa = reputação; sem site = invisibilidade) e terminar com pergunta de fechamento.",
+                    "products_to_sell": ["Lista de 3 produtos ideais (ex: Gestão de Tráfego, Site High-End, Automação de Reviews)"],
+                    "sales_strategy": "Qual abordagem usar? (ex: Medo da concorrência, Ganância por escala, Vaidade da marca)",
+                    "suggested_pricing": "Sugestão de valor (ex: Setup R$ 1.500 + Recorrência R$ 500)",
+                    "conquest_tip": "Uma dica psicológica ou 'hack' para ganhar a confiança desse dono específico.",
+                    "pain_points": ["Lista curta de 3 dores prováveis"]
+                }
             `;
 
             try {
@@ -336,29 +358,35 @@ const LeadStrategyModal = ({
                     body: JSON.stringify({
                         contents: { parts: [{ text: prompt }] },
                         model: 'gemini-3-flash-preview',
-                        config: { responseMimeType: 'text/plain' }
+                        config: { responseMimeType: 'application/json' }
                     })
                 });
                 const data = await response.json();
-                setEditablePitch(data.text.trim());
+                let cleanText = data.text.replace(/```json/g, '').replace(/```/g, '');
+                setAnalysis(JSON.parse(cleanText));
             } catch (error) {
-                console.error("Erro na IA, usando fallback", error);
-                // Fallback para template padrão se IA falhar
-                let template = customScripts.standard;
-                const platform = lead.website?.includes('anota') ? 'Anota AI' : 'Linktree';
-                setEditablePitch(template.replace('{EMPRESA}', companyName).replace('{NOTA}', rating.toString()).replace('{PLATAFORMA}', platform));
+                console.error("Erro na IA", error);
+                // Fallback básico se IA falhar
+                setAnalysis({
+                    pitch: customScripts.standard.replace('{EMPRESA}', companyName),
+                    products_to_sell: ["Site Profissional", "Google Meu Negócio"],
+                    sales_strategy: "Autoridade",
+                    suggested_pricing: "Sob Consulta",
+                    conquest_tip: "Foque na profissionalização.",
+                    pain_points: ["Baixa visibilidade"]
+                });
             } finally {
                 setIsAiLoading(false);
             }
         };
 
-        generateAiPitch();
-    }, [lead, customScripts]);
+        generateAiAnalysis();
+    }, [lead]);
 
     return (
         <div className="fixed inset-0 z-[200] flex items-end md:items-center justify-center bg-black/90 backdrop-blur-md p-0 md:p-4 animate-in fade-in duration-200" onClick={onClose}>
             <div 
-                className="w-full md:max-w-5xl h-[95vh] md:h-auto md:max-h-[90vh] bg-[#0c0c0c] border border-white/10 rounded-t-3xl md:rounded-3xl overflow-hidden flex flex-col shadow-2xl relative" 
+                className="w-full md:max-w-6xl h-[95vh] md:h-auto md:max-h-[90vh] bg-[#0c0c0c] border border-white/10 rounded-t-3xl md:rounded-3xl overflow-hidden flex flex-col shadow-2xl relative" 
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
@@ -380,69 +408,99 @@ const LeadStrategyModal = ({
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar bg-[#0c0c0c]">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                        {/* Coluna Esquerda: Dados Táticos */}
-                        <div className="lg:col-span-4 space-y-6">
-                            <div className="bg-[#111] border border-white/5 rounded-xl p-4">
-                                <h3 className="text-white/40 text-[10px] uppercase tracking-[0.2em] font-black mb-2">Google Score</h3>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-2xl font-black text-white">{lead.rating}</span>
-                                    <div className="flex text-yellow-500 text-xs">{'★'.repeat(Math.round(lead.rating))}</div>
-                                    <span className="text-white/30 text-xs">({lead.user_ratings_total} reviews)</span>
-                                </div>
-                            </div>
-                            
-                            <div className="bg-[#111] border border-white/5 rounded-xl p-4 space-y-3">
-                                <h3 className="text-white/40 text-[10px] uppercase tracking-[0.2em] font-black">Status Digital</h3>
-                                <div>
-                                    <span className="text-[9px] text-white/30 uppercase block">Website</span>
-                                    {lead.website ? (
-                                        <a href={lead.website} target="_blank" className="text-blue-400 text-xs truncate block hover:underline">{lead.website}</a>
-                                    ) : (
-                                        <span className="text-red-500 text-xs font-bold">Inexistente</span>
-                                    )}
-                                </div>
-                                <div>
-                                    <span className="text-[9px] text-white/30 uppercase block">Telefone</span>
-                                    <span className="text-white text-xs font-mono">{lead.phone || "N/A"}</span>
-                                </div>
-                            </div>
+                    {isAiLoading ? (
+                        <div className="flex flex-col items-center justify-center h-64 space-y-4">
+                            <SpinnerIcon />
+                            <p className="text-white/40 text-xs uppercase tracking-widest animate-pulse">Gerando Raio-X Estratégico...</p>
                         </div>
+                    ) : analysis ? (
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                            {/* Coluna Esquerda: Dados Táticos & Venda */}
+                            <div className="lg:col-span-5 space-y-6">
+                                {/* Score Card */}
+                                <div className="bg-[#111] border border-white/5 rounded-2xl p-5 flex items-center justify-between">
+                                    <div>
+                                        <h3 className="text-white/40 text-[10px] uppercase tracking-[0.2em] font-black mb-1">Google Reputation</h3>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-3xl font-black text-white">{lead.rating}</span>
+                                            <div className="flex text-yellow-500 text-xs">{'★'.repeat(Math.round(lead.rating))}</div>
+                                        </div>
+                                        <span className="text-white/30 text-[10px] uppercase">{lead.user_ratings_total} avaliações</span>
+                                    </div>
+                                    <div className="text-right">
+                                         <span className="block text-[10px] text-white/40 uppercase tracking-widest mb-1">Lead Score</span>
+                                         <span className={`text-3xl font-black ${lead.lead_score > 70 ? 'text-green-500' : 'text-red-600'}`}>{lead.lead_score}</span>
+                                    </div>
+                                </div>
 
-                        {/* Coluna Direita: Editor de Script */}
-                        <div className="lg:col-span-8 flex flex-col h-full">
-                             <div className="flex items-center justify-between mb-3">
-                                <h3 className="text-white/40 text-[10px] uppercase tracking-[0.2em] font-black flex items-center gap-2">
-                                    <ConsultingIcon className="w-4 h-4" /> Script Inteligente (IA)
-                                </h3>
-                                <button onClick={() => onCopyPitch(editablePitch)} className="text-[9px] bg-white text-black px-3 py-1.5 rounded uppercase font-black hover:bg-gray-200 transition-colors">Copiar</button>
-                             </div>
-                             
-                             <div className="relative">
-                                {isAiLoading && (
-                                    <div className="absolute inset-0 bg-[#151515]/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-2xl">
-                                        <div className="flex flex-col items-center">
-                                            <SpinnerIcon />
-                                            <span className="text-[9px] text-white/50 uppercase tracking-widest mt-2 animate-pulse">Analisando Dados do Lead...</span>
+                                {/* O Que Vender & Dores */}
+                                <div className="bg-[#111] border border-white/5 rounded-2xl p-6">
+                                    <h3 className="text-red-500 font-black text-[10px] uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                                        <TargetIcon className="w-4 h-4"/> Diagnóstico de Venda
+                                    </h3>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <span className="text-[9px] text-white/30 uppercase block mb-1">Produtos Sugeridos</span>
+                                            <div className="flex flex-wrap gap-2">
+                                                {analysis.products_to_sell.map((prod, i) => (
+                                                    <span key={i} className="px-2 py-1 bg-white/5 border border-white/10 rounded text-[10px] text-white font-bold uppercase">{prod}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <span className="text-[9px] text-white/30 uppercase block mb-1">Dores Prováveis</span>
+                                            <ul className="list-disc list-inside text-xs text-white/70 space-y-1">
+                                                {analysis.pain_points.map((pain, i) => <li key={i}>{pain}</li>)}
+                                            </ul>
                                         </div>
                                     </div>
-                                )}
-                                <textarea 
-                                    value={editablePitch}
-                                    onChange={(e) => setEditablePitch(e.target.value)}
-                                    className="w-full h-64 bg-[#151515] border border-white/10 rounded-2xl p-6 text-sm text-white/90 leading-relaxed font-sans focus:outline-none focus:border-red-600/50 resize-none custom-scrollbar mb-4"
-                                />
-                             </div>
+                                </div>
 
-                             <button 
-                                onClick={() => onOpenWhatsapp(editablePitch)}
-                                className="w-full bg-[#25D366] hover:bg-[#20b858] text-black py-4 rounded-xl font-black uppercase text-xs tracking-[0.2em] shadow-lg shadow-green-600/20 active:scale-[0.98] flex items-center justify-center gap-2 transition-all"
-                             >
-                                <PhoneIcon className="w-4 h-4 text-black fill-current" />
-                                Enviar no WhatsApp
-                             </button>
+                                {/* Estratégia & Preço */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-[#151515] p-4 rounded-2xl border border-white/5">
+                                        <span className="text-[9px] text-white/30 uppercase block mb-2">Estratégia</span>
+                                        <p className="text-white text-xs font-bold leading-tight">{analysis.sales_strategy}</p>
+                                    </div>
+                                    <div className="bg-[#151515] p-4 rounded-2xl border border-white/5">
+                                        <span className="text-[9px] text-white/30 uppercase block mb-2">Precificação</span>
+                                        <p className="text-green-400 text-xs font-bold leading-tight">{analysis.suggested_pricing}</p>
+                                    </div>
+                                </div>
+                                
+                                <div className="bg-blue-900/10 border border-blue-500/20 p-4 rounded-2xl">
+                                    <span className="text-[9px] text-blue-400 uppercase font-black tracking-widest block mb-2">💡 Dica de Conquista</span>
+                                    <p className="text-blue-100/80 text-xs italic">"{analysis.conquest_tip}"</p>
+                                </div>
+                            </div>
+
+                            {/* Coluna Direita: Copy & Ação */}
+                            <div className="lg:col-span-7 flex flex-col h-full">
+                                 <div className="flex items-center justify-between mb-3">
+                                    <h3 className="text-white/40 text-[10px] uppercase tracking-[0.2em] font-black flex items-center gap-2">
+                                        <ConsultingIcon className="w-4 h-4" /> Script Gerado (IA)
+                                    </h3>
+                                    <button onClick={() => onCopyPitch(analysis?.pitch || '')} className="text-[9px] bg-white text-black px-3 py-1.5 rounded uppercase font-black hover:bg-gray-200 transition-colors">Copiar</button>
+                                 </div>
+                                 
+                                 <div className="relative flex-1 mb-4">
+                                    <textarea 
+                                        value={analysis.pitch}
+                                        readOnly
+                                        className="w-full h-full min-h-[250px] bg-[#151515] border border-white/10 rounded-2xl p-6 text-sm text-white/90 leading-relaxed font-sans focus:outline-none focus:border-red-600/50 resize-none custom-scrollbar"
+                                    />
+                                 </div>
+
+                                 <button 
+                                    onClick={() => onOpenWhatsapp(analysis?.pitch || '')}
+                                    className="w-full bg-[#25D366] hover:bg-[#20b858] text-black py-5 rounded-xl font-black uppercase text-xs tracking-[0.2em] shadow-lg shadow-green-600/20 active:scale-[0.98] flex items-center justify-center gap-2 transition-all hover:scale-[1.01]"
+                                 >
+                                    <PhoneIcon className="w-5 h-5 text-black fill-current" />
+                                    ABRIR WHATSAPP & FECHAR
+                                 </button>
+                            </div>
                         </div>
-                    </div>
+                    ) : null}
                 </div>
             </div>
         </div>
@@ -493,7 +551,7 @@ const ScriptManager = ({ scripts, onSave }: { scripts: typeof DEFAULT_SCRIPTS, o
 
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
-  const [activeTab, setActiveTab] = useState<'search' | 'contacted' | 'scripts' | 'brainstorm' | 'marketing'>('search');
+  const [activeTab, setActiveTab] = useState<'search' | 'contacted' | 'ignored' | 'scripts' | 'brainstorm' | 'marketing'>('search');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Script State
@@ -517,9 +575,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [searchMode, setSearchMode] = useState<SearchMode>('standard');
   const [searchTerm, setSearchTerm] = useState('');
   const [location, setLocation] = useState('');
+  const [minScore, setMinScore] = useState(50);
   
+  // Controle de Paginação e Reset
+  const [lastSearchSignature, setLastSearchSignature] = useState('');
+
   // CRM States
   const [contactedLeads, setContactedLeads] = useState<Lead[]>([]);
+  const [ignoredLeads, setIgnoredLeads] = useState<Lead[]>([]);
   const [chamadosSearch, setChamadosSearch] = useState('');
 
   // Results States
@@ -573,14 +636,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     return Math.min(Math.max(score, 0), 99);
   };
 
-  const executeSearch = async (token?: string) => {
+  const executeSearch = async (token?: string, isNextPage: boolean = false) => {
     if (!searchTerm || !location) return;
 
     setIsLoading(true);
-    if (!token) {
-        setLeads([]); // Limpa se for nova busca
-    }
     setActiveTab('search');
+    
+    // Se for paginação (Carregar Mais / Próxima Página), movemos os atuais para ignorados
+    if (isNextPage && leads.length > 0) {
+        setIgnoredLeads(prev => [...prev, ...leads]);
+        setLeads([]);
+    } else if (!token) {
+        // Nova busca limpa tudo
+        setLeads([]);
+        setIgnoredLeads([]);
+    }
     
     let queryPrefix = "";
     if (searchMode === 'whale') queryPrefix = "Luxury High End ";
@@ -602,7 +672,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       const data = await response.json();
       const rawResults = data.results || [];
       
-      // Atualiza o token para a próxima página
       setNextPageToken(data.next_page_token || null);
 
       const processedLeads: Lead[] = rawResults.map((place: any) => {
@@ -629,16 +698,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           };
       });
 
-      // Filtra arquivados
+      // Filtra arquivados, já contactados e aplica MIN SCORE
       const filteredLeads = processedLeads.filter((lead: Lead) => {
           const isContacted = contactedLeads.some(cl => cl.id === lead.id);
-          if (isContacted) return false;
+          const isIgnored = ignoredLeads.some(il => il.id === lead.id);
+          const meetsScore = lead.lead_score >= minScore;
+          
+          if (isContacted || isIgnored) return false;
+          if (!meetsScore) return false;
           if (searchMode === 'ghost' && lead.status_site === 'com_site') return false;
+          
           return true;
       });
 
-      // Se for paginação, adiciona. Se for nova busca, substitui.
-      setLeads(prev => token ? [...prev, ...filteredLeads] : filteredLeads);
+      // Ordena por Score (Maior para menor)
+      filteredLeads.sort((a, b) => b.lead_score - a.lead_score);
+
+      setLeads(filteredLeads);
 
     } catch (error: any) {
       console.error(error);
@@ -650,12 +726,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
   const handleSearch = (e: React.FormEvent) => {
       e.preventDefault();
-      executeSearch();
-  };
-
-  const loadMore = () => {
-      if (nextPageToken) {
-          executeSearch(nextPageToken);
+      
+      const currentSignature = `${searchTerm}-${location}-${searchMode}`;
+      
+      if (currentSignature === lastSearchSignature && nextPageToken) {
+          // É a mesma busca, então carrega a próxima página
+          executeSearch(nextPageToken, true);
+      } else {
+          // É uma nova busca
+          setLastSearchSignature(currentSignature);
+          executeSearch(undefined, false);
       }
   };
 
@@ -786,6 +866,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
              <div className="md:hidden lg:block text-[9px] text-white/30 uppercase tracking-[0.2em] mb-2 pl-2">Ferramentas</div>
              <NavButton tab="search" icon={<TargetIcon className="w-5 h-5" />} label={<span className="md:hidden lg:inline">Prospecção</span>} />
              <NavButton tab="contacted" icon={<PhoneIcon className="w-5 h-5" />} label={<span className="md:hidden lg:inline">Histórico</span>} />
+             <NavButton tab="ignored" icon={<XIcon />} label={<span className="md:hidden lg:inline">Sem Interesse</span>} />
              <NavButton tab="brainstorm" icon={<BrainIcon className="w-5 h-5" />} label={<span className="md:hidden lg:inline">War Room</span>} />
              <NavButton tab="marketing" icon={<MegaphoneIcon className="w-5 h-5" />} label={<span className="md:hidden lg:inline">Marketing</span>} />
              <NavButton tab="scripts" icon={<ConsultingIcon className="w-5 h-5" />} label={<span className="md:hidden lg:inline">Scripts</span>} />
@@ -816,7 +897,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                         
                         <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 items-end bg-[#0A0A0A] p-4 md:p-5 rounded-3xl border border-white/10 relative overflow-hidden group">
                             <div className="absolute top-0 left-0 w-1 h-full bg-red-600 opacity-50 group-hover:opacity-100 transition-opacity"></div>
-                            <div className="md:col-span-5 space-y-2">
+                            <div className="md:col-span-4 space-y-2">
                                 <label className="text-[9px] font-black text-red-600 uppercase tracking-widest ml-1">Nicho</label>
                                 <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 md:py-4 text-white focus:border-red-600 outline-none text-sm md:text-base font-bold transition-all placeholder-white/20" placeholder="Ex: Estética" />
                             </div>
@@ -824,7 +905,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                                 <label className="text-[9px] font-black text-red-600 uppercase tracking-widest ml-1">Região</label>
                                 <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 md:py-4 text-white focus:border-red-600 outline-none text-sm md:text-base font-bold transition-all placeholder-white/20" placeholder="Ex: Pinheiros, SP" />
                             </div>
-                            <div className="md:col-span-3">
+                            
+                            {/* Score Slider */}
+                            <div className="md:col-span-2 space-y-2">
+                                <label className="text-[9px] font-black text-white/50 uppercase tracking-widest ml-1 flex justify-between">Score Mín: <span className="text-white">{minScore}</span></label>
+                                <input type="range" min="0" max="90" value={minScore} onChange={(e) => setMinScore(Number(e.target.value))} className="w-full accent-red-600 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer" />
+                            </div>
+
+                            <div className="md:col-span-2">
                                 <button type="submit" disabled={isLoading} className="w-full bg-red-600 hover:bg-red-700 text-white py-3 md:py-4 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-lg shadow-red-600/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 h-[48px] md:h-[58px] transition-all hover:shadow-[0_0_30px_rgba(220,38,38,0.5)]">
                                     {isLoading ? <SpinnerIcon /> : 'BUSCAR ALVOS'}
                                 </button>
@@ -838,7 +926,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                         {!isLoading && leads.length === 0 && (
                             <div className="h-64 flex flex-col items-center justify-center text-center opacity-30">
                                 <TargetIcon className="w-16 h-16 text-white mb-4" />
-                                <p className="text-sm font-black uppercase tracking-widest">Nenhum alvo detectado</p>
+                                <p className="text-sm font-black uppercase tracking-widest">Aguardando Parâmetros de Busca</p>
                             </div>
                         )}
                         
@@ -847,23 +935,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                                 <div className="flex justify-between items-end mb-6 px-1 border-b border-white/5 pb-4">
                                     <div className="flex items-center gap-4">
                                         <span className="text-3xl font-black text-white italic">{leads.length}</span>
-                                        <span className="text-[10px] text-white/40 uppercase tracking-[0.3em] font-bold mt-2 leading-tight">Leads Encontrados</span>
+                                        <span className="text-[10px] text-white/40 uppercase tracking-[0.3em] font-bold mt-2 leading-tight">Leads Filtrados (Score {'>'} {minScore})</span>
                                     </div>
+                                    <div className="text-[9px] font-mono text-white/30 uppercase tracking-widest">Sorted by: Lead Score</div>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-8">
                                     {leads.map((lead) => <LeadCard key={lead.id} lead={lead} />)}
                                 </div>
-                                {nextPageToken && (
-                                    <div className="mt-10 flex justify-center">
-                                        <button 
-                                            onClick={loadMore} 
-                                            disabled={isLoading}
-                                            className="bg-white/5 border border-white/10 text-white hover:bg-white/10 px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 transition-all hover:scale-105"
-                                        >
-                                            {isLoading ? <SpinnerIcon /> : '+ CARREGAR MAIS ALVOS'}
-                                        </button>
-                                    </div>
-                                )}
+                                
+                                <div className="mt-10 flex justify-center pb-10">
+                                    <p className="text-[10px] text-white/30 uppercase tracking-widest">Para carregar mais, clique em "BUSCAR ALVOS" novamente.</p>
+                                </div>
                             </>
                         )}
                     </div>
@@ -881,6 +963,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                         <div className="flex-1 overflow-y-auto custom-scrollbar">
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-8 pb-20">
                                 {contactedLeads.filter(l => l.name.toLowerCase().includes(chamadosSearch.toLowerCase())).map((lead) => <LeadCard key={lead.id} lead={lead} isArchived={true} />)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'ignored' && (
+                <div className="flex-1 flex flex-col bg-[#050505] p-4 md:p-6 overflow-hidden">
+                    <div className="max-w-7xl mx-auto w-full h-full flex flex-col">
+                        <div className="mb-6 flex flex-col md:flex-row justify-between items-end gap-4 border-b border-white/5 pb-6">
+                            <div><h1 className="text-3xl font-black uppercase italic tracking-tighter text-white">Sem Interesse</h1><p className="text-white/40 text-[10px] font-mono uppercase tracking-[0.2em] mt-1">Leads Arquivados da Busca</p></div>
+                        </div>
+                        <div className="flex-1 overflow-y-auto custom-scrollbar">
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-8 pb-20">
+                                {ignoredLeads.map((lead) => <LeadCard key={lead.id} lead={lead} isArchived={true} />)}
                             </div>
                         </div>
                     </div>

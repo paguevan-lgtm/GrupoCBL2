@@ -107,39 +107,44 @@ const MarketingCommand = () => {
 
         const prompt = `
             Atue como um Gestor de Tráfego Sênior.
-            Crie uma estratégia de ADS resumida e tática:
+            Crie uma estratégia de ADS resumida e tática para:
             Nicho: ${formData.niche}
             Cidade: ${formData.city || 'Brasil'}
             Verba Mensal: R$ ${formData.budget}
 
-            SAÍDA JSON ESTRITA (APENAS JSON, SEM MARKDOWN):
+            REGRAS RÍGIDAS:
+            1. Retorne APENAS um objeto JSON válido.
+            2. Não use Markdown (sem \`\`\`json).
+            3. Responda em Português do Brasil.
+
+            SAÍDA JSON ESTRITA ESPERADA:
             {
                 "niche": "${formData.niche}",
                 "total_budget": "R$ ${formData.budget}",
                 "allocation": {
                     "google_percent": 40,
                     "meta_percent": 60,
-                    "google_value": "Calculado",
-                    "meta_value": "Calculado"
+                    "google_value": "Calculado (ex: R$ 600,00)",
+                    "meta_value": "Calculado (ex: R$ 900,00)"
                 },
                 "projections": {
-                    "clicks": "Estimativa",
-                    "leads": "Estimativa",
-                    "cpm": "Estimativa"
+                    "clicks": "Estimativa numérica",
+                    "leads": "Estimativa numérica",
+                    "cpm": "Estimativa de custo"
                 },
                 "google_ads": {
-                    "campaign_type": "Ex: Rede de Pesquisa",
+                    "campaign_type": "Ex: Rede de Pesquisa + Max Performance",
                     "keywords": ["kw1", "kw2", "kw3"],
-                    "headline": "Título chamativo",
-                    "description": "Descrição curta"
+                    "headline": "Título chamativo (30 chars)",
+                    "description": "Descrição persuasiva (90 chars)"
                 },
                 "meta_ads": {
                     "creative_idea": "Ideia visual do anúncio",
-                    "copy_hook": "Gancho da copy"
+                    "copy_hook": "Primeira frase da legenda (Hook)"
                 },
                 "tactical_plan": {
-                    "phase1": "Ação semana 1",
-                    "phase2": "Ação semana 2"
+                    "phase1": "Ação prática semana 1-2",
+                    "phase2": "Ação prática semana 3-4"
                 }
             }
         `;
@@ -157,6 +162,10 @@ const MarketingCommand = () => {
             
             const data = await response.json();
             
+            if (data.error) {
+                throw new Error(data.details || data.error);
+            }
+
             if (!data || !data.text) {
                 throw new Error("A IA não retornou uma resposta válida. Tente novamente.");
             }
@@ -170,9 +179,9 @@ const MarketingCommand = () => {
             }
 
             setStrategy(JSON.parse(cleanText));
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            alert("Erro ao gerar estratégia. Tente novamente.");
+            alert(`Erro ao gerar estratégia: ${error.message}`);
         } finally {
             setIsLoading(false);
         }
@@ -391,6 +400,7 @@ const LeadStrategyModal = ({
                 
                 const data = await response.json();
                 
+                if (data.error) throw new Error(data.details || data.error);
                 if (!data || !data.text) throw new Error("Resposta vazia da IA");
                 
                 let cleanText = data.text.trim();

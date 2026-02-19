@@ -14,7 +14,7 @@ export default async function handler(req, res) {
 
   try {
     // Usando a chave que você forneceu explicitamente para a IA no início.
-    const apiKey = "AIzaSyAmuRj1rPy_60TL9yoplCw_TR-A-qa_eXg";
+    const apiKey = "AIzaSyDx8QZ41gze3XEYhXvo6r5EmkXxmC8_daA";
     
     const ai = new GoogleGenAI({ apiKey: apiKey });
     

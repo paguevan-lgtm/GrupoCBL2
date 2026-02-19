@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   }
 
   // Chave fornecida
-  const apiKey = "AIzaSyC1mfIO67ZnVuMbbDoyibfX_A_O2D9eB5s";
+  const apiKey = "AIzaSyDx8QZ41gze3XEYhXvo6r5EmkXxmC8_daA";
 
   try {
     let searchUrl;

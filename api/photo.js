@@ -2,7 +2,7 @@
 export default async function handler(req, res) {
   const { ref } = req.query;
   // Mesma chave usada no places.js
-  const apiKey = "AIzaSyC1mfIO67ZnVuMbbDoyibfX_A_O2D9eB5s"; 
+  const apiKey = "AIzaSyDx8QZ41gze3XEYhXvo6r5EmkXxmC8_daA"; 
   
   if (!ref) return res.status(400).send('No reference provided');
 

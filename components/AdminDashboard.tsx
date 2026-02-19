@@ -116,12 +116,46 @@ const getScoreDetails = (lead: Lead, mode: SearchMode) => {
 // --- COMPONENTE: MAPA DE HISTÓRICO ---
 const HistoryMap = ({ leads }: { leads: Lead[] }) => {
     const mapRef = useRef<HTMLDivElement>(null);
+    const [isLoaded, setIsLoaded] = useState(false);
     const [mapError, setMapError] = useState(false);
 
+    // Efeito para carregar o script do Google Maps dinamicamente
     useEffect(() => {
-        if (!mapRef.current) return;
+        // Se já estiver carregado no window
+        if ((window as any).google?.maps) {
+            setIsLoaded(true);
+            return;
+        }
 
-        // Verifica se a API do Google Maps está carregada
+        // Verifica se o script já existe no DOM para evitar duplicidade
+        const existingScript = document.querySelector('script[src^="https://maps.googleapis.com/maps/api/js"]');
+        if (existingScript) {
+            existingScript.addEventListener('load', () => setIsLoaded(true));
+            existingScript.addEventListener('error', () => setMapError(true));
+            return;
+        }
+
+        // Cria e injeta o script
+        const script = document.createElement('script');
+        // Usa process.env.API_KEY. Se estiver usando Next.js, certifique-se de que essa variável é exposta ao cliente 
+        // (geralmente prefixada com NEXT_PUBLIC_ no .env e chamada aqui, ou configurada no next.config.js)
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.API_KEY}&libraries=places`;
+        script.async = true;
+        script.defer = true;
+        script.onload = () => setIsLoaded(true);
+        script.onerror = () => setMapError(true);
+        
+        document.head.appendChild(script);
+
+        return () => {
+            // Cleanup opcional
+        };
+    }, []);
+
+    // Efeito para inicializar o mapa quando o script estiver pronto
+    useEffect(() => {
+        if (!isLoaded || !mapRef.current) return;
+
         const google = (window as any).google;
         if (!google || !google.maps) {
             setMapError(true);
@@ -269,14 +303,23 @@ const HistoryMap = ({ leads }: { leads: Lead[] }) => {
             map.fitBounds(bounds);
         }
 
-    }, [leads]);
+    }, [isLoaded, leads]);
 
     if (mapError) {
         return (
             <div className="w-full h-full flex flex-col items-center justify-center bg-[#0c0c0c] border border-white/10 rounded-3xl p-8 text-center">
                 <LocationIcon className="w-12 h-12 text-white/20 mb-4" />
-                <h3 className="text-white font-black uppercase tracking-widest mb-2">Mapa Indisponível</h3>
-                <p className="text-white/40 text-xs">A API do Google Maps Javascript não foi carregada corretamente.</p>
+                <h3 className="text-white font-black uppercase tracking-widest mb-2">Erro no Mapa</h3>
+                <p className="text-white/40 text-xs">Não foi possível carregar o Google Maps. Verifique sua chave de API.</p>
+            </div>
+        );
+    }
+
+    if (!isLoaded) {
+        return (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-[#0c0c0c] border border-white/10 rounded-3xl p-8 text-center">
+                <SpinnerIcon />
+                <p className="text-white/40 text-xs mt-4 uppercase tracking-widest">Carregando Mapa Tático...</p>
             </div>
         );
     }

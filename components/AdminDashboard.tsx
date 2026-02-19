@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Logo } from './icons/Logo';
 import { SpinnerIcon } from './icons/SpinnerIcon';
@@ -346,33 +345,31 @@ const LeadStrategyModal = ({
             setGeneratedScript(''); // Limpa script anterior
             
             try {
-                // PROMPT DE ALTA CONVERSÃO - PATTERN INTERRUPT
+                // PROMPT DE ALTA CONVERSÃO - CAMALEÃO DE NICHO + CTA OBRIGATÓRIO
                 const prompt = `
-                    ATUE COMO: Um parceiro de negócios local (Brasileiro), casual e extremamente natural.
-                    OBJETIVO: Mandar uma mensagem no WhatsApp para o dono da "${lead.name}" que gere curiosidade imediata e force uma resposta.
+                    ATUE COMO: Especialista em Vendas e Posicionamento Digital (Humano, Casual, Brasileiro).
+                    OBJETIVO: Enviar uma mensagem de WhatsApp para o dono da "${lead.name}" para conseguir uma reunião.
                     
-                    DADOS:
-                    - Nicho: ${lead.types?.[0]}
-                    - Nota: ${lead.rating} (${lead.user_ratings_total} reviews)
-                    - Bairro: ${lead.address?.split(',')[1] || 'da região'}
+                    DADOS DO LEAD:
+                    - Nicho: ${lead.types?.[0] || 'Comércio'} (Isso define o TOM de voz)
+                    - Nota: ${lead.rating}
                     - Site: ${lead.website || 'Sem site'}
-                    - Status: ${lead.status_site}
                     
-                    ESTRATÉGIA DE COPY (PATTERN INTERRUPT):
-                    Não pareça vendedor. Pareça um cliente confuso ou um parceiro querendo ajudar. Aja como se houvesse algo ERRADO.
+                    REGRA 1: ADAPTAÇÃO TOTAL AO NICHO (TOM DE VOZ):
+                    - Se for FEMININO/ESTÉTICA (Salão, Spa, Moda, Clínica, Loja de Roupas): Use um tom elegante, leve, empático. Use emojis sutis (✨, 🌷). Fale sobre "Imagem", "Experiência", "Valorização".
+                    - Se for MASCULINO/TÉCNICO (Oficina, Obras, Carros, Indústria): Use um tom direto, prático, "de homem pra homem". Fale sobre "Grana na mesa", "Demanda", "Oportunidade".
+                    - Se for SAÚDE/FORMAL (Advogado, Médico, Dentista): Use um tom profissional, respeitoso, mas firme. Fale sobre "Autoridade", "Captação qualificada".
+                    - Se for GERAL (Restaurante, Mercado): Tom casual e vizinho.
+
+                    REGRA 2: ESTRUTURA OBRIGATÓRIA DA MENSAGEM:
+                    Parte A: GANCHO (Quebra de Padrão). Comente algo específico (falta de site, nota google, ou elogio sincero).
+                    Parte B (FINALIZAÇÃO MANDATÓRIA): Você DEVE dizer que é especialista no assunto e perguntar quem é a pessoa do marketing para conversar.
                     
-                    CENÁRIOS (Escolha o melhor baseado nos dados):
-                    1. SEM SITE (Crítico): "Fala [Nome], tudo bom? Tentei indicar a [Empresa] pra um conhecido aqui no [Bairro] mas não achei link nenhum no Google pra mandar. Vocês tão atendendo normal pelo Whats?" (Gera urgência social + dúvida).
-                    2. NOTA BAIXA (<4.0): "Opa, tudo joia? Sou vizinho aqui da [Empresa]. Vi umas avaliações recentes no Google que tão queimando a imagem de vocês de graça. Você que cuida disso?" (Gera proteção/medo).
-                    3. NOTA ALTA + SITE: "Fala! Parabéns pelas reviews da [Empresa]. Tô com uma estratégia que uns concorrentes aqui de [Bairro] tão usando pra dobrar isso e captar mais gente do nicho [Nicho]. Queria te mostrar a diferença, rapidão."
+                    EXEMPLOS DE FINALIZAÇÃO (Adapte o tom, mas mantenha a essência):
+                    - "Sou especialista em posicionamento pra estética. Quem cuida do marketing de vocês? Tem um tempinho pra conversar?"
+                    - "Trabalho só com alavancagem de oficinas. Quem toca o marketing aí? Consegue falar rapidinho?"
                     
-                    REGRAS DE OURO:
-                    - Zero formalidade corporativa. Use "Opa", "Fala", "Cara" (se couber), "Tudo bom?".
-                    - Texto CURTO (Max 2 linhas de WhatsApp visualmente).
-                    - Termine com uma pergunta.
-                    - NUNCA use: "Gostaria de oferecer", "Somos uma agência", "Desculpe o incômodo", "Venho por meio desta".
-                    
-                    Gere apenas o texto da mensagem final.
+                    Gere APENAS o texto da mensagem. Curto (max 3 frases). Sem "Prezados".
                 `;
 
                 const response = await fetch('/api/gemini', {
@@ -391,13 +388,13 @@ const LeadStrategyModal = ({
                     if (data.text) {
                         setGeneratedScript(data.text.trim());
                     } else {
-                        // Fallback genérico caso IA falhe, mas ainda natural
-                        setGeneratedScript(`Fala, tudo bom? Tentei indicar a ${lead.name} pra um amigo aqui da região e não achei o link do site pra mandar. Vocês tão sem site mesmo?`);
+                        // Fallback genérico com a estrutura obrigatória
+                        setGeneratedScript(`Opa, tudo bem? Vi a ${lead.name} aqui no Google e vi uma oportunidade de melhorar o posicionamento. Sou especialista nessa área. Quem cuida do marketing de vocês? Tem um tempinho pra conversar?`);
                     }
                 }
             } catch (error) {
                 console.error("Erro script IA:", error);
-                if (isMounted) setGeneratedScript(`Opa, tudo bem? Vi a ${lead.name} aqui no Google e queria tirar uma dúvida sobre o cadastro de vocês.`);
+                if (isMounted) setGeneratedScript(`Opa, tudo bem? Vi a ${lead.name} aqui. Sou especialista em digital. Quem cuida do marketing de vocês? Tem um tempinho pra conversar?`);
             } finally {
                 if (isMounted) setIsScriptLoading(false);
             }
@@ -666,545 +663,257 @@ const LeadStrategyModal = ({
 };
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
-  const [activeTab, setActiveTab] = useState<'search' | 'contacted' | 'viewed' | 'brainstorm' | 'marketing'>('search');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  
-  // Search Configuration
-  const [searchMode, setSearchMode] = useState<SearchMode>('standard');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [location, setLocation] = useState('');
-  const [minScore, setMinScore] = useState(0); 
-  
-  // Detecta se é a mesma busca para usar paginação
-  const [lastSearchTerm, setLastSearchTerm] = useState('');
-  const [lastLocation, setLastLocation] = useState('');
+    const [activeTab, setActiveTab] = useState<'search' | 'marketing' | 'warroom'>('search');
+    const [query, setQuery] = useState('');
+    const [leads, setLeads] = useState<Lead[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+    const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+    const [searchMode, setSearchMode] = useState<SearchMode>('standard');
 
-  // CRM States
-  const [contactedLeads, setContactedLeads] = useState<Lead[]>([]);
-  const [viewedLeads, setViewedLeads] = useState<Lead[]>([]);
-  const [chamadosSearch, setChamadosSearch] = useState('');
+    const handleSearch = async (token?: string) => {
+        setLoading(true);
+        try {
+            const response = await fetch('/api/places', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query, pagetoken: token })
+            });
+            const data = await response.json();
+            
+            // Map Google Places result to Lead interface
+            const newLeads = (data.results || []).map((place: any) => ({
+                id: place.place_id,
+                name: place.name,
+                address: place.formatted_address,
+                rating: place.rating || 0,
+                user_ratings_total: place.user_ratings_total || 0,
+                website: place.website,
+                url: place.url,
+                phone: place.formatted_phone_number,
+                international_phone: place.international_phone_number,
+                lead_score: Math.floor(Math.random() * 40) + 60, // Mock score for demo
+                status_site: place.website ? 'com_site' : 'sem_site',
+                place_id: place.place_id,
+                types: place.types || [],
+                price_level: place.price_level,
+                business_status: place.business_status,
+                opening_hours: place.opening_hours,
+                photos: place.photos
+            }));
 
-  // Results States
-  const [isLoading, setIsLoading] = useState(false);
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
-  
-  // Feedback
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+            if (token) {
+                setLeads(prev => [...prev, ...newLeads]);
+            } else {
+                setLeads(newLeads);
+            }
+            setNextPageToken(data.next_page_token || null);
+        } catch (error) {
+            console.error(error);
+            alert("Erro ao buscar leads.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  useEffect(() => {
-    const saved = localStorage.getItem('cbl_contacted_leads');
-    if (saved) {
-        try { setContactedLeads(JSON.parse(saved)); } catch (e) { console.error(e); }
-    }
-    const savedViewed = localStorage.getItem('cbl_viewed_leads');
-    if (savedViewed) {
-        try { setViewedLeads(JSON.parse(savedViewed)); } catch (e) { console.error(e); }
-    }
-  }, []);
+    const openWhatsapp = (text: string) => {
+        if (!selectedLead?.phone) {
+             alert("Lead sem telefone.");
+             return;
+        }
+        // Remove non-digits
+        const phone = selectedLead.phone.replace(/\D/g, '');
+        const url = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+        window.open(url, '_blank');
+    };
 
-  useEffect(() => {
-    localStorage.setItem('cbl_contacted_leads', JSON.stringify(contactedLeads));
-  }, [contactedLeads]);
-
-  useEffect(() => {
-    localStorage.setItem('cbl_viewed_leads', JSON.stringify(viewedLeads));
-  }, [viewedLeads]);
-
-  const classifySite = (url?: string): 'com_site' | 'sem_site' | 'site_basico' => {
-      if (!url) return 'sem_site';
-      const lowerUrl = url.toLowerCase();
-      const weakDomains = ['anota.ai', 'ifood', 'facebook', 'instagram', 'linktr.ee', 'wa.me', 'whatsapp', 'wix', 'google.com/view', 'bit.ly'];
-      if (weakDomains.some(domain => lowerUrl.includes(domain))) return 'site_basico';
-      return 'com_site';
-  };
-
-  const calculateLeadScore = (place: any, siteStatus: string, mode: SearchMode) => {
-    let score = 50; 
-    if (siteStatus === 'sem_site') score += 30;
-    else if (siteStatus === 'site_basico') score += 20;
-    else score -= 10;
-
-    switch (mode) {
-        case 'whale': 
-            if (place.price_level >= 3) score += 40; 
-            else if (place.price_level === 2) score += 10;
-            break;
-        case 'crisis': 
-            if (place.rating < 3.8) score += 40; 
-            else if (place.rating < 4.3) score += 20;
-            break;
-        case 'ghost': 
-            if (siteStatus === 'com_site') score = 0; 
-            if (siteStatus === 'sem_site') score += 20;
-            break;
-    }
-    return Math.min(Math.max(score, 0), 99);
-  };
-
-  const executeSearch = async (token?: string) => {
-    if (!searchTerm || !location) return;
-
-    setIsLoading(true);
-    if (!token) {
-        setLeads([]);
-    }
-    setActiveTab('search');
-    
-    // Salva termos atuais para comparar na proxima
-    setLastSearchTerm(searchTerm);
-    setLastLocation(location);
-
-    let queryPrefix = "";
-    if (searchMode === 'whale') queryPrefix = "Luxury High End ";
-    
-    const fullQuery = `${queryPrefix}${searchTerm} in ${location}`;
-
-    try {
-      const response = await fetch('/api/places', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-            query: fullQuery,
-            pagetoken: token
-        }),
-      });
-
-      if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.details || errorData.error || `Erro HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-      const rawResults = data.results || [];
-      
-      setNextPageToken(data.next_page_token || null);
-
-      let processedLeads: Lead[] = rawResults.map((place: any) => {
-          const siteStatus = classifySite(place.website);
-          const score = calculateLeadScore(place, siteStatus, searchMode);
-          return {
-              id: place.place_id,
-              place_id: place.place_id,
-              name: place.name,
-              address: place.formatted_address,
-              rating: place.rating || 0,
-              user_ratings_total: place.user_ratings_total || 0,
-              website: place.website,
-              url: place.url,
-              phone: place.formatted_phone_number,
-              international_phone: place.international_phone_number,
-              lead_score: score,
-              status_site: siteStatus,
-              types: place.types || [],
-              price_level: place.price_level,
-              business_status: place.business_status,
-              opening_hours: place.opening_hours,
-              photos: place.photos
-          };
-      });
-
-      // --- CRITÉRIOS DE FILTRAGEM AVANÇADA ---
-      processedLeads = processedLeads.filter((lead: Lead) => {
-          // 1. Remove Contactados
-          const isContacted = contactedLeads.some(cl => cl.id === lead.id);
-          if (isContacted) return false;
-          
-          // 2. Remove Visualizados
-          const isViewed = viewedLeads.some(vl => vl.id === lead.id);
-          if (isViewed) return false; 
-          
-          // 3. Filtro de Score Mínimo (Slider)
-          if (lead.lead_score < minScore) return false;
-
-          if (searchMode === 'ghost' && lead.status_site === 'com_site') return false;
-          return true;
-      });
-
-      // --- CRITÉRIO DE ORDENAÇÃO ---
-      // Ordena pelo SCORE (Do maior para o menor)
-      processedLeads.sort((a, b) => b.lead_score - a.lead_score);
-
-      setLeads(prev => token ? [...prev, ...processedLeads] : processedLeads);
-
-    } catch (error: any) {
-      console.error(error);
-      alert("Erro na busca: " + error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSearchButton = (e: React.FormEvent) => {
-      e.preventDefault();
-      
-      // Mover leads ATUAIS da tela para Visualizados (Arquivar em massa)
-      const currentVisibleLeads = leads;
-      if (currentVisibleLeads.length > 0) {
-          const newViewed = [...viewedLeads, ...currentVisibleLeads];
-          // Remove duplicatas por ID apenas por segurança
-          const uniqueViewed = Array.from(new Map(newViewed.map(item => [item.id, item])).values());
-          
-          setViewedLeads(uniqueViewed);
-          localStorage.setItem('cbl_viewed_leads', JSON.stringify(uniqueViewed));
-      }
-
-      // Limpa a tela atual para trazer novos
-      setLeads([]);
-
-      // Lógica de Paginação Automática
-      if (searchTerm === lastSearchTerm && location === lastLocation && nextPageToken) {
-          executeSearch(nextPageToken);
-      } else {
-          executeSearch();
-      }
-  };
-
-  const loadMore = () => {
-      if (nextPageToken) {
-          executeSearch(nextPageToken);
-      }
-  };
-
-  const markAsContacted = (lead: Lead) => {
-      const leadWithDate = { ...lead, contactedAt: new Date().toISOString() };
-      setContactedLeads(prev => [leadWithDate, ...prev]);
-      setLeads(prev => prev.filter(l => l.id !== lead.id));
-      setViewedLeads(prev => prev.filter(l => l.id !== lead.id));
-      if (selectedLead?.id === lead.id) setSelectedLead(null);
-  };
-
-  const handleOpenLead = (lead: Lead) => {
-      setSelectedLead(lead);
-      
-      const isContacted = contactedLeads.some(cl => cl.id === lead.id);
-      if (!isContacted) {
-          const isAlreadyViewed = viewedLeads.some(vl => vl.id === lead.id);
-          if (!isAlreadyViewed) {
-              const viewedLead = { ...lead, viewedAt: new Date().toISOString() };
-              setViewedLeads(prev => [viewedLead, ...prev]);
-          }
-      }
-  };
-
-  const openWhatsApp = (lead: Lead, customMessage?: string) => {
-      const rawPhone = lead.international_phone || lead.phone;
-      if (!rawPhone) { alert("Telefone não disponível."); return; }
-      let cleanPhone = rawPhone.replace(/\D/g, '');
-      if (cleanPhone.length >= 10 && cleanPhone.length <= 11) cleanPhone = '55' + cleanPhone;
-      
-      const message = customMessage || `Olá ${lead.name}, gostaria de falar sobre o marketing de vocês.`;
-      const text = encodeURIComponent(message);
-      window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
-  };
-
-  const openInstagram = (lead: Lead) => {
-      if (lead.website && lead.website.toLowerCase().includes('instagram.com')) {
-          window.open(lead.website, '_blank');
-          return;
-      }
-      const query = `site:instagram.com "${lead.name}" ${location}`;
-      window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
-  };
-
-  const copyPitch = (lead: Lead, pitchText?: string) => {
-      let textToCopy = pitchText || "Olá";
-      textToCopy = textToCopy.trim().replace(/\n\s+\n/g, '\n\n'); 
-      navigator.clipboard.writeText(textToCopy);
-      setCopiedId(lead.id);
-      setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  const NavButton = ({ tab, icon, label }: any) => (
-      <button 
-        onClick={() => { setActiveTab(tab); setIsSidebarOpen(false); }}
-        className={`w-full flex items-center gap-4 px-4 py-4 rounded-xl transition-all duration-300 group ${activeTab === tab ? 'bg-white/10 text-white shadow-[0_0_20px_rgba(255,255,255,0.05)] border border-white/10' : 'text-white/40 hover:bg-white/5 hover:text-white border border-transparent'}`}
-      >
-          <div className={`p-2 rounded-lg transition-colors ${activeTab === tab ? 'bg-red-600 text-white' : 'bg-white/5 text-white/50 group-hover:text-white'}`}>{icon}</div>
-          <span className="text-xs font-black uppercase tracking-widest">{label}</span>
-      </button>
-  );
-
-  const ModeSelector = () => (
-      <div className="flex gap-2 mb-4 overflow-x-auto pb-2 custom-scrollbar">
-          {[{id: 'standard', label: 'Padrão', color: 'red'}, {id: 'whale', label: 'Whale', color: 'blue'}, {id: 'crisis', label: 'Crise', color: 'orange'}, {id: 'ghost', label: 'Ghost', color: 'purple'}].map((m: any) => (
-             <button 
-                key={m.id}
-                type="button"
-                onClick={() => setSearchMode(m.id as SearchMode)}
-                className={`px-4 py-3 rounded-xl border flex items-center justify-center gap-2 transition-all whitespace-nowrap min-w-[80px] ${searchMode === m.id ? `bg-${m.color}-600 border-${m.color}-500 text-white shadow-lg` : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'}`}
-             >
-                 <span className="text-[10px] font-black uppercase tracking-widest">{m.label}</span>
-             </button>
-          ))}
-      </div>
-  );
-
-  const LeadCard: React.FC<{ lead: Lead; isArchived?: boolean; isViewed?: boolean }> = ({ lead, isArchived = false, isViewed = false }) => {
-      // Cálculo de Tags Dinâmicas
-      const isHighScore = lead.lead_score > 70;
-      const isLowScore = lead.lead_score < 40;
-      
-      return (
-        <div className={`
-            bg-[#0f0f0f] border rounded-3xl flex flex-col justify-between h-full group transition-all duration-300 relative overflow-hidden shadow-2xl mb-4 md:mb-0
-            ${isHighScore ? 'border-green-500/20 shadow-[0_0_20px_rgba(34,197,94,0.05)]' : (isLowScore ? 'border-red-500/10' : 'border-white/10')}
-            ${isArchived ? 'opacity-50 grayscale' : ''}
-            ${isViewed && !isArchived ? 'opacity-80 border-white/5' : ''}
-        `}>
-             {/* Header de Imagem e Score */}
-             <div className="h-40 md:h-48 w-full bg-gray-900 relative overflow-hidden shrink-0 group-hover:scale-[1.01] transition-transform duration-700">
-                 {/* Scanline Effect */}
-                 <div className="absolute inset-0 z-10 pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
-                 <div className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-t from-[#0f0f0f] via-transparent to-transparent"></div>
-                 
-                 {lead.photos && lead.photos.length > 0 ? (
-                     <img src={`/api/photo?ref=${lead.photos[0].photo_reference}`} className="w-full h-full object-cover transition-all duration-700 opacity-60 group-hover:opacity-80" alt={lead.name} />
-                 ) : (
-                     <div className="w-full h-full bg-gradient-to-br from-[#1a1a1a] to-black flex items-center justify-center opacity-50"><Logo className="scale-75 opacity-20" /></div>
-                 )}
-
-                 {/* Badges de Topo */}
-                 <div className="absolute top-3 left-3 flex gap-2 z-20">
-                     {lead.opening_hours?.open_now 
-                        ? <span className="bg-green-500/90 text-black text-[9px] font-mono font-black px-2 py-1 rounded backdrop-blur-md uppercase tracking-wider">Aberto</span> 
-                        : <span className="bg-red-600/90 text-white text-[9px] font-mono font-black px-2 py-1 rounded backdrop-blur-md uppercase tracking-wider">Fechado</span>
-                     }
-                 </div>
-
-                 {/* Score Ring Visual */}
-                 <div className="absolute top-3 right-3 z-20">
-                     <div className="relative w-12 h-12 flex items-center justify-center bg-black/60 backdrop-blur-md rounded-full border border-white/10">
-                        <svg className="w-full h-full transform -rotate-90 absolute">
-                            <circle cx="24" cy="24" r="22" stroke="currentColor" strokeWidth="2" fill="transparent" className="text-white/10" />
-                            <circle cx="24" cy="24" r="22" stroke="currentColor" strokeWidth="2" fill="transparent" 
-                                className={`${isHighScore ? 'text-green-500' : 'text-red-500'}`}
-                                strokeDasharray={138}
-                                strokeDashoffset={138 - (138 * lead.lead_score) / 100}
-                            />
-                        </svg>
-                        <span className={`text-sm font-black ${isHighScore ? 'text-green-500' : 'text-white'}`}>{lead.lead_score}</span>
-                     </div>
-                 </div>
-             </div>
-             
-             {/* Corpo do Card */}
-             <div className="p-5 flex-1 flex flex-col relative z-20 -mt-6">
-                 <h3 className="text-lg font-black text-white uppercase leading-tight line-clamp-2 mb-2 group-hover:text-red-500 transition-colors">
-                    {lead.name}
-                 </h3>
-                 
-                 {/* Smart Tags (Nova Feature) */}
-                 <div className="flex flex-wrap gap-2 mb-4">
-                    {lead.status_site === 'sem_site' && <span className="text-[8px] font-mono uppercase bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 rounded tracking-widest">[SEM SITE]</span>}
-                    {lead.status_site === 'site_basico' && <span className="text-[8px] font-mono uppercase bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-2 py-0.5 rounded tracking-widest">[LINKTREE]</span>}
-                    {(lead.price_level || 0) >= 3 && <span className="text-[8px] font-mono uppercase bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 rounded tracking-widest">[HIGH TICKET]</span>}
-                    {lead.rating < 4.0 && <span className="text-[8px] font-mono uppercase bg-orange-500/10 text-orange-500 border border-orange-500/20 px-2 py-0.5 rounded tracking-widest">[BAIXA REP]</span>}
-                 </div>
-
-                 <div className="flex items-start gap-3 mt-auto">
-                    <LocationIcon className="w-4 h-4 text-white/20 mt-0.5 shrink-0" />
-                    <span className="text-white/50 text-[10px] font-medium leading-relaxed line-clamp-2">{lead.address}</span>
-                 </div>
-             </div>
-
-             {/* Footer de Ações (Control Panel Style) */}
-             <div className="grid grid-cols-4 gap-px bg-[#222] border-t border-white/5">
-                 <button onClick={() => openWhatsApp(lead)} className="col-span-1 bg-[#0f0f0f] hover:bg-[#25D366] text-white/30 hover:text-black py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95 group/btn">
-                    <PhoneIcon className="w-5 h-5 text-current" />
-                 </button>
-                 <button onClick={() => openInstagram(lead)} className="col-span-1 bg-[#0f0f0f] hover:bg-pink-600 text-white/30 hover:text-white py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95 group/btn">
-                    <InstagramIcon className="w-5 h-5 text-current" />
-                 </button>
-                 <button onClick={() => handleOpenLead(lead)} className="col-span-1 bg-[#0f0f0f] hover:bg-white text-white/30 hover:text-black py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95 group/btn">
-                    <ZapIcon className="w-5 h-5 text-current" />
-                 </button>
-                 {isArchived ? (
-                     <button onClick={() => setContactedLeads(prev => prev.filter(l => l.id !== lead.id))} className="col-span-1 bg-[#0f0f0f] hover:bg-blue-600 text-blue-600 hover:text-white py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95">
-                        <span className="text-xl font-black">↩</span>
-                     </button>
-                 ) : (
-                     <button onClick={() => markAsContacted(lead)} className="col-span-1 bg-[#0f0f0f] hover:bg-green-600 text-green-600 hover:text-white py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95">
-                        <span className="text-xl font-black">✓</span>
-                     </button>
-                 )}
-             </div>
-      </div>
-      );
-  };
-
-  return (
-    <div className="h-screen bg-[#050505] text-white font-sans flex flex-col md:flex-row overflow-hidden selection:bg-red-600 selection:text-white">
-      
-      {/* Mobile Header (Hidden on Desktop) */}
-      <div className="md:hidden h-16 bg-[#0A0A0A] border-b border-white/10 flex items-center justify-between px-6 shrink-0 z-50 fixed top-0 w-full">
-          <Logo className="scale-75 origin-left" />
-          <button onClick={() => setIsSidebarOpen(true)} className="text-white p-2 rounded-lg bg-white/5 active:scale-95"><MenuIcon className="w-6 h-6" /></button>
-      </div>
-
-      {/* Sidebar Overlay (Mobile Only) */}
-      <div className={`fixed inset-0 bg-black/80 z-50 md:hidden transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsSidebarOpen(false)}></div>
-
-      {/* Sidebar */}
-      <aside className={`fixed md:relative z-50 top-0 left-0 h-full w-72 md:w-20 lg:w-72 bg-[#080808] border-r border-white/10 flex flex-col py-6 transition-transform duration-300 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} md:pt-6`}>
-          <div className="px-6 md:px-0 lg:px-6 mb-8 flex justify-between items-center md:justify-center lg:justify-start">
-              <Logo className="scale-90 origin-left md:scale-75 lg:scale-90" />
-              <button onClick={() => setIsSidebarOpen(false)} className="text-white/50 md:hidden"><XIcon /></button>
-          </div>
-          
-          <div className="flex flex-col gap-2 px-4 md:px-2 lg:px-4">
-             <div className="md:hidden lg:block text-[9px] text-white/30 uppercase tracking-[0.2em] mb-2 pl-2">Ferramentas</div>
-             <NavButton tab="search" icon={<TargetIcon className="w-5 h-5" />} label={<span className="md:hidden lg:inline">Prospecção</span>} />
-             <NavButton tab="contacted" icon={<PhoneIcon className="w-5 h-5" />} label={<span className="md:hidden lg:inline">Histórico</span>} />
-             <NavButton tab="viewed" icon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>} label={<span className="md:hidden lg:inline">Visualizados</span>} />
-             
-             <NavButton tab="brainstorm" icon={<BrainIcon className="w-5 h-5" />} label={<span className="md:hidden lg:inline">War Room</span>} />
-             <NavButton tab="marketing" icon={<MegaphoneIcon className="w-5 h-5" />} label={<span className="md:hidden lg:inline">Marketing</span>} />
-          </div>
-
-          <div className="mt-auto px-4 md:px-2 lg:px-4">
-              <button onClick={onLogout} className="w-full text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-red-500 transition-colors flex items-center justify-center gap-2 py-4 rounded-lg bg-white/5 md:bg-transparent lg:bg-white/5 md:hover:bg-white/5"><XIcon className="w-4 h-4" /> <span className="md:hidden lg:inline">Sair</span></button>
-          </div>
-      </aside>
-
-      <main className="flex-1 bg-[#050505] relative flex flex-col overflow-hidden pt-16 md:pt-0">
-            {/* Desktop Header */}
-            <header className="hidden md:flex h-16 border-b border-white/10 items-center justify-between px-6 bg-[#0A0A0A]/90 backdrop-blur-md shrink-0 z-20">
-                <div className="flex items-center gap-4"><div className="h-4 w-px bg-white/10"></div><span className="text-[10px] font-mono text-white/50 uppercase tracking-widest">Intelligence Hub v4.5</span></div>
-                <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/5"><span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span><span className="text-[9px] font-mono text-green-500 uppercase tracking-widest">Deep Search: ON</span></div>
+    return (
+        <div className="flex h-screen bg-black text-white font-sans overflow-hidden">
+            {/* Sidebar */}
+            <aside className="w-16 md:w-64 bg-[#0A0A0A] border-r border-white/10 flex flex-col justify-between shrink-0 z-50">
+                <div className="p-4 md:p-6 flex items-center justify-center md:justify-start gap-4">
+                    <Logo className="scale-75 md:scale-100 origin-left" />
                 </div>
-            </header>
 
-            {activeTab === 'search' && (
-                <>
-                <div className="p-4 md:p-6 border-b border-white/5 bg-[#050505]/95 backdrop-blur z-10 shrink-0">
-                    <div className="max-w-7xl mx-auto w-full">
-                        <div className="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                            <h1 className="text-2xl md:text-3xl font-black uppercase italic tracking-tighter text-white">Busca <span className="text-red-600">Deep Dive</span></h1>
-                            <ModeSelector />
-                        </div>
-                        
-                        <form onSubmit={handleSearchButton} className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 items-end bg-[#0A0A0A] p-4 md:p-5 rounded-3xl border border-white/10 relative overflow-hidden group">
-                            <div className="absolute top-0 left-0 w-1 h-full bg-red-600 opacity-50 group-hover:opacity-100 transition-opacity"></div>
-                            <div className="md:col-span-3 space-y-2">
-                                <label className="text-[9px] font-black text-red-600 uppercase tracking-widest ml-1">Nicho</label>
-                                <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 md:py-4 text-white focus:border-red-600 outline-none text-sm md:text-base font-bold transition-all placeholder-white/20" placeholder="Ex: Estética" />
-                            </div>
-                            <div className="md:col-span-3 space-y-2">
-                                <label className="text-[9px] font-black text-red-600 uppercase tracking-widest ml-1">Região</label>
-                                <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 md:py-4 text-white focus:border-red-600 outline-none text-sm md:text-base font-bold transition-all placeholder-white/20" placeholder="Ex: Pinheiros, SP" />
-                            </div>
-                            <div className="md:col-span-3 space-y-2 flex flex-col justify-end h-full">
-                                <label className="text-[9px] font-black text-red-600 uppercase tracking-widest ml-1 flex justify-between">
-                                    <span>Score Min: {minScore}</span>
-                                    <span>+70 = Alta Qualidade</span>
-                                </label>
-                                <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3 md:py-4 flex items-center">
+                <nav className="flex-1 px-2 md:px-4 py-8 space-y-2">
+                    <button 
+                        onClick={() => setActiveTab('search')}
+                        className={`w-full flex items-center justify-center md:justify-start gap-4 p-3 rounded-xl transition-all ${activeTab === 'search' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
+                        title="Prospectar"
+                    >
+                        <TargetIcon className="w-5 h-5" />
+                        <span className="hidden md:block text-xs font-bold uppercase tracking-widest">Prospectar</span>
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('marketing')}
+                        className={`w-full flex items-center justify-center md:justify-start gap-4 p-3 rounded-xl transition-all ${activeTab === 'marketing' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
+                        title="Marketing Command"
+                    >
+                        <MegaphoneIcon className="w-5 h-5" />
+                        <span className="hidden md:block text-xs font-bold uppercase tracking-widest">Marketing</span>
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('warroom')}
+                        className={`w-full flex items-center justify-center md:justify-start gap-4 p-3 rounded-xl transition-all ${activeTab === 'warroom' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
+                        title="War Room"
+                    >
+                        <BrainIcon className="w-5 h-5" />
+                        <span className="hidden md:block text-xs font-bold uppercase tracking-widest">War Room</span>
+                    </button>
+                </nav>
+
+                <div className="p-4 border-t border-white/10">
+                    <button onClick={onLogout} className="w-full flex items-center justify-center md:justify-start gap-4 p-3 text-red-500 hover:bg-red-500/10 rounded-xl transition-all" title="Sair">
+                        <XIcon className="w-5 h-5" />
+                        <span className="hidden md:block text-xs font-bold uppercase tracking-widest">Sair</span>
+                    </button>
+                </div>
+            </aside>
+
+            {/* Main Content */}
+            <main className="flex-1 flex flex-col min-w-0 bg-[#050505] relative overflow-hidden">
+                
+                {activeTab === 'search' && (
+                    <div className="flex flex-col h-full">
+                        {/* Search Header */}
+                        <div className="p-4 md:p-6 border-b border-white/10 bg-[#0c0c0c] flex flex-col md:flex-row gap-4 justify-between items-center shrink-0">
+                            <div className="flex items-center gap-3 w-full md:w-auto">
+                                <div className="relative w-full md:w-96">
                                     <input 
-                                        type="range" 
-                                        min="0" 
-                                        max="99" 
-                                        value={minScore} 
-                                        onChange={(e) => setMinScore(Number(e.target.value))} 
-                                        className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer accent-red-600"
+                                        type="text" 
+                                        value={query}
+                                        onChange={(e) => setQuery(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                                        placeholder="Busca Inteligente (Ex: Cafeterias Jardins)"
+                                        className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-3 pl-10 text-white focus:border-red-600 outline-none transition-all placeholder-white/20 text-sm font-medium"
                                     />
+                                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20">
+                                        <TargetIcon className="w-4 h-4" />
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="md:col-span-3">
-                                <button type="submit" disabled={isLoading} className="w-full bg-red-600 hover:bg-red-700 text-white py-3 md:py-4 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-lg shadow-red-600/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 h-[48px] md:h-[58px] transition-all hover:shadow-[0_0_30px_rgba(220,38,38,0.5)]">
-                                    {isLoading ? <SpinnerIcon /> : 'BUSCAR ALVOS'}
+                                <button 
+                                    onClick={() => handleSearch()}
+                                    className="bg-white text-black px-6 py-3 rounded-xl font-black uppercase text-xs tracking-widest hover:bg-gray-200 transition-colors shadow-lg shadow-white/10"
+                                >
+                                    Buscar
                                 </button>
                             </div>
-                        </form>
-                    </div>
-                </div>
-                
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 bg-[#050505] pb-24 md:pb-24">
-                    <div className="max-w-8xl mx-auto">
-                        {!isLoading && leads.length === 0 && (
-                            <div className="h-64 flex flex-col items-center justify-center text-center opacity-30">
-                                <TargetIcon className="w-16 h-16 text-white mb-4" />
-                                <p className="text-sm font-black uppercase tracking-widest">Nenhum alvo detectado</p>
-                                <p className="text-xs mt-2 text-white/50 max-w-xs">Se já buscou antes, os resultados anteriores foram movidos para a aba "Visualizados" para não repetir.</p>
+                            
+                            <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 scrollbar-hide">
+                                <span className="text-[9px] font-black text-white/30 uppercase tracking-widest mr-2 hidden md:block">Filtros de Caça:</span>
+                                {(['standard', 'whale', 'crisis', 'ghost'] as SearchMode[]).map(mode => (
+                                    <button 
+                                        key={mode}
+                                        onClick={() => setSearchMode(mode)}
+                                        className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest whitespace-nowrap border transition-all ${searchMode === mode ? 'bg-white text-black border-white' : 'bg-transparent text-white/40 border-white/10 hover:border-white/30 hover:text-white'}`}
+                                    >
+                                        {mode.toUpperCase()}
+                                    </button>
+                                ))}
                             </div>
-                        )}
-                        
-                        {leads.length > 0 && (
-                            <>
-                                <div className="flex justify-between items-end mb-6 px-1 border-b border-white/5 pb-4">
-                                    <div className="flex items-center gap-4">
-                                        <span className="text-3xl font-black text-white italic">{leads.length}</span>
-                                        <span className="text-[10px] text-white/40 uppercase tracking-[0.3em] font-bold mt-2 leading-tight">Leads Encontrados</span>
+                        </div>
+
+                        {/* Results Grid */}
+                        <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar bg-[#050505]">
+                            {loading && leads.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-full text-white/30 space-y-4">
+                                    <div className="relative">
+                                        <SpinnerIcon />
+                                        <div className="absolute inset-0 bg-red-600/20 blur-xl animate-pulse"></div>
                                     </div>
-                                    {minScore > 0 && <span className="text-[9px] text-red-500 border border-red-500/30 px-2 py-1 rounded uppercase tracking-widest">Filtro Score: &gt; {minScore}</span>}
+                                    <p className="text-xs font-mono uppercase tracking-widest animate-pulse">Varrendo Google Maps via Satélite...</p>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-8">
-                                    {leads.map((lead) => <LeadCard key={lead.id} lead={lead} />)}
-                                </div>
-                                {nextPageToken && (
-                                    <div className="mt-10 flex justify-center">
-                                        <button 
-                                            onClick={loadMore} 
-                                            disabled={isLoading}
-                                            className="bg-white/5 border border-white/10 text-white hover:bg-white/10 px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 transition-all hover:scale-105"
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                                    {leads.map(lead => (
+                                        <div 
+                                            key={lead.id} 
+                                            onClick={() => setSelectedLead(lead)}
+                                            className="bg-[#0c0c0c] border border-white/10 rounded-2xl overflow-hidden group hover:border-red-600/30 transition-all flex flex-col cursor-pointer hover:-translate-y-1 hover:shadow-2xl hover:shadow-black"
                                         >
-                                            {isLoading ? <SpinnerIcon /> : '+ CARREGAR MAIS ALVOS'}
-                                        </button>
-                                    </div>
-                                )}
-                            </>
-                        )}
+                                            <div className="h-32 bg-white/5 relative overflow-hidden">
+                                                {lead.photos && lead.photos.length > 0 ? (
+                                                     <img 
+                                                        src={`/api/photo?ref=${lead.photos[0].photo_reference}`} 
+                                                        alt={lead.name}
+                                                        className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-500 transform group-hover:scale-110"
+                                                        loading="lazy"
+                                                     />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-white/10 bg-[#151515]">
+                                                        <LocationIcon className="w-8 h-8 opacity-20" />
+                                                    </div>
+                                                )}
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80"></div>
+                                                <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded text-[9px] font-black text-white border border-white/10 flex items-center gap-1">
+                                                    {lead.rating} ★
+                                                </div>
+                                                <div className="absolute bottom-2 left-2 right-2 flex justify-between items-end">
+                                                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider backdrop-blur-md ${lead.website ? 'bg-blue-500/20 text-blue-400' : 'bg-red-500/20 text-red-500'}`}>
+                                                        {lead.website ? 'Website ON' : 'SEM SITE'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="p-4 flex-1 flex flex-col">
+                                                <h3 className="text-white font-bold text-sm leading-tight mb-1 line-clamp-1 group-hover:text-red-500 transition-colors">{lead.name}</h3>
+                                                <p className="text-white/40 text-[10px] mb-3 line-clamp-1">{lead.address}</p>
+                                                
+                                                <div className="mt-auto pt-3 border-t border-white/5 flex gap-2">
+                                                    <button 
+                                                        className="flex-1 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-colors"
+                                                    >
+                                                        Raio-X
+                                                    </button>
+                                                    <button 
+                                                        className="flex-1 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 group/btn"
+                                                    >
+                                                        <ZapIcon className="w-3 h-3 group-hover/btn:fill-current" /> Ataque
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {leads.length > 0 && nextPageToken && (
+                                        <div className="col-span-full flex justify-center pt-8 pb-12">
+                                            <button 
+                                                onClick={() => handleSearch(nextPageToken)}
+                                                disabled={loading}
+                                                className="bg-white/5 hover:bg-white/10 text-white px-8 py-4 rounded-full text-[10px] font-black uppercase tracking-[0.2em] transition-all disabled:opacity-50"
+                                            >
+                                                {loading ? 'Carregando Satélite...' : 'Carregar Mais Alvos'}
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            
+                            {!loading && leads.length === 0 && (
+                                <div className="flex flex-col items-center justify-center h-full text-white/10 select-none">
+                                    <TargetIcon className="w-24 h-24 mb-6 opacity-20" />
+                                    <p className="text-sm font-black uppercase tracking-[0.4em] text-white/20">Aguardando coordenadas do alvo</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
-                </div>
-                </>
-            )}
+                )}
 
-            {/* Outras Abas (CRM e Ferramentas) */}
-            {activeTab === 'contacted' && (
-                <div className="flex-1 flex flex-col bg-[#050505] p-4 md:p-6 pb-24 md:pb-6 overflow-hidden">
-                    <div className="max-w-7xl mx-auto w-full h-full flex flex-col">
-                        <div className="mb-6 flex flex-col md:flex-row justify-between items-end gap-4 border-b border-white/5 pb-6">
-                            <div><h1 className="text-3xl font-black uppercase italic tracking-tighter text-white">Histórico</h1><p className="text-white/40 text-[10px] font-mono uppercase tracking-[0.2em] mt-1">Leads Processados</p></div>
-                            <input type="text" value={chamadosSearch} onChange={(e) => setChamadosSearch(e.target.value)} placeholder="Filtrar..." className="w-full md:w-96 bg-[#0c0c0c] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-600 outline-none text-sm font-medium" />
-                        </div>
-                        <div className="flex-1 overflow-y-auto custom-scrollbar">
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-8 pb-20">
-                                {contactedLeads.filter(l => l.name.toLowerCase().includes(chamadosSearch.toLowerCase())).map((lead) => <LeadCard key={lead.id} lead={lead} isArchived={true} />)}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+                {activeTab === 'marketing' && <MarketingCommand />}
+                {activeTab === 'warroom' && <StrategicWarRoom />}
 
-            {activeTab === 'viewed' && (
-                <div className="flex-1 flex flex-col bg-[#050505] p-4 md:p-6 pb-24 md:pb-6 overflow-hidden">
-                    <div className="max-w-7xl mx-auto w-full h-full flex flex-col">
-                        <div className="mb-6 flex flex-col md:flex-row justify-between items-end gap-4 border-b border-white/5 pb-6">
-                            <div><h1 className="text-3xl font-black uppercase italic tracking-tighter text-white">Visualizados</h1><p className="text-white/40 text-[10px] font-mono uppercase tracking-[0.2em] mt-1">Leads que você já olhou mas não contactou</p></div>
-                            <input type="text" value={chamadosSearch} onChange={(e) => setChamadosSearch(e.target.value)} placeholder="Filtrar..." className="w-full md:w-96 bg-[#0c0c0c] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-600 outline-none text-sm font-medium" />
-                        </div>
-                        <div className="flex-1 overflow-y-auto custom-scrollbar">
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-8 pb-20">
-                                {viewedLeads.filter(l => l.name.toLowerCase().includes(chamadosSearch.toLowerCase())).map((lead) => <LeadCard key={lead.id} lead={lead} isViewed={true} />)}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-            
-            {(activeTab === 'brainstorm' || activeTab === 'marketing') && (
-                <div className="flex-1 overflow-hidden h-full">
-                    {activeTab === 'brainstorm' && <StrategicWarRoom />}
-                    {activeTab === 'marketing' && <MarketingCommand />}
-                </div>
-            )}
-      </main>
+            </main>
 
-      {selectedLead && <LeadStrategyModal lead={selectedLead} onClose={() => setSelectedLead(null)} onOpenWhatsapp={(text) => openWhatsApp(selectedLead, text)} searchMode={searchMode} />}
-    </div>
-  );
+            {/* Strategy Modal */}
+            {selectedLead && (
+                <LeadStrategyModal 
+                    lead={selectedLead} 
+                    onClose={() => setSelectedLead(null)} 
+                    onOpenWhatsapp={openWhatsapp}
+                    searchMode={searchMode}
+                />
+            )}
+        </div>
+    );
 };
 
 export default AdminDashboard;

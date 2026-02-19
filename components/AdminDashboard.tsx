@@ -115,7 +115,6 @@ const getScoreDetails = (lead: Lead, mode: SearchMode) => {
 
 // --- COMPONENTE: MARKETING COMMAND ---
 const MarketingCommand = () => {
-    // ... (Mantido igual)
     const [formData, setFormData] = useState({ niche: '', city: '', budget: '' });
     const [isLoading, setIsLoading] = useState(false);
     const [strategy, setStrategy] = useState<AdsStrategy | null>(null);
@@ -232,7 +231,46 @@ const MarketingCommand = () => {
                                     </div>
                                 </div>
                             </div>
-                            {/* ... Resto do componente igual ... */}
+                            
+                            {/* Projections */}
+                            <div className="bg-[#0c0c0c] border border-white/10 p-6 rounded-3xl col-span-1 md:col-span-3 lg:col-span-2 flex flex-col justify-between">
+                                <h3 className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-4">Projeções Mensais</h3>
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div className="text-center p-4 bg-white/5 rounded-2xl">
+                                        <div className="text-2xl font-black text-white">{strategy.projections.clicks}</div>
+                                        <div className="text-[9px] uppercase text-white/40">Cliques Est.</div>
+                                    </div>
+                                    <div className="text-center p-4 bg-white/5 rounded-2xl border border-green-500/20">
+                                        <div className="text-2xl font-black text-green-500">{strategy.projections.leads}</div>
+                                        <div className="text-[9px] uppercase text-green-500/60">Leads Est.</div>
+                                    </div>
+                                    <div className="text-center p-4 bg-white/5 rounded-2xl">
+                                        <div className="text-2xl font-black text-white">{strategy.projections.cpm}</div>
+                                        <div className="text-[9px] uppercase text-white/40">CPM Médio</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Tactics */}
+                            <div className="md:col-span-3 bg-[#0c0c0c] border border-white/10 p-6 rounded-3xl">
+                                <h3 className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-4">Plano Tático</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <h4 className="text-blue-500 text-xs font-black uppercase mb-2">Google (Pesquisa)</h4>
+                                        <p className="text-white/80 text-sm mb-2">"{strategy.google_ads.headline}"</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {strategy.google_ads.keywords.map((kw, i) => (
+                                                <span key={i} className="text-[9px] bg-blue-500/10 text-blue-400 px-2 py-1 rounded">{kw}</span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-purple-500 text-xs font-black uppercase mb-2">Meta (Social)</h4>
+                                        <p className="text-white/80 text-sm mb-1 italic">Idea: {strategy.meta_ads.creative_idea}</p>
+                                        <p className="text-white/50 text-xs">Hook: "{strategy.meta_ads.copy_hook}"</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -243,7 +281,6 @@ const MarketingCommand = () => {
 
 // --- COMPONENTE: STRATEGIC WAR ROOM ---
 const StrategicWarRoom = () => {
-    // ... (Mantido igual)
     const [notes, setNotes] = useState('');
     
     useEffect(() => {
@@ -306,25 +343,103 @@ const LeadStrategyModal = ({
     const [strategy, setStrategy] = useState<LeadStrategyData | null>(null);
     const [isAiLoading, setIsAiLoading] = useState(false);
 
+    // Estado para Script Personalizado IA
+    const [generatedScript, setGeneratedScript] = useState('');
+    const [isScriptLoading, setIsScriptLoading] = useState(false);
+
     // Dados para o Score Breakdown
     const scoreReasons = getScoreDetails(lead, searchMode);
 
-    // Função Manual para Gerar IA
+    // Função de Fallback (Template)
+    const getQuickScript = () => {
+        let template = customScripts.standard;
+        if (lead.lead_score > 80) template = customScripts.whale;
+        else if (lead.status_site === 'sem_site') template = customScripts.ghost;
+        else if (lead.rating < 4.0) template = customScripts.crisis;
+        
+        return template
+            .replace(/{EMPRESA}/g, lead.name)
+            .replace(/{NOTA}/g, lead.rating.toString())
+            .replace(/{BAIRRO}/g, lead.address.split(',')[1] || 'sua região')
+            .replace(/{PLATAFORMA}/g, lead.website || 'Linktree');
+    };
+
+    // Efeito para Gerar Script Automaticamente ao abrir o modal
+    useEffect(() => {
+        let isMounted = true;
+        const generatePersonalizedScript = async () => {
+            setIsScriptLoading(true);
+            setGeneratedScript(''); // Limpa script anterior
+            
+            try {
+                const prompt = `
+                    ATUE COMO: SDR Sênior e Especialista em Vendas do Grupo CBL.
+                    CONTEXTO: Prospecção fria via WhatsApp para vender Site, Tráfego ou Gestão de Reputação.
+                    
+                    DADOS DO LEAD ALVO:
+                    Nome: "${lead.name}"
+                    Nicho: ${lead.types?.[0] || 'Comércio Local'}
+                    Nota Google: ${lead.rating} (${lead.user_ratings_total} avaliações)
+                    Localização: ${lead.address?.split(',')[1] || lead.address}
+                    Site: ${lead.website || 'Não possui'}
+                    Status Site: ${lead.status_site} (sem_site = grave, site_basico = linktree/wix, com_site = tem site).
+                    
+                    TAREFA:
+                    Escreva uma mensagem de abordagem para o dono.
+                    
+                    REGRAS DE OURO:
+                    1. HIPER-PERSONALIZADA: Você DEVE citar o nome da empresa e um dado específico (ex: "Vi que vocês têm nota 4.8" ou "Não achei o site de vocês").
+                    2. TOM: Profissional, direto, mas humano. Nada de "Prezados".
+                    3. GANCHO:
+                       - Se tiver nota baixa (<4.0): Foque em reputação.
+                       - Se não tiver site: Foque na perda de clientes no Google.
+                       - Se tiver site e nota boa: Foque em atrair mais clientes (tráfego).
+                    4. FINALIZAÇÃO: Termine com uma pergunta de baixo atrito (ex: "Cuida dessa parte aí?" ou "Podemos falar 5min?").
+                    5. Tamanho: Máximo 3 blocos curtos.
+                `;
+
+                const response = await fetch('/api/gemini', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: { parts: [{ text: prompt }] },
+                        model: 'gemini-3-flash-preview',
+                        config: { responseMimeType: 'text/plain' }
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (isMounted) {
+                    if (data.text) {
+                        setGeneratedScript(data.text.trim());
+                    } else {
+                        // Fallback se a IA falhar
+                        setGeneratedScript(getQuickScript());
+                    }
+                }
+            } catch (error) {
+                console.error("Erro script IA:", error);
+                if (isMounted) setGeneratedScript(getQuickScript());
+            } finally {
+                if (isMounted) setIsScriptLoading(false);
+            }
+        };
+
+        generatePersonalizedScript();
+
+        return () => { isMounted = false; };
+    }, [lead]); // Recarrega se o lead mudar
+
+    // Função Manual para Gerar Estratégia Completa (Aba 2)
     const generateAiStrategy = async () => {
         setIsAiLoading(true);
-        
-        // Dados brutos
-        const companyName = lead.name;
-        const rating = lead.rating;
-        const address = lead.address;
-        const hasSite = lead.status_site !== 'sem_site';
-        
         const prompt = `
             ATUE COMO: Consultor de Negócios Sênior do Grupo CBL.
             DADOS DO PROSPECT:
-            Nome: ${companyName}
-            Nota: ${rating} estrelas
-            Site: ${hasSite ? lead.website : "Não possui"}
+            Nome: ${lead.name}
+            Nota: ${lead.rating} estrelas
+            Site: ${lead.status_site !== 'sem_site' ? lead.website : "Não possui"}
             Nicho: ${lead.types.join(', ')}
 
             TAREFA: Raio-X comercial para venda de site/tráfego.
@@ -362,20 +477,6 @@ const LeadStrategyModal = ({
     const handleCopy = (text: string) => {
         navigator.clipboard.writeText(text);
         alert("Copiado!");
-    };
-    
-    // Script básico (Template replacement) para mostrar imediatamente na aba de abordagem
-    const getQuickScript = () => {
-        let template = customScripts.standard;
-        if (lead.lead_score > 80) template = customScripts.whale;
-        else if (lead.status_site === 'sem_site') template = customScripts.ghost;
-        else if (lead.rating < 4.0) template = customScripts.crisis;
-        
-        return template
-            .replace(/{EMPRESA}/g, lead.name)
-            .replace(/{NOTA}/g, lead.rating.toString())
-            .replace(/{BAIRRO}/g, lead.address.split(',')[1] || 'sua região')
-            .replace(/{PLATAFORMA}/g, lead.website || 'Linktree');
     };
 
     return (
@@ -444,7 +545,7 @@ const LeadStrategyModal = ({
                                     <h3 className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-2">Dados de Contato</h3>
                                     
                                     {lead.phone && (
-                                        <div onClick={() => onOpenWhatsapp(getQuickScript())} className="flex items-center gap-3 text-white cursor-pointer hover:text-green-500 transition-colors">
+                                        <div onClick={() => onOpenWhatsapp(generatedScript)} className="flex items-center gap-3 text-white cursor-pointer hover:text-green-500 transition-colors">
                                             <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center"><PhoneIcon /></div>
                                             <span className="text-sm font-bold">{lead.phone}</span>
                                         </div>
@@ -471,21 +572,36 @@ const LeadStrategyModal = ({
                                 </div>
                             </div>
 
-                            {/* Coluna Direita: Script Rápido */}
+                            {/* Coluna Direita: Script Rápido (Agora com IA) */}
                             <div className="flex flex-col h-full">
-                                <div className="flex-1 bg-[#151515] border border-white/10 rounded-2xl p-5 relative flex flex-col">
+                                <div className="flex-1 bg-[#151515] border border-white/10 rounded-2xl p-5 relative flex flex-col group">
                                     <div className="flex justify-between items-center mb-4">
-                                        <h3 className="text-[10px] font-black text-white/30 uppercase tracking-widest">Script Rápido (Template)</h3>
-                                        <button onClick={() => handleCopy(getQuickScript())} className="text-[10px] text-white/50 hover:text-white uppercase font-bold">Copiar</button>
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="text-[10px] font-black text-white/30 uppercase tracking-widest">Abordagem Personalizada IA</h3>
+                                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shadow-[0_0_5px_#22c55e]"></span>
+                                        </div>
+                                        <button onClick={() => handleCopy(generatedScript)} className="text-[10px] text-white/50 hover:text-white uppercase font-bold">Copiar</button>
                                     </div>
-                                    <textarea 
-                                        className="w-full flex-1 bg-transparent border-none outline-none text-white text-sm md:text-base leading-relaxed resize-none font-sans min-h-[200px]"
-                                        value={getQuickScript()}
-                                        readOnly
-                                    />
+                                    
+                                    <div className="relative flex-1 min-h-[200px]">
+                                        {isScriptLoading && (
+                                            <div className="absolute inset-0 bg-[#151515] z-10 flex flex-col items-center justify-center rounded-xl border border-white/5">
+                                                <SpinnerIcon />
+                                                <span className="text-[10px] uppercase tracking-widest text-white/40 mt-2 animate-pulse">Gerando Abordagem Única...</span>
+                                            </div>
+                                        )}
+                                        <textarea 
+                                            className="w-full h-full bg-transparent border-none outline-none text-white text-sm md:text-base leading-relaxed resize-none font-sans"
+                                            value={generatedScript}
+                                            onChange={(e) => setGeneratedScript(e.target.value)}
+                                            placeholder="Aguarde, gerando texto..."
+                                        />
+                                    </div>
+
                                     <button 
-                                        onClick={() => onOpenWhatsapp(getQuickScript())}
-                                        className="mt-4 w-full bg-[#25D366] hover:bg-[#20b858] text-black py-4 rounded-xl font-black uppercase text-xs tracking-[0.2em] shadow-lg shadow-green-600/20 active:scale-[0.98] flex items-center justify-center gap-2 transition-all"
+                                        onClick={() => onOpenWhatsapp(generatedScript)}
+                                        disabled={isScriptLoading}
+                                        className="mt-4 w-full bg-[#25D366] hover:bg-[#20b858] text-black py-4 rounded-xl font-black uppercase text-xs tracking-[0.2em] shadow-lg shadow-green-600/20 active:scale-[0.98] flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         <PhoneIcon className="w-4 h-4 text-black fill-current" />
                                         Enviar WhatsApp

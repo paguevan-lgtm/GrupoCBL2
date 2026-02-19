@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from "@google/genai";
 
 export default async function handler(req, res) {
@@ -13,15 +12,12 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Usando a chave que você forneceu explicitamente para a IA no início.
-    const apiKey = "AIzaSyDx8QZ41gze3XEYhXvo6r5EmkXxmC8_daA";
-    
-    const ai = new GoogleGenAI({ apiKey: apiKey });
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     console.log("Iniciando requisição Gemini...");
 
     const response = await ai.models.generateContent({
-      model: model || 'gemini-2.0-flash',
+      model: model || 'gemini-3-flash-preview',
       contents: contents,
       config: config || {}
     });

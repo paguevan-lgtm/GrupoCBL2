@@ -10,18 +10,17 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Query or pagetoken is required' });
   }
 
-  // Use environment variable
-  const apiKey = process.env.API_KEY;
+  // Tenta usar a chave específica do Maps primeiro, senão cai na geral
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.API_KEY;
 
   if (!apiKey) {
-    console.error("API_KEY environment variable is missing");
-    return res.status(500).json({ error: 'Server configuration error: API Key missing.' });
+    console.error("GOOGLE_MAPS_API_KEY or API_KEY environment variable is missing");
+    return res.status(500).json({ error: 'Configuração de servidor inválida: Chave de API ausente.' });
   }
 
   try {
     let searchUrl;
     
-    // Se tiver token de paginação, usa ele. Se não, faz a busca textual.
     if (pagetoken) {
         searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?pagetoken=${pagetoken}&key=${apiKey}`;
         console.log(`[API Places] Fetching next page...`);
@@ -36,13 +35,12 @@ export default async function handler(req, res) {
     const searchData = await searchResponse.json();
 
     if (searchData.status !== 'OK' && searchData.status !== 'ZERO_RESULTS') {
-      throw new Error(`Search API Error: ${searchData.status}`);
+      const errorMsg = searchData.error_message || searchData.status;
+      throw new Error(`Google Maps API Error: ${errorMsg}`);
     }
 
     const initialResults = searchData.results || [];
     
-    // Google Places retorna 20 resultados por página.
-    // Vamos processar todos os 20 para maximizar a eficiência da busca.
     const detailedResults = await Promise.all(
       initialResults.map(async (place) => {
         try {
@@ -52,14 +50,13 @@ export default async function handler(req, res) {
           const detailsData = await detailsResponse.json();
 
           if (detailsData.status === 'OK') {
-            // Mescla os dados da busca com os detalhes ricos
             return {
               ...place,
-              ...detailsData.result, // Sobrescreve com dados mais precisos
+              ...detailsData.result,
               original_search_ref: place.place_id
             };
           }
-          return place; // Fallback para o resultado básico se o details falhar
+          return place;
         } catch (err) {
           console.error(`Failed to fetch details for ${place.place_id}`, err);
           return place;

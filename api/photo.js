@@ -1,10 +1,11 @@
 
 export default async function handler(req, res) {
   const { ref } = req.query;
-  const apiKey = process.env.API_KEY; 
+  // Prioriza chave específica do Maps
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.API_KEY; 
   
   if (!apiKey) {
-    console.error("API_KEY environment variable is missing");
+    console.error("API Key missing");
     return res.status(500).send('Server configuration error');
   }
   
@@ -20,7 +21,7 @@ export default async function handler(req, res) {
     const buffer = Buffer.from(arrayBuffer);
 
     res.setHeader('Content-Type', response.headers.get('content-type') || 'image/jpeg');
-    res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache por 1 dia
+    res.setHeader('Cache-Control', 'public, max-age=86400');
     res.send(buffer);
   } catch (error) {
     console.error(error);

@@ -241,7 +241,7 @@ const MarketingCommand = () => {
             DADOS:
             - Nicho: ${inputs.niche}
             - Verba Total: R$ ${inputs.budget}
-            - Duração: ${inputs.days} dias
+            - Duração: ${inputs.days}
             - Objetivo: ${inputs.objective}
 
             REGRAS ESTRATÉGICAS:
@@ -718,87 +718,120 @@ const StrategicWarRoom = () => {
     );
 };
 
+// --- DEFINIÇÕES E COMPONENTES AUXILIARES ADICIONADOS ---
+
 const DEFAULT_SCRIPTS = [
-    { id: '1', title: 'Abordagem Fria (WhatsApp)', content: 'Olá, encontrei a *{Empresa}* no Google e notei que vocês têm um ótimo potencial em *{Nicho}*, mas a presença digital pode melhorar. Tenho uma estratégia rápida para isso. Podemos falar?' },
-    { id: '2', title: 'Follow-up (3 dias)', content: 'Oi! Imagino que a correria esteja grande. Só queria confirmar se viu minha mensagem anterior sobre a otimização do perfil da *{Empresa}*.' },
-    { id: '3', title: 'Quebra de Objeção (Preço)', content: 'Entendo perfeitamente. Mas pense nisso não como um custo, e sim como um investimento. Se um único cliente novo vier dessa estratégia, o projeto já se paga. Vamos fazer um teste?' }
+    { id: 'cold_call', title: 'Cold Call (Padrão)', content: "Olá [NOME], aqui é [SEU_NOME] do Grupo CBL. \n\nEstou ligando porque vi que vocês são referência em [NICHO] na região, mas notei que a presença digital de vocês não reflete essa autoridade. \n\nHoje vocês dependem 100% de indicação ou já usam tráfego pago?" },
+    { id: 'gatekeeper', title: 'Passar pela Secretária', content: "Olá, bom dia. Por favor, eu preciso falar com o responsável pela parte comercial ou de marketing. \n\nÉ sobre uma parceria estratégica que pode reduzir o custo de aquisição de clientes de vocês. \n\nQual o melhor horário para eu ligar e falar com ele por 2 minutos?" },
+    { id: 'whatsapp_first', title: 'Primeiro Contato (WhatsApp)', content: "Olá [NOME], tudo bem? \n\nEncontrei o perfil da [EMPRESA] e vi um potencial enorme que não está sendo explorado no Google/Instagram. \n\nSou especialista em alavancagem de negócios locais. Posso te enviar um áudio de 30s explicando o que encontrei de 'dinheiro na mesa' no caso de vocês?" }
 ];
 
-const ScriptManager: React.FC<{ scripts: typeof DEFAULT_SCRIPTS, onSave: (scripts: typeof DEFAULT_SCRIPTS) => void }> = ({ scripts, onSave }) => {
-    const [localScripts, setLocalScripts] = useState(scripts);
-    const [editingId, setEditingId] = useState<string | null>(null);
+const ScriptManager = ({ scripts, onSave }: { scripts: typeof DEFAULT_SCRIPTS, onSave: (s: typeof DEFAULT_SCRIPTS) => void }) => {
+    const [selectedScript, setSelectedScript] = useState(scripts[0]);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editContent, setEditContent] = useState('');
 
-    const handleUpdate = (id: string, newContent: string) => {
-        const updated = localScripts.map(s => s.id === id ? { ...s, content: newContent } : s);
-        setLocalScripts(updated);
-    };
+    useEffect(() => {
+        setEditContent(selectedScript.content);
+    }, [selectedScript]);
 
     const handleSave = () => {
-        onSave(localScripts);
-        setEditingId(null);
+        const updated = scripts.map(s => s.id === selectedScript.id ? { ...s, content: editContent } : s);
+        onSave(updated);
+        setSelectedScript({ ...selectedScript, content: editContent });
+        setIsEditing(false);
     };
 
     return (
         <div className="h-full flex flex-col bg-[#050505] p-6">
             <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-purple-600/20 rounded-lg text-purple-500"><BrainIcon className="w-6 h-6"/></div>
-                <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter">Script Vault</h2>
+                 <div className="p-2 bg-purple-600/20 rounded-lg text-purple-500"><BrainIcon className="w-6 h-6"/></div>
+                 <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter">Scripts de Venda</h2>
             </div>
             
-            <div className="grid gap-6 h-full overflow-y-auto custom-scrollbar pb-20">
-                {localScripts.map(script => (
-                    <div key={script.id} className="bg-[#0c0c0c] border border-white/10 rounded-2xl p-6">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-white font-bold">{script.title}</h3>
-                            {editingId === script.id ? (
-                                <button onClick={handleSave} className="text-green-500 text-xs font-black uppercase tracking-widest hover:text-green-400">Salvar</button>
-                            ) : (
-                                <button onClick={() => setEditingId(script.id)} className="text-white/40 text-xs font-black uppercase tracking-widest hover:text-white">Editar</button>
-                            )}
-                        </div>
-                        {editingId === script.id ? (
-                            <textarea 
-                                value={script.content} 
-                                onChange={(e) => handleUpdate(script.id, e.target.value)}
-                                className="w-full h-32 bg-[#151515] border border-white/10 rounded-xl p-4 text-white/80 text-sm leading-relaxed outline-none focus:border-purple-500 transition-colors resize-none"
-                            />
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 h-full min-h-0">
+                <div className="md:col-span-4 space-y-2 overflow-y-auto custom-scrollbar">
+                    {scripts.map(script => (
+                        <button 
+                            key={script.id}
+                            onClick={() => { setSelectedScript(script); setIsEditing(false); }}
+                            className={`w-full text-left p-4 rounded-xl border transition-all ${selectedScript.id === script.id ? 'bg-white/10 border-white/40 text-white' : 'bg-[#111] border-white/5 text-white/50 hover:bg-[#1a1a1a]'}`}
+                        >
+                            <span className="font-bold text-sm block">{script.title}</span>
+                        </button>
+                    ))}
+                </div>
+                
+                <div className="md:col-span-8 bg-[#0c0c0c] border border-white/10 rounded-3xl p-6 flex flex-col relative group">
+                     <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-sm font-black text-white uppercase tracking-widest">{selectedScript.title}</h3>
+                        {!isEditing ? (
+                            <button onClick={() => setIsEditing(true)} className="text-xs font-bold text-white/50 hover:text-white uppercase tracking-wider">Editar</button>
                         ) : (
-                            <p className="text-white/60 text-sm leading-relaxed">{script.content}</p>
+                            <div className="flex gap-2">
+                                <button onClick={() => setIsEditing(false)} className="text-xs font-bold text-red-500 uppercase tracking-wider">Cancelar</button>
+                                <button onClick={handleSave} className="text-xs font-black text-green-500 uppercase tracking-wider">Salvar</button>
+                            </div>
                         )}
-                    </div>
-                ))}
+                     </div>
+                     
+                     {isEditing ? (
+                         <textarea 
+                            value={editContent}
+                            onChange={(e) => setEditContent(e.target.value)}
+                            className="flex-1 bg-[#151515] border border-white/10 rounded-xl p-4 text-white/80 font-mono text-sm resize-none outline-none focus:border-white/30"
+                         />
+                     ) : (
+                         <div className="flex-1 overflow-y-auto custom-scrollbar whitespace-pre-wrap text-white/80 text-sm font-light leading-relaxed p-4 bg-[#151515] border border-transparent rounded-xl">
+                            {selectedScript.content}
+                         </div>
+                     )}
+                     
+                     <div className="mt-4 pt-4 border-t border-white/5 flex justify-end">
+                         <button 
+                            onClick={() => navigator.clipboard.writeText(selectedScript.content)}
+                            className="bg-white text-black px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-gray-200 transition-colors shadow-lg"
+                         >
+                             Copiar para Área de Transferência
+                         </button>
+                     </div>
+                </div>
             </div>
         </div>
     );
 };
 
-const LeadStrategyModal: React.FC<{ 
-    lead: Lead; 
-    onClose: () => void; 
-    onCopyPitch: (text: string) => void;
-    onOpenWhatsapp: (text: string) => void;
-    customScripts: typeof DEFAULT_SCRIPTS;
-}> = ({ lead, onClose, onCopyPitch, onOpenWhatsapp, customScripts }) => {
-    const [strategy, setStrategy] = useState<IAAnalysisResult | null>(null);
+const LeadStrategyModal = ({ lead, onClose, onCopyPitch, onOpenWhatsapp, customScripts }: { 
+    lead: Lead, 
+    onClose: () => void, 
+    onCopyPitch: (t: string) => void, 
+    onOpenWhatsapp: (t: string) => void,
+    customScripts: typeof DEFAULT_SCRIPTS
+}) => {
+    const [analysis, setAnalysis] = useState<IAAnalysisResult | null>(null);
     const [loading, setLoading] = useState(false);
-    const [selectedScriptId, setSelectedScriptId] = useState(customScripts[0].id);
 
+    // Auto-analyze on mount if not analyzed
     useEffect(() => {
-        const generateStrategy = async () => {
+        const analyzeLead = async () => {
             setLoading(true);
             const prompt = `
-                ATUE COMO: Estrategista de Vendas B2B.
-                CLIENTE: ${lead.name} (${lead.types?.join(', ') || 'Comércio Local'}).
-                DADOS: Score ${lead.lead_score}, Rating ${lead.rating}, Endereço ${lead.address}.
+                ATUE COMO: Consultor de Vendas Sênior especializado em ${lead.types.join(', ')}.
+                CLIENTE: ${lead.name}
+                SCORE: ${lead.lead_score}
+                ENDEREÇO: ${lead.address}
+                NOTA: ${lead.rating} (${lead.user_ratings_total} reviews)
                 
-                Gere uma análise rápida em JSON:
+                TAREFA: Crie uma estratégia de abordagem.
+                
+                RETORNE JSON:
                 {
-                    "pitch": "Uma frase de impacto personalizada para abrir conversa no WhatsApp.",
+                    "pitch": "Uma mensagem curta de quebra de gelo para WhatsApp (max 3 linhas).",
                     "products_to_sell": ["Produto 1", "Produto 2"],
-                    "sales_strategy": "Dica tática de como abordar (ex: elogiar o ponto físico).",
-                    "suggested_pricing": "Faixa de preço sugerida (ex: R$ 500 - R$ 1000).",
-                    "conquest_tip": "Um gatilho mental para usar.",
-                    "pain_points": ["Provável dor 1", "Provável dor 2"]
+                    "sales_strategy": "Dica de como conduzir a negociação.",
+                    "suggested_pricing": "Quanto cobrar (range) por um serviço inicial.",
+                    "conquest_tip": "Uma dica de ouro baseada no nicho.",
+                    "pain_points": ["Dor 1", "Dor 2"]
                 }
             `;
             
@@ -813,141 +846,93 @@ const LeadStrategyModal: React.FC<{
                     })
                 });
                 const data = await response.json();
-                
-                // Limpeza e parse
-                let jsonText = data.text ? data.text.trim() : '';
-                if (jsonText.startsWith('```json')) {
-                    jsonText = jsonText.replace(/^```json/, '').replace(/```$/, '');
-                } else if (jsonText.startsWith('```')) {
-                    jsonText = jsonText.replace(/^```/, '').replace(/```$/, '');
+                let cleanText = data.text.trim();
+                if (cleanText.startsWith('```json')) {
+                    cleanText = cleanText.replace(/^```json/, '').replace(/```$/, '');
                 }
-                
-                try {
-                    setStrategy(JSON.parse(jsonText));
-                } catch (parseError) {
-                    console.error("JSON Parse Error in Strategy:", parseError, jsonText);
-                    setStrategy({
-                        pitch: "Erro ao gerar estratégia. Tente novamente.",
-                        products_to_sell: ["-"],
-                        sales_strategy: "Análise manual necessária.",
-                        suggested_pricing: "-",
-                        conquest_tip: "-",
-                        pain_points: ["-"]
-                    });
-                }
-            } catch (error) {
-                console.error("Erro ao gerar estratégia", error);
+                const parsed = JSON.parse(cleanText);
+                setAnalysis(parsed);
+            } catch (e) {
+                console.error(e);
             } finally {
                 setLoading(false);
             }
         };
 
-        generateStrategy();
+        if (!lead.ai_analysis) {
+            analyzeLead();
+        }
     }, [lead]);
 
-    const currentScript = customScripts.find(s => s.id === selectedScriptId);
-    const formattedScript = currentScript?.content.replace('{Empresa}', lead.name).replace('{Nicho}', lead.types?.[0] || 'seu ramo') || '';
-
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 p-4 backdrop-blur-sm" onClick={onClose}>
-            <div className="w-full max-w-5xl h-[90vh] bg-[#0c0c0c] border border-white/10 rounded-3xl overflow-hidden flex flex-col md:flex-row shadow-2xl" onClick={e => e.stopPropagation()}>
-                
-                {/* Coluna Esquerda: Dados do Lead & Scripts */}
-                <div className="w-full md:w-1/3 bg-[#111] border-r border-white/5 p-6 overflow-y-auto custom-scrollbar">
-                    <div className="mb-8">
-                        <div className="w-16 h-16 bg-gray-800 rounded-full mb-4 overflow-hidden">
-                             {lead.photos?.[0] ? <img src={`/api/photo?ref=${lead.photos[0].photo_reference}`} className="w-full h-full object-cover" /> : null}
-                        </div>
-                        <h2 className="text-2xl font-black text-white uppercase leading-tight">{lead.name}</h2>
-                        <p className="text-white/40 text-xs mt-1">{lead.address}</p>
-                        <div className="flex gap-2 mt-4">
-                            <span className={`px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest ${lead.lead_score > 70 ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>Score {lead.lead_score}</span>
-                            <span className="px-2 py-1 rounded bg-white/10 text-white text-[9px] font-black uppercase tracking-widest">{lead.rating} ★</span>
-                        </div>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95 duration-200" onClick={onClose}>
+            <div className="w-full max-w-4xl max-h-[90vh] bg-[#0c0c0c] border border-white/10 rounded-3xl overflow-hidden flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+                <div className="p-6 border-b border-white/10 flex justify-between items-start bg-[#111]">
+                    <div>
+                        <h2 className="text-2xl font-black text-white uppercase">{lead.name}</h2>
+                        <p className="text-white/50 text-xs mt-1">{lead.address}</p>
                     </div>
-
-                    <div className="space-y-4">
-                        <h3 className="text-[10px] font-black text-white/40 uppercase tracking-widest">Scripts Prontos</h3>
-                        <select 
-                            value={selectedScriptId} 
-                            onChange={(e) => setSelectedScriptId(e.target.value)}
-                            className="w-full bg-black border border-white/10 rounded-lg p-2 text-white text-xs outline-none focus:border-red-600 transition-colors"
-                        >
-                            {customScripts.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
-                        </select>
-                        <div className="bg-black/50 border border-white/5 rounded-xl p-4">
-                            <p className="text-white/70 text-sm italic leading-relaxed">"{formattedScript}"</p>
-                        </div>
-                        <button 
-                            onClick={() => onOpenWhatsapp(formattedScript)}
-                            className="w-full bg-green-600 hover:bg-green-500 text-white py-3 rounded-xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg shadow-green-600/20"
-                        >
-                            <PhoneIcon className="w-4 h-4" /> Abrir no WhatsApp
-                        </button>
-                    </div>
+                    <button onClick={onClose} className="text-white/30 hover:text-white"><XIcon /></button>
                 </div>
-
-                {/* Coluna Direita: IA Strategy */}
-                <div className="flex-1 p-6 md:p-10 bg-[#050505] overflow-y-auto custom-scrollbar relative">
-                    <button onClick={onClose} className="absolute top-6 right-6 text-white/30 hover:text-white"><XIcon /></button>
-                    
+                
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
                     {loading ? (
-                        <div className="h-full flex flex-col items-center justify-center space-y-4">
+                        <div className="flex flex-col items-center justify-center h-64 space-y-4">
                             <SpinnerIcon />
-                            <p className="text-white/40 text-xs uppercase tracking-widest animate-pulse">Gerando Estratégia de Combate...</p>
+                            <p className="text-red-500 font-bold uppercase tracking-widest animate-pulse">Analisando Lead...</p>
                         </div>
-                    ) : strategy ? (
-                        <div className="space-y-8 animate-in slide-in-from-bottom-10 duration-500">
-                            <div>
-                                <h3 className="text-3xl font-black text-white uppercase italic tracking-tighter mb-2">Raio-X <span className="text-red-600">Estratégico</span></h3>
-                                <p className="text-white/40 text-xs uppercase tracking-widest">Análise gerada por Inteligência Artificial</p>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="bg-[#111] border border-white/10 p-5 rounded-2xl">
-                                    <h4 className="text-red-500 font-black text-[10px] uppercase tracking-widest mb-3">Pitch Matador</h4>
-                                    <p className="text-white text-lg font-medium leading-relaxed">"{strategy.pitch}"</p>
-                                    <button onClick={() => onCopyPitch(strategy.pitch)} className="mt-3 text-[9px] text-white/30 hover:text-white uppercase tracking-widest font-bold">Copiar Pitch</button>
+                    ) : analysis ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-6">
+                                <div className="bg-red-900/10 border border-red-500/20 p-5 rounded-2xl">
+                                    <h3 className="text-red-500 font-black uppercase text-xs tracking-widest mb-3">Pitch de Quebra de Gelo</h3>
+                                    <p className="text-white text-sm font-medium leading-relaxed italic">"{analysis.pitch}"</p>
+                                    <div className="mt-4 flex gap-3">
+                                        <button onClick={() => onCopyPitch(analysis.pitch)} className="flex-1 bg-white/10 hover:bg-white/20 text-white py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors">Copiar</button>
+                                        <button onClick={() => onOpenWhatsapp(analysis.pitch)} className="flex-1 bg-green-600 hover:bg-green-500 text-white py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors">Enviar Whats</button>
+                                    </div>
                                 </div>
-                                <div className="space-y-4">
-                                     <div className="bg-[#111] border border-white/10 p-4 rounded-xl">
-                                        <h4 className="text-blue-500 font-black text-[10px] uppercase tracking-widest mb-2">Dores Prováveis</h4>
-                                        <ul className="list-disc list-inside text-white/70 text-sm space-y-1">
-                                            {strategy.pain_points.map((p, i) => <li key={i}>{p}</li>)}
-                                        </ul>
-                                     </div>
-                                     <div className="bg-[#111] border border-white/10 p-4 rounded-xl">
-                                        <h4 className="text-green-500 font-black text-[10px] uppercase tracking-widest mb-2">Produtos para Vender</h4>
-                                        <div className="flex flex-wrap gap-2">
-                                            {strategy.products_to_sell.map((p, i) => (
-                                                <span key={i} className="bg-green-500/10 text-green-500 px-2 py-1 rounded text-[10px] font-bold uppercase">{p}</span>
-                                            ))}
-                                        </div>
-                                     </div>
+                                
+                                <div>
+                                    <h3 className="text-white/40 font-black uppercase text-xs tracking-widest mb-3">Dores Prováveis</h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {analysis.pain_points.map((p, i) => (
+                                            <span key={i} className="bg-white/5 border border-white/10 px-3 py-1.5 rounded-full text-xs text-white/80">{p}</span>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div className="bg-gradient-to-r from-red-900/10 to-transparent border border-red-500/10 p-6 rounded-2xl">
-                                <h4 className="text-white font-black text-xs uppercase tracking-widest mb-2 flex items-center gap-2">
-                                    <TargetIcon className="w-4 h-4 text-red-500"/> Tática de Conquista
-                                </h4>
-                                <p className="text-white/80 text-sm leading-relaxed">{strategy.sales_strategy}</p>
+                                <div>
+                                    <h3 className="text-white/40 font-black uppercase text-xs tracking-widest mb-3">Produtos Recomendados</h3>
+                                    <ul className="space-y-2">
+                                        {analysis.products_to_sell.map((p, i) => (
+                                            <li key={i} className="flex items-center gap-2 text-sm text-white/80">
+                                                <span className="text-red-500">→</span> {p}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
                             </div>
                             
-                            <div className="grid grid-cols-2 gap-4">
-                                 <div className="p-4 border border-white/5 rounded-xl bg-white/[0.02]">
-                                     <span className="block text-[9px] text-white/30 uppercase tracking-widest mb-1">Preço Sugerido</span>
-                                     <span className="block text-xl font-black text-white">{strategy.suggested_pricing}</span>
-                                 </div>
-                                 <div className="p-4 border border-white/5 rounded-xl bg-white/[0.02]">
-                                     <span className="block text-[9px] text-white/30 uppercase tracking-widest mb-1">Gatilho Mental</span>
-                                     <span className="block text-sm font-bold text-white/80">{strategy.conquest_tip}</span>
-                                 </div>
-                            </div>
+                            <div className="space-y-6">
+                                <div className="bg-[#151515] p-5 rounded-2xl border border-white/5">
+                                    <h3 className="text-blue-400 font-black uppercase text-xs tracking-widest mb-3">Estratégia de Venda</h3>
+                                    <p className="text-white/70 text-sm leading-relaxed">{analysis.sales_strategy}</p>
+                                </div>
+                                
+                                <div className="bg-[#151515] p-5 rounded-2xl border border-white/5">
+                                    <h3 className="text-yellow-400 font-black uppercase text-xs tracking-widest mb-3">Pricing Sugerido</h3>
+                                    <p className="text-white text-xl font-black">{analysis.suggested_pricing}</p>
+                                </div>
 
+                                <div className="bg-[#151515] p-5 rounded-2xl border border-white/5">
+                                     <h3 className="text-purple-400 font-black uppercase text-xs tracking-widest mb-3">Dica de Ouro</h3>
+                                     <p className="text-white/70 text-sm leading-relaxed italic">"{analysis.conquest_tip}"</p>
+                                </div>
+                            </div>
                         </div>
                     ) : (
-                        <div className="h-full flex items-center justify-center text-white/20">Erro ao carregar estratégia.</div>
+                        <div className="text-center text-white/30">Não foi possível analisar este lead.</div>
                     )}
                 </div>
             </div>
@@ -968,6 +953,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [minScore, setMinScore] = useState(50);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [searchError, setSearchError] = useState('');
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [chamadosSearch, setChamadosSearch] = useState('');
   
@@ -997,6 +983,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const executeSearch = async (token?: string) => {
       if (!searchTerm || !location) return;
       setIsLoading(true);
+      setSearchError('');
+      setLeads([]);
       
       try {
           const response = await fetch('/api/places', {
@@ -1006,6 +994,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           });
           const data = await response.json();
           
+          if (!response.ok) {
+             throw new Error(data.details || data.error || 'Erro desconhecido na API');
+          }
+
           let newLeads = (data.results || []).map((p: any) => ({
               ...p,
               id: p.place_id,
@@ -1023,8 +1015,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           }
 
           setLeads(newLeads);
-      } catch (e) {
+      } catch (e: any) {
           console.error(e);
+          setSearchError(e.message || "Falha na comunicação com a API");
       } finally {
           setIsLoading(false);
       }
@@ -1147,6 +1140,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                             </div>
                         </form>
                         
+                        {searchError && (
+                            <div className="bg-red-900/20 border border-red-500/30 p-4 rounded-xl mb-6 text-center animate-in fade-in slide-in-from-top-2">
+                                <p className="text-red-500 font-bold text-xs uppercase tracking-widest mb-1">Erro na Busca</p>
+                                <p className="text-white/70 text-xs font-mono">{searchError}</p>
+                            </div>
+                        )}
+
                         {leads.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-8">
                                 {leads.map((lead) => {
@@ -1194,7 +1194,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                                 })}
                             </div>
                         ) : (
-                            !isLoading && <div className="h-64 flex items-center justify-center text-white/20 text-sm uppercase tracking-widest">Nenhum alvo detectado</div>
+                            !isLoading && !searchError && <div className="h-64 flex items-center justify-center text-white/20 text-sm uppercase tracking-widest">Nenhum alvo detectado</div>
                         )}
                     </div>
                 </div>

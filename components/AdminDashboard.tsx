@@ -158,7 +158,7 @@ const MarketingCommand = () => {
     // Carregar plano salvo anteriormente
     useEffect(() => {
         const savedData = LocalDB.getMarketingData();
-        // @ts-ignore - Adaptando para ler o formato novo se existir, ou ignorar
+        // @ts-ignore
         if (savedData.currentPlan) {
              // @ts-ignore
              setPlan(savedData.currentPlan);
@@ -224,12 +224,19 @@ const MarketingCommand = () => {
             });
 
             const data = await response.json();
-            const generatedPlan = JSON.parse(data.text);
+            
+            // Sanitização do JSON para evitar erros de markdown
+            let cleanText = data.text.trim();
+            if (cleanText.startsWith('```json')) {
+                cleanText = cleanText.replace(/^```json/, '').replace(/```$/, '');
+            } else if (cleanText.startsWith('```')) {
+                cleanText = cleanText.replace(/^```/, '').replace(/```$/, '');
+            }
+            
+            const generatedPlan = JSON.parse(cleanText);
             
             setPlan(generatedPlan);
             
-            // Salvar no LocalDB (Gambiarra estrutural para manter compatibilidade com o arquivo utils existente sem quebrá-lo, 
-            // idealmente atualizaríamos a interface no utils/localDb.ts)
             const dbData = LocalDB.getMarketingData();
             // @ts-ignore
             LocalDB.saveMarketingData({ ...dbData, currentPlan: generatedPlan, lastInputs: inputs });
@@ -252,7 +259,6 @@ const MarketingCommand = () => {
             </div>
 
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0">
-                {/* Coluna da Esquerda: Inputs */}
                 <div className="lg:col-span-4 bg-[#0c0c0c] border border-white/10 rounded-3xl p-6 flex flex-col overflow-y-auto custom-scrollbar h-auto max-h-full">
                     <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6 border-b border-white/5 pb-2">Briefing Tático</h3>
                     
@@ -312,14 +318,12 @@ const MarketingCommand = () => {
                         </button>
                     </div>
 
-                    {/* Dicas Rápidas Estáticas */}
                     <div className="mt-8 pt-6 border-t border-white/5">
                         <p className="text-[9px] text-white/30 uppercase tracking-widest mb-2 font-mono">Dica do Especialista:</p>
                         <p className="text-xs text-white/60 font-light italic">"Nunca comece com a verba total. Use 20% para validar o criativo antes de escalar."</p>
                     </div>
                 </div>
 
-                {/* Coluna da Direita: O Plano (Resultado) */}
                 <div className="lg:col-span-8 bg-[#0c0c0c] border border-white/10 rounded-3xl p-1 overflow-hidden flex flex-col h-full relative">
                     {!plan && !isLoading && (
                         <div className="h-full flex flex-col items-center justify-center text-white/20 p-10 text-center">
@@ -339,7 +343,6 @@ const MarketingCommand = () => {
                     {plan && !isLoading && (
                         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                             
-                            {/* Header do Plano */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="bg-blue-900/10 border border-blue-500/20 p-4 rounded-xl">
                                     <span className="block text-[9px] text-blue-400 uppercase tracking-widest font-bold">Investimento Sugerido</span>
@@ -355,7 +358,6 @@ const MarketingCommand = () => {
                                 </div>
                             </div>
 
-                            {/* Timeline de Fases */}
                             <div>
                                 <h3 className="text-sm font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2">
                                     <span className="w-2 h-2 bg-blue-500 rounded-full"></span> Cronograma de Execução
@@ -390,7 +392,6 @@ const MarketingCommand = () => {
                                 </div>
                             </div>
 
-                            {/* Dos and Donts */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-white/5">
                                 <div>
                                     <h4 className="text-[10px] font-black text-green-500 uppercase tracking-widest mb-3 flex items-center gap-2">
@@ -422,10 +423,148 @@ const MarketingCommand = () => {
     );
 };
 
-// --- COMPONENTE: STRATEGIC WAR ROOM (REFORMULADO - DB LOCAL) ---
+// --- ESTRUTURA KANBAN & CARDS (Movidos para fora para evitar re-render) ---
+
+// Card de Tarefa Premium
+const TaskCard: React.FC<{ task: Task, moveTask: (id: string, status: Task['status']) => void, deleteTask: (id: string) => void }> = ({ task, moveTask, deleteTask }) => {
+    const priorityColors = {
+        high: 'bg-red-500/20 text-red-400 border-red-500/20',
+        medium: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/20',
+        low: 'bg-blue-500/20 text-blue-400 border-blue-500/20'
+    };
+
+    return (
+        <div className="group relative bg-[#181818]/60 backdrop-blur-md border border-white/5 p-4 rounded-xl hover:border-white/20 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl shadow-black/50">
+            <div className="flex justify-between items-start mb-3">
+                <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border ${priorityColors[task.priority]}`}>
+                    {task.priority}
+                </span>
+                <button onClick={() => deleteTask(task.id)} className="text-white/20 hover:text-red-500 transition-colors">
+                    <XIcon />
+                </button>
+            </div>
+            <p className="text-white/90 text-sm font-medium leading-relaxed mb-4">{task.content}</p>
+            
+            {/* Controles de Movimento (Pílula Flutuante) */}
+            <div className="flex items-center justify-between border-t border-white/5 pt-3 mt-2">
+                <span className="text-[9px] text-white/20 font-mono">ID: {task.id.substr(-4)}</span>
+                <div className="flex gap-1 bg-black/40 rounded-lg p-1">
+                    <button 
+                        disabled={task.status === 'backlog'}
+                        onClick={() => moveTask(task.id, task.status === 'doing' ? 'backlog' : 'doing')} 
+                        className="p-1.5 hover:bg-white/10 rounded text-white/50 hover:text-white disabled:opacity-20 transition-colors"
+                    >
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                    </button>
+                    <button 
+                            disabled={task.status === 'done'}
+                            onClick={() => moveTask(task.id, task.status === 'backlog' ? 'doing' : 'done')}
+                            className="p-1.5 hover:bg-white/10 rounded text-white/50 hover:text-white disabled:opacity-20 transition-colors"
+                    >
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+interface KanbanColumnProps {
+    title: string;
+    status: Task['status'];
+    color: string;
+    icon: React.ReactNode;
+    tasks: Task[];
+    moveTask: (id: string, status: Task['status']) => void;
+    deleteTask: (id: string) => void;
+    onAddTask?: () => void;
+    newTaskText?: string;
+    setNewTaskText?: (val: string) => void;
+    newTaskPriority?: Task['priority'];
+    setNewTaskPriority?: (val: Task['priority']) => void;
+}
+
+const KanbanColumn = ({ 
+    title, 
+    status, 
+    color, 
+    icon, 
+    tasks, 
+    moveTask, 
+    deleteTask, 
+    onAddTask, 
+    newTaskText, 
+    setNewTaskText, 
+    newTaskPriority, 
+    setNewTaskPriority 
+}: KanbanColumnProps) => (
+    <div className="min-w-[85vw] md:min-w-0 md:flex-1 bg-[#0c0c0c] border border-white/5 rounded-2xl flex flex-col h-full relative overflow-hidden shrink-0 snap-center mx-2 md:mx-0">
+        {/* Header com Glassmorphism */}
+        <div className={`p-4 border-b border-white/5 bg-white/[0.02] backdrop-blur-sm flex justify-between items-center z-10 sticky top-0`}>
+            <div className="flex items-center gap-3">
+                <div className={`p-1.5 rounded-lg bg-opacity-10 ${color.replace('text', 'bg')} ${color}`}>
+                    {icon}
+                </div>
+                <h3 className={`text-xs font-black uppercase tracking-[0.2em] text-white`}>{title}</h3>
+            </div>
+            <span className="bg-white/10 text-white text-[10px] font-mono px-2 py-0.5 rounded-full">
+                {tasks.length}
+            </span>
+        </div>
+
+        {/* Lista de Tarefas */}
+        <div className="flex-1 p-3 space-y-3 overflow-y-auto custom-scrollbar">
+            {tasks.map(task => (
+                <TaskCard key={task.id} task={task} moveTask={moveTask} deleteTask={deleteTask} />
+            ))}
+            {tasks.length === 0 && (
+                <div className="h-32 flex flex-col items-center justify-center text-white/10 border-2 border-dashed border-white/5 rounded-xl m-2">
+                    <span className="text-2xl mb-2 opacity-50">+</span>
+                    <span className="text-[9px] uppercase tracking-widest">Sem tarefas</span>
+                </div>
+            )}
+        </div>
+
+        {/* Input Área (Apenas no Backlog) */}
+        {status === 'backlog' && setNewTaskText && setNewTaskPriority && onAddTask && (
+            <div className="p-3 border-t border-white/5 bg-[#111]">
+                <div className="flex gap-2 mb-2">
+                        {(['low', 'medium', 'high'] as const).map(p => (
+                            <button 
+                            key={p}
+                            onClick={() => setNewTaskPriority(p)}
+                            className={`flex-1 text-[8px] uppercase font-bold py-1 rounded border transition-all ${newTaskPriority === p ? 'bg-white text-black border-white' : 'bg-transparent text-white/30 border-white/10'}`}
+                            >
+                            {p}
+                            </button>
+                        ))}
+                </div>
+                <div className="flex gap-2">
+                    <input 
+                        type="text" 
+                        value={newTaskText}
+                        onChange={e => setNewTaskText(e.target.value)}
+                        placeholder="Nova missão..."
+                        className="flex-1 bg-black border border-white/10 text-white text-xs px-3 py-2.5 rounded-lg outline-none focus:border-white/30 transition-colors"
+                        onKeyDown={e => e.key === 'Enter' && onAddTask()}
+                    />
+                    <button 
+                        onClick={onAddTask}
+                        className="bg-white/10 hover:bg-white text-white hover:text-black p-2 rounded-lg transition-all"
+                    >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                    </button>
+                </div>
+            </div>
+        )}
+    </div>
+);
+
+// --- COMPONENTE: STRATEGIC WAR ROOM (PREMIUM UI REFACTOR) ---
 const StrategicWarRoom = () => {
     const [data, setData] = useState<WarRoomData>({ notes: '', tasks: [] });
     const [newTaskText, setNewTaskText] = useState('');
+    const [newTaskPriority, setNewTaskPriority] = useState<Task['priority']>('medium');
 
     useEffect(() => {
         setData(LocalDB.getWarRoomData());
@@ -436,13 +575,13 @@ const StrategicWarRoom = () => {
         LocalDB.saveWarRoomData(newData);
     };
 
-    const addTask = (status: Task['status']) => {
+    const addTask = () => {
         if (!newTaskText) return;
         const newTask: Task = {
             id: Date.now().toString(),
             content: newTaskText,
-            status,
-            priority: 'medium'
+            status: 'backlog',
+            priority: newTaskPriority
         };
         updateDB({ ...data, tasks: [...data.tasks, newTask] });
         setNewTaskText('');
@@ -457,70 +596,89 @@ const StrategicWarRoom = () => {
         updateDB({ ...data, tasks: data.tasks.filter(t => t.id !== id) });
     };
 
-    const KanbanColumn = ({ title, status, color }: { title: string, status: Task['status'], color: string }) => (
-        <div className="flex-1 bg-[#0c0c0c] border border-white/10 rounded-2xl flex flex-col overflow-hidden h-full">
-            <div className={`p-3 border-b border-white/5 ${color} bg-opacity-10 flex justify-between items-center`}>
-                <h3 className={`text-[10px] font-black uppercase tracking-[0.2em] ${color}`}>{title}</h3>
-                <span className="text-white/30 text-[9px] font-mono">{data.tasks.filter(t => t.status === status).length}</span>
-            </div>
-            <div className="flex-1 p-2 space-y-2 overflow-y-auto custom-scrollbar">
-                {data.tasks.filter(t => t.status === status).map(task => (
-                    <div key={task.id} className="bg-[#151515] p-3 rounded-xl border border-white/5 group hover:border-white/20 transition-all">
-                        <p className="text-white text-xs font-medium leading-relaxed mb-2">{task.content}</p>
-                        <div className="flex justify-between items-center border-t border-white/5 pt-2">
-                            <button onClick={() => deleteTask(task.id)} className="text-red-500/50 hover:text-red-500"><XIcon /></button>
-                            <div className="flex gap-1">
-                                {status !== 'backlog' && <button onClick={() => moveTask(task.id, 'backlog')} className="text-[8px] uppercase text-white/30 hover:text-white bg-white/5 px-2 py-1 rounded">←</button>}
-                                {status !== 'done' && <button onClick={() => moveTask(task.id, status === 'backlog' ? 'doing' : 'done')} className="text-[8px] uppercase text-white/30 hover:text-white bg-white/5 px-2 py-1 rounded">→</button>}
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-            {status === 'backlog' && (
-                <div className="p-3 border-t border-white/5">
-                    <input 
-                        type="text" 
-                        value={newTaskText}
-                        onChange={e => setNewTaskText(e.target.value)}
-                        placeholder="+ Nova Ideia"
-                        className="w-full bg-[#151515] text-white text-xs px-3 py-2 rounded-lg outline-none border border-transparent focus:border-white/20"
-                        onKeyDown={e => e.key === 'Enter' && addTask('backlog')}
-                    />
-                </div>
-            )}
-        </div>
-    );
-
     return (
-        <div className="h-full flex flex-col bg-[#050505] p-6 overflow-hidden">
+        <div className="h-full flex flex-col bg-[#050505] p-4 md:p-6 overflow-hidden">
+             {/* Header do War Room */}
              <div className="flex items-center justify-between mb-6 shrink-0">
                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-600/20 rounded-lg text-purple-500"><BrainIcon className="w-6 h-6"/></div>
+                    <div className="p-2.5 bg-gradient-to-br from-purple-600/30 to-purple-900/30 border border-purple-500/30 rounded-xl text-purple-400 shadow-[0_0_15px_rgba(147,51,234,0.15)]">
+                        <BrainIcon className="w-6 h-6"/>
+                    </div>
                     <div>
                         <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter">War Room</h2>
-                        <p className="text-[9px] text-white/40 uppercase tracking-widest">Base de Operações & Estratégia</p>
+                        <div className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                            <p className="text-[9px] text-white/40 uppercase tracking-[0.3em]">Online • Sync Ativo</p>
+                        </div>
                     </div>
                 </div>
              </div>
 
-             <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-0">
-                {/* Kanban Board */}
-                <div className="lg:col-span-2 flex flex-col md:flex-row gap-4 h-[500px] lg:h-auto">
-                    <KanbanColumn title="Ideias (Backlog)" status="backlog" color="text-gray-400" />
-                    <KanbanColumn title="Executando" status="doing" color="text-yellow-500" />
-                    <KanbanColumn title="Concluído" status="done" color="text-green-500" />
+             <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0">
+                {/* Kanban Board Container - Mobile Horizontal Scroll Snap */}
+                <div className="lg:col-span-8 h-full flex flex-col min-h-0">
+                    <div className="flex-1 flex overflow-x-auto lg:overflow-visible snap-x snap-mandatory lg:snap-none gap-4 pb-4 lg:pb-0 custom-scrollbar md:grid md:grid-cols-3">
+                        <KanbanColumn 
+                            title="Backlog" 
+                            status="backlog" 
+                            color="text-gray-400" 
+                            icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>}
+                            tasks={data.tasks.filter(t => t.status === 'backlog')}
+                            moveTask={moveTask}
+                            deleteTask={deleteTask}
+                            onAddTask={addTask}
+                            newTaskText={newTaskText}
+                            setNewTaskText={setNewTaskText}
+                            newTaskPriority={newTaskPriority}
+                            setNewTaskPriority={setNewTaskPriority}
+                        />
+                        <KanbanColumn 
+                            title="Em Execução" 
+                            status="doing" 
+                            color="text-yellow-400" 
+                            icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
+                            tasks={data.tasks.filter(t => t.status === 'doing')}
+                            moveTask={moveTask}
+                            deleteTask={deleteTask}
+                        />
+                        <KanbanColumn 
+                            title="Concluído" 
+                            status="done" 
+                            color="text-green-500" 
+                            icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+                            tasks={data.tasks.filter(t => t.status === 'done')}
+                            moveTask={moveTask}
+                            deleteTask={deleteTask}
+                        />
+                    </div>
                 </div>
 
-                {/* Bloco de Notas */}
-                <div className="bg-[#0c0c0c] border border-white/10 rounded-2xl p-4 flex flex-col h-full">
-                    <h3 className="text-[10px] font-black text-white/50 uppercase tracking-[0.2em] mb-3">Notas Rápidas (Salvo Localmente)</h3>
-                    <textarea 
-                        value={data.notes} 
-                        onChange={e => updateDB({...data, notes: e.target.value})} 
-                        className="flex-1 bg-[#151515] border border-white/5 rounded-xl p-4 text-white/80 font-mono text-sm resize-none outline-none focus:border-white/20 custom-scrollbar leading-relaxed" 
-                        placeholder="// Cole links, rascunhos e insights aqui..." 
-                    />
+                {/* Bloco de Notas Estilo Terminal */}
+                <div className="lg:col-span-4 flex flex-col h-[400px] lg:h-full bg-[#080808] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+                    <div className="bg-[#111] p-3 border-b border-white/5 flex justify-between items-center">
+                        <h3 className="text-[10px] font-black text-white/50 uppercase tracking-[0.2em]">Strategic_Log.txt</h3>
+                        <div className="flex gap-1.5">
+                            <div className="w-2 h-2 rounded-full bg-red-500/20 border border-red-500/50"></div>
+                            <div className="w-2 h-2 rounded-full bg-yellow-500/20 border border-yellow-500/50"></div>
+                            <div className="w-2 h-2 rounded-full bg-green-500/20 border border-green-500/50"></div>
+                        </div>
+                    </div>
+                    <div className="flex-1 relative group">
+                        <textarea 
+                            value={data.notes} 
+                            onChange={e => updateDB({...data, notes: e.target.value})} 
+                            className="absolute inset-0 w-full h-full bg-transparent p-5 text-white/80 font-mono text-xs md:text-sm resize-none outline-none custom-scrollbar leading-relaxed z-10 selection:bg-purple-500/30" 
+                            placeholder="// Digite suas estratégias confidenciais aqui..." 
+                        />
+                        {/* Linhas de fundo decorativas */}
+                        <div className="absolute inset-0 pointer-events-none opacity-[0.03] z-0" style={{ 
+                            backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px)', 
+                            backgroundSize: '100% 24px' 
+                        }}></div>
+                    </div>
+                    <div className="p-2 bg-[#111] border-t border-white/5 text-[9px] text-white/20 font-mono text-right">
+                        {data.notes.length} chars
+                    </div>
                 </div>
              </div>
         </div>
@@ -908,44 +1066,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                         ) : (
                             !isLoading && <div className="h-64 flex items-center justify-center text-white/20 text-sm uppercase tracking-widest">Nenhum alvo detectado</div>
                         )}
-                    </div>
-                </div>
-            )}
-
-            {/* Nova Aba de Objeções (Feature 1) */}
-            {activeTab === 'objections' && <ObjectionCrusher />}
-
-            {/* Aba Pipeline (Antigo Contacted) - Feature 7 */}
-            {activeTab === 'contacted' && (
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-[#050505]">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter">Pipeline de Vendas</h2>
-                        <input type="text" value={chamadosSearch} onChange={(e) => setChamadosSearch(e.target.value)} placeholder="Filtrar..." className="bg-[#151515] border border-white/10 rounded-lg px-3 py-2 text-white text-xs outline-none" />
-                    </div>
-                    <div className="space-y-4 pb-20">
-                        {contactedLeads.filter(l => l.name.toLowerCase().includes(chamadosSearch.toLowerCase())).map(lead => (
-                            <div key={lead.id} className="bg-[#0c0c0c] border border-white/10 p-4 rounded-xl flex flex-col md:flex-row justify-between items-center gap-4 group hover:border-white/20 transition-all">
-                                <div className="flex-1">
-                                    <h3 className="font-bold text-white">{lead.name}</h3>
-                                    <p className="text-xs text-white/40">{lead.phone} • {new Date(lead.contactedAt || '').toLocaleDateString()}</p>
-                                </div>
-                                <div className="flex gap-2 w-full md:w-auto">
-                                    <select 
-                                        value={lead.pipelineStatus || 'contacted'} 
-                                        onChange={(e) => updateStatus(lead.id, e.target.value as any)}
-                                        className={`bg-[#151515] border border-white/10 text-xs p-2 rounded-lg outline-none font-bold uppercase tracking-wide flex-1 md:flex-none ${
-                                            lead.pipelineStatus === 'closed' ? 'text-green-500' : (lead.pipelineStatus === 'negotiating' ? 'text-yellow-500' : 'text-white')
-                                        }`}
-                                    >
-                                        <option value="contacted">📩 Contactado</option>
-                                        <option value="negotiating">🤝 Negociando</option>
-                                        <option value="closed">💰 Fechado</option>
-                                        <option value="lost">❌ Perdido</option>
-                                    </select>
-                                    <button onClick={() => setSelectedLead(lead)} className="p-2 border border-white/10 rounded-lg hover:bg-white/5 text-white/50 hover:text-white"><BrainIcon className="w-4 h-4"/></button>
-                                </div>
-                            </div>
-                        ))}
                     </div>
                 </div>
             )}

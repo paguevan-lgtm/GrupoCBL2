@@ -72,9 +72,11 @@ interface MarketingPlan {
 
 type SearchMode = 'standard' | 'whale' | 'crisis' | 'ghost';
 
-// --- FEATURE 1: OBJECTION CRUSHER ---
+// --- FEATURE 1: OBJECTION CRUSHER (Agora com IA Real) ---
 const ObjectionCrusher = () => {
     const [selectedObjection, setSelectedObjection] = useState<string | null>(null);
+    const [customObjection, setCustomObjection] = useState('');
+    const [isAiProcessing, setIsAiProcessing] = useState(false);
 
     const objections = [
         { id: 'expensive', label: '“Está muito caro”', script: 'Entendo totalmente a preocupação com o investimento. Mas se olharmos para o retorno, hoje você perde clientes por não estar posicionado? Meu foco é fazer esse valor voltar multiplicado para o seu caixa.' },
@@ -84,6 +86,42 @@ const ObjectionCrusher = () => {
         { id: 'marketing', label: '“Já faço tráfego”', script: 'Excelente! Isso mostra que você tem visão. E como está o custo por cliente hoje? Às vezes, um ajuste fino na estratégia pode dobrar seus resultados com o mesmo investimento.' }
     ];
 
+    const handleCustomCrush = async () => {
+        if (!customObjection.trim()) return;
+        setIsAiProcessing(true);
+        setSelectedObjection(null); // Limpa anterior
+
+        const prompt = `
+            ATUE COMO: Especialista em Vendas e Negociação (Closer) do Grupo CBL.
+            CONTEXTO: Estou tentando vender serviços de tecnologia/marketing.
+            OBJEÇÃO DO CLIENTE: "${customObjection}"
+            
+            TAREFA: Gere uma quebra de objeção curta, perspicaz e profissional.
+            Use técnica de empatia tática + reframe (reenquadramento).
+            MÁXIMO 2 PARÁGRAFOS CURTOS.
+            Responda diretamente com o script de fala.
+        `;
+
+        try {
+            const response = await fetch('/api/gemini', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: prompt,
+                    model: 'gemini-3-flash-preview',
+                    config: { temperature: 0.7 }
+                })
+            });
+            const data = await response.json();
+            setSelectedObjection(data.text);
+        } catch (error) {
+            console.error("Erro na IA:", error);
+            alert("Erro ao processar objeção.");
+        } finally {
+            setIsAiProcessing(false);
+        }
+    };
+
     return (
         <div className="h-full flex flex-col bg-[#050505] p-6">
             <div className="flex items-center gap-3 mb-6">
@@ -91,27 +129,57 @@ const ObjectionCrusher = () => {
                 <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter">Objection Crusher</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full overflow-y-auto custom-scrollbar pb-20">
-                <div className="space-y-3">
-                    <p className="text-[10px] text-white/40 uppercase tracking-widest mb-2">Selecione a Objeção</p>
-                    {objections.map(obj => (
-                        <button 
-                            key={obj.id} 
-                            onClick={() => setSelectedObjection(obj.script)}
-                            className={`w-full text-left p-4 rounded-xl border transition-all ${selectedObjection === obj.script ? 'bg-red-600 border-red-500 text-white shadow-lg' : 'bg-[#111] border-white/5 text-white/70 hover:bg-[#1a1a1a] hover:border-white/10'}`}
-                        >
-                            <span className="font-bold text-sm">{obj.label}</span>
-                        </button>
-                    ))}
+                <div className="space-y-6">
+                    {/* Área de Custom Input com IA */}
+                    <div className="bg-[#111] border border-white/10 rounded-2xl p-4 space-y-3">
+                        <label className="text-[10px] text-red-500 font-black uppercase tracking-widest">Objeção Personalizada (IA)</label>
+                        <div className="flex gap-2">
+                            <input 
+                                type="text" 
+                                value={customObjection}
+                                onChange={(e) => setCustomObjection(e.target.value)}
+                                placeholder="Digite o que o cliente disse..."
+                                className="flex-1 bg-black border border-white/10 rounded-xl px-4 py-3 text-white text-xs outline-none focus:border-red-600 transition-colors"
+                                onKeyDown={(e) => e.key === 'Enter' && handleCustomCrush()}
+                            />
+                            <button 
+                                onClick={handleCustomCrush}
+                                disabled={isAiProcessing || !customObjection}
+                                className="bg-red-600 hover:bg-red-500 text-white px-4 rounded-xl disabled:opacity-50 transition-colors"
+                            >
+                                {isAiProcessing ? <SpinnerIcon /> : <ZapIcon className="w-5 h-5"/>}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <p className="text-[10px] text-white/40 uppercase tracking-widest mb-2">Objeções Comuns</p>
+                        {objections.map(obj => (
+                            <button 
+                                key={obj.id} 
+                                onClick={() => setSelectedObjection(obj.script)}
+                                className={`w-full text-left p-4 rounded-xl border transition-all ${selectedObjection === obj.script ? 'bg-white/10 border-red-500 text-white shadow-lg' : 'bg-[#111] border-white/5 text-white/70 hover:bg-[#1a1a1a] hover:border-white/10'}`}
+                            >
+                                <span className="font-bold text-sm">{obj.label}</span>
+                            </button>
+                        ))}
+                    </div>
                 </div>
-                <div className="bg-[#0c0c0c] border border-white/10 rounded-3xl p-6 relative min-h-[200px]">
+                
+                <div className="bg-[#0c0c0c] border border-white/10 rounded-3xl p-6 relative min-h-[300px] flex flex-col">
                     <p className="text-[10px] text-white/40 uppercase tracking-widest mb-4">Script Sugerido</p>
-                    {selectedObjection ? (
-                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-                            <p className="text-white text-lg font-medium leading-relaxed">"{selectedObjection}"</p>
-                            <button onClick={() => navigator.clipboard.writeText(selectedObjection)} className="absolute bottom-6 right-6 bg-white text-black px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-gray-200">Copiar</button>
+                    {isAiProcessing ? (
+                        <div className="flex-1 flex flex-col items-center justify-center space-y-4">
+                            <SpinnerIcon />
+                            <p className="text-red-500 text-[10px] uppercase tracking-widest animate-pulse">Consultando Base Estratégica...</p>
+                        </div>
+                    ) : selectedObjection ? (
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-300 flex-1 relative">
+                            <p className="text-white text-lg font-medium leading-relaxed whitespace-pre-wrap">"{selectedObjection}"</p>
+                            <button onClick={() => navigator.clipboard.writeText(selectedObjection)} className="absolute bottom-0 right-0 bg-white text-black px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-gray-200 shadow-lg">Copiar</button>
                         </div>
                     ) : (
-                        <div className="h-full flex items-center justify-center text-white/20 text-sm italic">Selecione uma objeção para ver a resposta.</div>
+                        <div className="h-full flex items-center justify-center text-white/20 text-sm italic">Selecione ou digite uma objeção.</div>
                     )}
                 </div>
             </div>
@@ -173,7 +241,7 @@ const MarketingCommand = () => {
             DADOS:
             - Nicho: ${inputs.niche}
             - Verba Total: R$ ${inputs.budget}
-            - Duração: ${inputs.days}
+            - Duração: ${inputs.days} dias
             - Objetivo: ${inputs.objective}
 
             REGRAS ESTRATÉGICAS:
@@ -219,7 +287,6 @@ const MarketingCommand = () => {
 
             const data = await response.json();
             
-            // Sanitização do JSON para evitar erros de markdown
             let cleanText = data.text.trim();
             // Remove code blocks
             cleanText = cleanText.replace(/```json/g, '').replace(/```/g, '');
@@ -746,8 +813,28 @@ const LeadStrategyModal: React.FC<{
                     })
                 });
                 const data = await response.json();
-                const jsonText = data.text.replace(/```json/g, '').replace(/```/g, '').trim();
-                setStrategy(JSON.parse(jsonText));
+                
+                // Limpeza e parse
+                let jsonText = data.text ? data.text.trim() : '';
+                if (jsonText.startsWith('```json')) {
+                    jsonText = jsonText.replace(/^```json/, '').replace(/```$/, '');
+                } else if (jsonText.startsWith('```')) {
+                    jsonText = jsonText.replace(/^```/, '').replace(/```$/, '');
+                }
+                
+                try {
+                    setStrategy(JSON.parse(jsonText));
+                } catch (parseError) {
+                    console.error("JSON Parse Error in Strategy:", parseError, jsonText);
+                    setStrategy({
+                        pitch: "Erro ao gerar estratégia. Tente novamente.",
+                        products_to_sell: ["-"],
+                        sales_strategy: "Análise manual necessária.",
+                        suggested_pricing: "-",
+                        conquest_tip: "-",
+                        pain_points: ["-"]
+                    });
+                }
             } catch (error) {
                 console.error("Erro ao gerar estratégia", error);
             } finally {

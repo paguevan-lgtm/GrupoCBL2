@@ -12,8 +12,13 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Conteúdo (contents) é obrigatório' });
   }
 
-  // Chave de API definida explicitamente conforme solicitado
-  const apiKey = "AIzaSyDB3Kt75mYC0cz0dWBoG_-OTCTWVhHvVig";
+  // Chave de API obtida via variável de ambiente
+  const apiKey = process.env.API_KEY;
+
+  if (!apiKey) {
+    console.error("API_KEY environment variable is missing");
+    return res.status(500).json({ error: 'Configuração de servidor inválida: API Key ausente.' });
+  }
 
   try {
     const ai = new GoogleGenAI({ apiKey: apiKey });

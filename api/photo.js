@@ -1,8 +1,12 @@
 
 export default async function handler(req, res) {
   const { ref } = req.query;
-  // Mesma chave usada no places.js
-  const apiKey = "AIzaSyDx8QZ41gze3XEYhXvo6r5EmkXxmC8_daA"; 
+  const apiKey = process.env.API_KEY; 
+  
+  if (!apiKey) {
+    console.error("API_KEY environment variable is missing");
+    return res.status(500).send('Server configuration error');
+  }
   
   if (!ref) return res.status(400).send('No reference provided');
 

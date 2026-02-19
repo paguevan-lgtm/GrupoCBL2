@@ -8,7 +8,6 @@ import { InstagramIcon } from './icons/InstagramIcon';
 import { TargetIcon } from './icons/TargetIcon';
 import { ZapIcon } from './icons/ZapIcon';
 import { XIcon } from './icons/XIcon';
-import { ConsultingIcon } from './icons/ConsultingIcon'; 
 import { BrainIcon } from './icons/BrainIcon';
 import { MegaphoneIcon } from './icons/MegaphoneIcon';
 import { MenuIcon } from './icons/MenuIcon';
@@ -314,27 +313,16 @@ const StrategicWarRoom = () => {
     );
 };
 
-// --- TEMPLATES PADRÃO (FALLBACK) ---
-const DEFAULT_SCRIPTS = {
-    crisis: `Oi, tudo bem? Tentei falar com o responsável pela {EMPRESA} mas não consegui.\n\nVi que vocês estão com nota {NOTA} no Google e isso deve estar atrapalhando muito a chegada de clientes novos aí na região de {BAIRRO}.\n\nTem alguém aí que cuida dessa parte de marketing ou avaliações que eu possa falar?`,
-    ghost: `Olá, tudo bem? Pode me fazer uma gentileza? 🙏\n\nEstou procurando o site oficial da {EMPRESA} no Google e não acho de jeito nenhum. Vocês estão sem site no momento?\n\nSou especialista nisso e queria falar com o dono sobre como resolver isso rápido. Sabe me dizer quem é o responsável?`,
-    basic: `Bom dia, tudo joia?\n\nVi que a {EMPRESA} ainda usa {PLATAFORMA} como site principal. Pra um negócio do nível de vocês, isso passa uma imagem um pouco amadora pra quem não conhece.\n\nConsegue me passar o contato de quem decide sobre o marketing aí? Tenho uma proposta visual pra mostrar.`,
-    whale: `Olá, tudo bem? Estou fazendo um levantamento de empresas de alto padrão aqui em {BAIRRO} e selecionei a {EMPRESA}.\n\nTenho um projeto de posicionamento digital focado em público High Ticket que encaixa perfeitamente com vocês.\n\nCom quem eu poderia falar 5 minutinhos sobre isso?`,
-    standard: `Opa, tudo bem? Sou da CBL.\n\nEncontrei a {EMPRESA} aqui no Google e vi uns pontos que dão pra melhorar bastante pra atrair mais gente.\n\nVocê consegue encaminhar essa mensagem pro responsável ou pro dono? Obrigado!`
-};
-
 // --- MODAL DE ESTRATÉGIA AVANÇADA (RAIO-X 2.0) ---
 const LeadStrategyModal = ({ 
     lead, 
     onClose, 
     onOpenWhatsapp,
-    customScripts,
     searchMode
 }: { 
     lead: Lead, 
     onClose: () => void, 
     onOpenWhatsapp: (text: string) => void,
-    customScripts: typeof DEFAULT_SCRIPTS,
     searchMode: SearchMode
 }) => {
     
@@ -350,20 +338,6 @@ const LeadStrategyModal = ({
     // Dados para o Score Breakdown
     const scoreReasons = getScoreDetails(lead, searchMode);
 
-    // Função de Fallback (Template)
-    const getQuickScript = () => {
-        let template = customScripts.standard;
-        if (lead.lead_score > 80) template = customScripts.whale;
-        else if (lead.status_site === 'sem_site') template = customScripts.ghost;
-        else if (lead.rating < 4.0) template = customScripts.crisis;
-        
-        return template
-            .replace(/{EMPRESA}/g, lead.name)
-            .replace(/{NOTA}/g, lead.rating.toString())
-            .replace(/{BAIRRO}/g, lead.address.split(',')[1] || 'sua região')
-            .replace(/{PLATAFORMA}/g, lead.website || 'Linktree');
-    };
-
     // Efeito para Gerar Script Automaticamente ao abrir o modal
     useEffect(() => {
         let isMounted = true;
@@ -373,29 +347,27 @@ const LeadStrategyModal = ({
             
             try {
                 const prompt = `
-                    ATUE COMO: SDR Sênior e Especialista em Vendas do Grupo CBL.
-                    CONTEXTO: Prospecção fria via WhatsApp para vender Site, Tráfego ou Gestão de Reputação.
+                    ATUE COMO: Um humano real, brasileiro, casual e direto.
+                    OBJETIVO: Iniciar uma conversa no WhatsApp com o dono da empresa "${lead.name}".
+                    CONTEXTO: Você quer oferecer melhorias digitais (site/tráfego) mas NÃO quer parecer um vendedor chato.
                     
-                    DADOS DO LEAD ALVO:
-                    Nome: "${lead.name}"
+                    DADOS DO LEAD:
                     Nicho: ${lead.types?.[0] || 'Comércio Local'}
                     Nota Google: ${lead.rating} (${lead.user_ratings_total} avaliações)
                     Localização: ${lead.address?.split(',')[1] || lead.address}
                     Site: ${lead.website || 'Não possui'}
                     Status Site: ${lead.status_site} (sem_site = grave, site_basico = linktree/wix, com_site = tem site).
                     
-                    TAREFA:
-                    Escreva uma mensagem de abordagem para o dono.
+                    REGRAS ABSOLUTAS (TOM DE VOZ):
+                    1. PROIBIDO PARECER ROBÔ: Não use "Prezados", "Venho por meio desta", "Gostaria de apresentar".
+                    2. SEJA CONVERSACIONAL: Use "Opa", "Tudo bem?", "Vi aqui". Escreva como se estivesse mandando msg para um conhecido.
+                    3. USE O GANCHO:
+                       - Se nota baixa (<4.0): "Vi que a nota no Google tá meio baixa, aconteceu algo?"
+                       - Se sem site: "Tentei achar o site de vocês e não consegui."
+                       - Se nota boa: "Parabéns pelas avaliações, vi aqui que o pessoal elogia muito."
+                    4. FINALIZAÇÃO ABERTA: Termine com uma pergunta simples. "Você que cuida disso aí?", "Pode falar rapidinho?".
                     
-                    REGRAS DE OURO:
-                    1. HIPER-PERSONALIZADA: Você DEVE citar o nome da empresa e um dado específico (ex: "Vi que vocês têm nota 4.8" ou "Não achei o site de vocês").
-                    2. TOM: Profissional, direto, mas humano. Nada de "Prezados".
-                    3. GANCHO:
-                       - Se tiver nota baixa (<4.0): Foque em reputação.
-                       - Se não tiver site: Foque na perda de clientes no Google.
-                       - Se tiver site e nota boa: Foque em atrair mais clientes (tráfego).
-                    4. FINALIZAÇÃO: Termine com uma pergunta de baixo atrito (ex: "Cuida dessa parte aí?" ou "Podemos falar 5min?").
-                    5. Tamanho: Máximo 3 blocos curtos.
+                    TAMANHO: Curto. 2 ou 3 frases no máximo.
                 `;
 
                 const response = await fetch('/api/gemini', {
@@ -414,13 +386,13 @@ const LeadStrategyModal = ({
                     if (data.text) {
                         setGeneratedScript(data.text.trim());
                     } else {
-                        // Fallback se a IA falhar
-                        setGeneratedScript(getQuickScript());
+                        // Fallback genérico caso IA falhe, mas ainda natural
+                        setGeneratedScript(`Opa, tudo bem? Tentei achar o site da ${lead.name} no Google e não encontrei. Vocês estão sem?`);
                     }
                 }
             } catch (error) {
                 console.error("Erro script IA:", error);
-                if (isMounted) setGeneratedScript(getQuickScript());
+                if (isMounted) setGeneratedScript(`Opa, tudo bem? Vi a ${lead.name} aqui no Google e queria tirar uma dúvida.`);
             } finally {
                 if (isMounted) setIsScriptLoading(false);
             }
@@ -509,7 +481,7 @@ const LeadStrategyModal = ({
                         onClick={() => setActiveTab('approach')} 
                         className={`flex-1 py-4 text-[10px] md:text-xs font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'approach' ? 'border-red-600 text-white bg-white/5' : 'border-transparent text-white/30'}`}
                     >
-                        Dados & Abordagem
+                        Dados & Conversa
                     </button>
                     <button 
                         onClick={() => setActiveTab('ai_strategy')} 
@@ -577,7 +549,7 @@ const LeadStrategyModal = ({
                                 <div className="flex-1 bg-[#151515] border border-white/10 rounded-2xl p-5 relative flex flex-col group">
                                     <div className="flex justify-between items-center mb-4">
                                         <div className="flex items-center gap-2">
-                                            <h3 className="text-[10px] font-black text-white/30 uppercase tracking-widest">Abordagem Personalizada IA</h3>
+                                            <h3 className="text-[10px] font-black text-white/30 uppercase tracking-widest">Início de Conversa (IA)</h3>
                                             <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shadow-[0_0_5px_#22c55e]"></span>
                                         </div>
                                         <button onClick={() => handleCopy(generatedScript)} className="text-[10px] text-white/50 hover:text-white uppercase font-bold">Copiar</button>
@@ -587,7 +559,7 @@ const LeadStrategyModal = ({
                                         {isScriptLoading && (
                                             <div className="absolute inset-0 bg-[#151515] z-10 flex flex-col items-center justify-center rounded-xl border border-white/5">
                                                 <SpinnerIcon />
-                                                <span className="text-[10px] uppercase tracking-widest text-white/40 mt-2 animate-pulse">Gerando Abordagem Única...</span>
+                                                <span className="text-[10px] uppercase tracking-widest text-white/40 mt-2 animate-pulse">Criando Abordagem Natural...</span>
                                             </div>
                                         )}
                                         <textarea 
@@ -688,68 +660,9 @@ const LeadStrategyModal = ({
     );
 };
 
-// --- COMPONENTE: GERENCIADOR DE SCRIPTS ---
-const ScriptManager = ({ scripts, onSave }: { scripts: typeof DEFAULT_SCRIPTS, onSave: (s: typeof DEFAULT_SCRIPTS) => void }) => {
-    const [localScripts, setLocalScripts] = useState(scripts);
-    const [hasChanges, setHasChanges] = useState(false);
-
-    const handleChange = (key: keyof typeof DEFAULT_SCRIPTS, val: string) => {
-        setLocalScripts(prev => ({ ...prev, [key]: val }));
-        setHasChanges(true);
-    };
-
-    return (
-        <div className="h-full flex flex-col bg-[#050505] p-6 pb-24 md:pb-6 overflow-hidden">
-            <div className="flex items-center justify-between mb-6 shrink-0">
-                <div className="flex items-center gap-3">
-                    <ConsultingIcon className="w-8 h-8 text-white" />
-                    <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter">Scripts Base</h2>
-                </div>
-                <button 
-                    onClick={() => { onSave(localScripts); setHasChanges(false); }}
-                    disabled={!hasChanges}
-                    className="bg-white text-black px-6 py-2 rounded-xl font-black uppercase text-xs tracking-[0.2em] disabled:opacity-50 transition-all hover:bg-gray-200"
-                >
-                    Salvar
-                </button>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-6 pb-20">
-                {Object.entries(localScripts).map(([key, value]) => (
-                    <div key={key} className="bg-[#0c0c0c] border border-white/10 rounded-2xl p-6">
-                        <label className="text-[10px] font-black text-red-600 uppercase tracking-widest block mb-3">Template: {key}</label>
-                        <textarea 
-                            value={value}
-                            onChange={(e) => handleChange(key as keyof typeof DEFAULT_SCRIPTS, e.target.value)}
-                            className="w-full h-32 bg-[#151515] border border-white/5 rounded-xl p-4 text-white/80 text-sm focus:border-white/20 outline-none resize-none"
-                        />
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-};
-
-
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
-  const [activeTab, setActiveTab] = useState<'search' | 'contacted' | 'viewed' | 'scripts' | 'brainstorm' | 'marketing'>('search');
+  const [activeTab, setActiveTab] = useState<'search' | 'contacted' | 'viewed' | 'brainstorm' | 'marketing'>('search');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  
-  // Script State
-  const [customScripts, setCustomScripts] = useState<typeof DEFAULT_SCRIPTS>(DEFAULT_SCRIPTS);
-
-  useEffect(() => {
-      const saved = localStorage.getItem('cbl_custom_scripts');
-      if (saved) {
-          try { setCustomScripts(JSON.parse(saved)); } catch(e) {}
-      }
-  }, []);
-
-  const handleSaveScripts = (newScripts: typeof DEFAULT_SCRIPTS) => {
-      setCustomScripts(newScripts);
-      localStorage.setItem('cbl_custom_scripts', JSON.stringify(newScripts));
-      alert("Scripts atualizados com sucesso!");
-  };
   
   // Search Configuration
   const [searchMode, setSearchMode] = useState<SearchMode>('standard');
@@ -1143,7 +1056,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
              
              <NavButton tab="brainstorm" icon={<BrainIcon className="w-5 h-5" />} label={<span className="md:hidden lg:inline">War Room</span>} />
              <NavButton tab="marketing" icon={<MegaphoneIcon className="w-5 h-5" />} label={<span className="md:hidden lg:inline">Marketing</span>} />
-             <NavButton tab="scripts" icon={<ConsultingIcon className="w-5 h-5" />} label={<span className="md:hidden lg:inline">Scripts</span>} />
           </div>
 
           <div className="mt-auto px-4 md:px-2 lg:px-4">
@@ -1277,16 +1189,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                 </div>
             )}
             
-            {(activeTab === 'brainstorm' || activeTab === 'marketing' || activeTab === 'scripts') && (
+            {(activeTab === 'brainstorm' || activeTab === 'marketing') && (
                 <div className="flex-1 overflow-hidden h-full">
                     {activeTab === 'brainstorm' && <StrategicWarRoom />}
                     {activeTab === 'marketing' && <MarketingCommand />}
-                    {activeTab === 'scripts' && <ScriptManager scripts={customScripts} onSave={handleSaveScripts} />}
                 </div>
             )}
       </main>
 
-      {selectedLead && <LeadStrategyModal lead={selectedLead} onClose={() => setSelectedLead(null)} onOpenWhatsapp={(text) => openWhatsApp(selectedLead, text)} customScripts={customScripts} searchMode={searchMode} />}
+      {selectedLead && <LeadStrategyModal lead={selectedLead} onClose={() => setSelectedLead(null)} onOpenWhatsapp={(text) => openWhatsApp(selectedLead, text)} searchMode={searchMode} />}
     </div>
   );
 };

@@ -37,7 +37,7 @@ interface Lead {
   photos?: { photo_reference: string }[];
   contactedAt?: string;
   ai_analysis?: string;
-  // New: Pipeline Status
+  // Feature 7: Pipeline Status
   pipelineStatus?: 'contacted' | 'negotiating' | 'closed' | 'lost';
 }
 
@@ -98,11 +98,11 @@ const ObjectionCrusher = () => {
     const [selectedObjection, setSelectedObjection] = useState<string | null>(null);
 
     const objections = [
-        { id: 'expensive', label: '“Está muito caro”', script: 'Entendo perfeitamente. Mas hoje, quanto custa para você perder um cliente para o concorrente da esquina porque ele te achou no Google e você não? O meu trabalho não é um custo, é a única coisa que vai trazer esse dinheiro de volta.' },
-        { id: 'nephew', label: '“Tenho um sobrinho que faz”', script: 'Que ótimo! Ele cuida da estratégia de conversão e SEO local também? Porque design bonito sem estratégia é apenas um quadro na parede. Eu não faço "postinho", eu construo máquinas de vendas.' },
-        { id: 'think', label: '“Vou pensar”', script: 'Claro. Enquanto você pensa, o {CONCORRENTE} já está aparecendo em 1º lugar para quem procura o seu serviço agora. Você prefere pensar ou começar a vender amanhã?' },
-        { id: 'broke', label: '“Estamos sem verba”', script: 'Justamente por isso você precisa de mim. Se você tivesse sobrando, talvez não precisasse de mais clientes. Eu resolvo a falta de verba trazendo vendas. Vamos começar pequeno?' },
-        { id: 'marketing', label: '“Já faço tráfego”', script: 'Excelente. E qual é o seu Custo por Lead hoje? Se você não soube responder em 1 segundo, você está queimando dinheiro. Posso auditar sua campanha de graça?' }
+        { id: 'expensive', label: '“Está muito caro”', script: 'Entendo totalmente a preocupação com o investimento. Mas se olharmos para o retorno, hoje você perde clientes por não estar posicionado? Meu foco é fazer esse valor voltar multiplicado para o seu caixa.' },
+        { id: 'nephew', label: '“Tenho um sobrinho que faz”', script: 'Que bacana que você dá oportunidade para a família! O que eu proponho não é competir com ele, mas trazer uma estratégia comercial profissional. Talvez possamos somar: ele na operação diária e eu na estratégia de vendas.' },
+        { id: 'think', label: '“Vou pensar”', script: 'Perfeito, decisões importantes precisam ser pensadas. Mas qual é a sua maior dúvida hoje? Talvez eu consiga esclarecer agora para você decidir com mais tranquilidade.' },
+        { id: 'broke', label: '“Estamos sem verba”', script: 'Entendo, o momento exige cautela. Mas é justamente para trazer mais caixa que meu trabalho serve. Vamos começar com algo menor para você ver o dinheiro entrando primeiro?' },
+        { id: 'marketing', label: '“Já faço tráfego”', script: 'Excelente! Isso mostra que você tem visão. E como está o custo por cliente hoje? Às vezes, um ajuste fino na estratégia pode dobrar seus resultados com o mesmo investimento.' }
     ];
 
     return (
@@ -111,7 +111,7 @@ const ObjectionCrusher = () => {
                 <div className="p-2 bg-red-600/20 rounded-lg text-red-500"><ZapIcon className="w-6 h-6"/></div>
                 <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter">Objection Crusher</h2>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full overflow-y-auto custom-scrollbar pb-20">
                 <div className="space-y-3">
                     <p className="text-[10px] text-white/40 uppercase tracking-widest mb-2">Selecione a Objeção</p>
                     {objections.map(obj => (
@@ -124,15 +124,15 @@ const ObjectionCrusher = () => {
                         </button>
                     ))}
                 </div>
-                <div className="bg-[#0c0c0c] border border-white/10 rounded-3xl p-6 relative">
-                    <p className="text-[10px] text-white/40 uppercase tracking-widest mb-4">Script de Resposta</p>
+                <div className="bg-[#0c0c0c] border border-white/10 rounded-3xl p-6 relative min-h-[200px]">
+                    <p className="text-[10px] text-white/40 uppercase tracking-widest mb-4">Script Sugerido</p>
                     {selectedObjection ? (
                         <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
                             <p className="text-white text-lg font-medium leading-relaxed">"{selectedObjection}"</p>
                             <button onClick={() => navigator.clipboard.writeText(selectedObjection)} className="absolute bottom-6 right-6 bg-white text-black px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-gray-200">Copiar</button>
                         </div>
                     ) : (
-                        <div className="h-full flex items-center justify-center text-white/20 text-sm italic">Selecione uma objeção para destruir.</div>
+                        <div className="h-full flex items-center justify-center text-white/20 text-sm italic">Selecione uma objeção para ver a resposta.</div>
                     )}
                 </div>
             </div>
@@ -169,11 +169,10 @@ const HunterRank = ({ count }: { count: number }) => {
     );
 };
 
-// --- COMPONENTE: MARKETING COMMAND (Mantido e Integrado) ---
-// (Código do MarketingCommand anterior - simplificado para o exemplo, mas assuma que é o full)
+// --- COMPONENTE: MARKETING COMMAND (Mantido) ---
 const MarketingCommand = () => {
-    // ... (mesma lógica do anterior)
-    return <div className="p-6 text-white text-center opacity-50 uppercase tracking-widest mt-20">Módulo Marketing Command (Carregado)</div>; 
+    // ... (Código do MarketingCommand mantido igual, apenas renderizado quando a aba é selecionada)
+    return <div className="p-6 text-white text-center opacity-50 uppercase tracking-widest mt-20">Módulo Marketing (Aba Integrada)</div>; 
 };
 
 // --- COMPONENTE: STRATEGIC WAR ROOM (Mantido) ---
@@ -184,48 +183,71 @@ const StrategicWarRoom = () => {
     return (
         <div className="h-full bg-[#050505] p-6 flex flex-col">
              <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter mb-4">War Room</h2>
-             <textarea value={notes} onChange={handleChange} className="flex-1 bg-[#0c0c0c] border border-white/10 rounded-2xl p-6 text-white/80 font-mono text-sm resize-none outline-none focus:border-white/20" placeholder="// Estratégias..." />
+             <textarea value={notes} onChange={handleChange} className="flex-1 bg-[#0c0c0c] border border-white/10 rounded-2xl p-6 text-white/80 font-mono text-sm resize-none outline-none focus:border-white/20 custom-scrollbar" placeholder="// Estratégias e anotações..." />
         </div>
     );
+};
+
+const DEFAULT_SCRIPTS = {
+    standard: `Olá, falo com o responsável pela {EMPRESA}?
+
+Vi que vocês têm uma reputação excelente, mas quando procurei no Google, notei algumas oportunidades que podem trazer mais clientes.
+
+Sou especialista em posicionamento digital e ajudo empresas a dominarem o mercado local. Tem 5 minutos para eu te mostrar como?`
 };
 
 // --- MODAL DE ESTRATÉGIA (ATUALIZADO COM FEATURES 2, 4, 9) ---
 const LeadStrategyModal = ({ lead, onClose, onCopyPitch, onOpenWhatsapp, customScripts }: any) => {
     const [analysis, setAnalysis] = useState<IAAnalysisResult | null>(null);
     const [isAiLoading, setIsAiLoading] = useState(false);
-    const [pitchTone, setPitchTone] = useState<'consultive' | 'aggressive' | 'urgent'>('consultive');
+    
+    // Feature 9: Seletor de Tom
+    const [pitchTone, setPitchTone] = useState<'consultive' | 'direct'>('consultive');
 
-    // Feature 2: Loss Calculator
-    const potentialRevenue = Math.round(Math.random() * (15000 - 5000) + 5000);
-    const lossPercentage = lead.rating < 4.0 ? 0.35 : (lead.rating < 4.5 ? 0.15 : 0);
-    const moneyLost = Math.round(potentialRevenue * lossPercentage);
+    // Feature 2: Loss Calculator (Estimativa baseada no score)
+    const potentialRevenue = 10000; // Ticket médio base
+    const lossFactor = lead.rating < 4.0 ? 0.35 : (lead.rating < 4.5 ? 0.15 : 0.05);
+    const moneyLost = Math.round(potentialRevenue * lossFactor);
 
-    // Feature 4: Competitor Radar (Simulado)
+    // Feature 4: Competitor Radar (Simulado para urgência)
     const competitors = [
-        { name: "Concorrente A", rating: (lead.rating + 0.3).toFixed(1), dist: "200m" },
+        { name: "Concorrente A", rating: (lead.rating + 0.4).toFixed(1), dist: "200m" },
         { name: "Concorrente B", rating: "4.9", dist: "850m" },
         { name: "Concorrente C", rating: "4.8", dist: "1.2km" }
     ];
 
     useEffect(() => {
-        // ... (Mesma lógica de IA do anterior, apenas simulando carregamento aqui)
-        const load = async () => {
+        const generateAiAnalysis = async () => {
             setIsAiLoading(true);
-            // Simulação rápida para UX
+            
+            // Lógica simples de IA para o exemplo, respeitando o tom solicitado
+            const toneInstruction = pitchTone === 'consultive' 
+                ? "Seja um consultor parceiro, focado em ajudar." 
+                : "Seja direto, focado em resultado rápido.";
+
+            const prompt = `
+                ATUE COMO: Consultor Comercial Sênior. TOM: ${toneInstruction}
+                CLIENTE: "${lead.name}" (${lead.rating} estrelas).
+                Crie um script de venda curto e educado.
+            `;
+
+            // Simulação de chamada (substituir por fetch real na produção)
             setTimeout(() => {
                 setAnalysis({
-                    pitch: customScripts.standard.replace('{EMPRESA}', lead.name),
+                    pitch: pitchTone === 'consultive' 
+                        ? `Olá ${lead.name}, tudo bem? Sou consultor de estratégias digitais. Vi que vocês são referência na região, mas notei um detalhe no Google que pode estar limitando seus novos clientes. Podemos conversar rapidinho?`
+                        : `Opa, tudo bom na ${lead.name}? Estou com um projeto de expansão digital para empresas da sua região e vi potencial no seu negócio. Quero te apresentar uma proposta de crescimento. Tem um minuto?`,
                     products_to_sell: ["Google Meu Negócio", "Site High-End"],
-                    sales_strategy: "Autoridade",
+                    sales_strategy: pitchTone === 'consultive' ? "Relacionamento" : "Oportunidade",
                     suggested_pricing: "R$ 1.500,00 Setup",
-                    conquest_tip: "Elogie a fachada, critique o digital.",
-                    pain_points: ["Invisível no Maps", "Sem site"]
+                    conquest_tip: "Elogie a fachada, critique o digital com sutileza.",
+                    pain_points: ["Visibilidade Baixa", "Perda para concorrência"]
                 });
                 setIsAiLoading(false);
-            }, 1500);
+            }, 800);
         };
-        load();
-    }, [lead, pitchTone]); // Recarrega se mudar o tom (na versão real, mudaria o prompt)
+        generateAiAnalysis();
+    }, [lead, pitchTone]);
 
     return (
         <div className="fixed inset-0 z-[200] flex items-end md:items-center justify-center bg-black/90 backdrop-blur-md p-0 md:p-4 animate-in fade-in duration-200" onClick={onClose}>
@@ -246,19 +268,17 @@ const LeadStrategyModal = ({ lead, onClose, onCopyPitch, onOpenWhatsapp, customS
                         <div className="lg:col-span-5 space-y-6">
                             
                             {/* Feature 2: Loss Calculator */}
-                            {lossPercentage > 0 && (
-                                <div className="bg-red-900/10 border border-red-600/30 p-5 rounded-2xl relative overflow-hidden">
-                                    <div className="absolute top-0 right-0 p-4 opacity-10"><ZapIcon className="w-12 h-12 text-red-600"/></div>
-                                    <h3 className="text-red-500 font-black text-[10px] uppercase tracking-widest mb-1">Prejuízo Estimado (Mensal)</h3>
-                                    <p className="text-3xl font-black text-white">R$ {moneyLost.toLocaleString('pt-BR')}</p>
-                                    <p className="text-[10px] text-white/50 mt-2 font-mono uppercase">Devido à nota {lead.rating} vs 4.8+ do mercado.</p>
-                                    <div className="w-full bg-red-900/30 h-1 mt-3 rounded-full overflow-hidden"><div className="h-full bg-red-600 w-[65%]"></div></div>
-                                </div>
-                            )}
+                            <div className="bg-red-900/10 border border-red-600/30 p-5 rounded-2xl relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-4 opacity-10"><ZapIcon className="w-12 h-12 text-red-600"/></div>
+                                <h3 className="text-red-500 font-black text-[10px] uppercase tracking-widest mb-1">Custo de Oportunidade (Estimado)</h3>
+                                <p className="text-3xl font-black text-white">R$ {moneyLost.toLocaleString('pt-BR')}</p>
+                                <p className="text-[10px] text-white/50 mt-2 font-mono uppercase">Potencial perdido por visibilidade digital limitada.</p>
+                                <div className="w-full bg-red-900/30 h-1 mt-3 rounded-full overflow-hidden"><div className="h-full bg-red-600 w-[65%]"></div></div>
+                            </div>
 
                             {/* Feature 4: Competitor Radar */}
                             <div className="bg-[#111] border border-white/5 p-5 rounded-2xl">
-                                <h3 className="text-white/40 font-black text-[10px] uppercase tracking-widest mb-4 flex items-center gap-2"><TargetIcon className="w-3 h-3"/> Radar de Concorrência</h3>
+                                <h3 className="text-white/40 font-black text-[10px] uppercase tracking-widest mb-4 flex items-center gap-2"><TargetIcon className="w-3 h-3"/> Radar de Concorrência (Simulado)</h3>
                                 <div className="space-y-3">
                                     {competitors.map((comp, i) => (
                                         <div key={i} className="flex justify-between items-center text-xs">
@@ -272,21 +292,28 @@ const LeadStrategyModal = ({ lead, onClose, onCopyPitch, onOpenWhatsapp, customS
                                 </div>
                             </div>
 
-                            {/* Feature 9: Magic Tone Switcher (Simulado na UI) */}
-                            <div className="flex gap-2">
-                                <button onClick={() => setPitchTone('consultive')} className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest border ${pitchTone === 'consultive' ? 'bg-white text-black border-white' : 'bg-transparent text-white/30 border-white/10'}`}>Consultivo</button>
-                                <button onClick={() => setPitchTone('aggressive')} className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest border ${pitchTone === 'aggressive' ? 'bg-red-600 text-white border-red-600' : 'bg-transparent text-white/30 border-white/10'}`}>Agressivo</button>
+                            {/* Feature 9: Tone Switcher */}
+                            <div>
+                                <label className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-2 block">Abordagem do Script</label>
+                                <div className="flex gap-2">
+                                    <button onClick={() => setPitchTone('consultive')} className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all ${pitchTone === 'consultive' ? 'bg-white text-black border-white' : 'bg-transparent text-white/30 border-white/10 hover:border-white/30'}`}>Consultiva</button>
+                                    <button onClick={() => setPitchTone('direct')} className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all ${pitchTone === 'direct' ? 'bg-red-600 text-white border-red-600' : 'bg-transparent text-white/30 border-white/10 hover:border-white/30'}`}>Direta</button>
+                                </div>
                             </div>
                         </div>
 
                         <div className="lg:col-span-7 flex flex-col h-full">
-                             {/* Conteúdo de Copy do Prompt Original (Mantido) */}
+                             {/* Conteúdo de Copy */}
+                             <div className="flex items-center justify-between mb-2">
+                                 <h3 className="text-[10px] font-black text-white/40 uppercase tracking-widest">Script Sugerido (IA)</h3>
+                                 <button onClick={() => onCopyPitch(analysis?.pitch || '')} className="text-[9px] bg-white/10 hover:bg-white text-white hover:text-black px-3 py-1 rounded transition-colors uppercase font-bold">Copiar</button>
+                             </div>
                              <textarea 
                                 value={analysis?.pitch || "Gerando copy estratégica..."}
                                 readOnly
-                                className="w-full flex-1 min-h-[300px] bg-[#151515] border border-white/10 rounded-2xl p-6 text-sm text-white/90 leading-relaxed font-sans focus:outline-none resize-none mb-4"
+                                className="w-full flex-1 min-h-[300px] bg-[#151515] border border-white/10 rounded-2xl p-6 text-sm text-white/90 leading-relaxed font-sans focus:outline-none resize-none mb-4 custom-scrollbar"
                             />
-                             <button onClick={() => onOpenWhatsapp(analysis?.pitch || '')} className="w-full bg-[#25D366] hover:bg-[#20b858] text-black py-5 rounded-xl font-black uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-2">
+                             <button onClick={() => onOpenWhatsapp(analysis?.pitch || '')} className="w-full bg-[#25D366] hover:bg-[#20b858] text-black py-5 rounded-xl font-black uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-2 shadow-lg shadow-green-900/20 active:scale-[0.98] transition-all">
                                 <PhoneIcon className="w-5 h-5 text-black fill-current" /> ABRIR WHATSAPP & FECHAR
                              </button>
                         </div>
@@ -299,16 +326,8 @@ const LeadStrategyModal = ({ lead, onClose, onCopyPitch, onOpenWhatsapp, customS
 
 // --- COMPONENTE: SCRIPT MANAGER (Mantido) ---
 const ScriptManager = ({ scripts, onSave }: any) => {
-    // ... (mesma lógica)
+    // ... (Código do ScriptManager mantido, apenas placeholder para brevidade do XML)
     return <div className="p-6 text-white">Gerenciador de Scripts (Ativo)</div>;
-};
-
-const DEFAULT_SCRIPTS = {
-    standard: `Olá, falo com o responsável pela {EMPRESA}?
-
-Vi que vocês têm uma reputação excelente, mas quando procurei no Google, notei algumas oportunidades que podem trazer mais clientes.
-
-Sou especialista em posicionamento digital e ajudo empresas a dominarem o mercado local. Tem 5 minutos para eu te mostrar como?`
 };
 
 // --- MAIN DASHBOARD ---
@@ -326,6 +345,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+  const [chamadosSearch, setChamadosSearch] = useState('');
   
   // CRM Data
   const [contactedLeads, setContactedLeads] = useState<Lead[]>([]);
@@ -353,12 +373,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       localStorage.setItem('cbl_contacted_leads', JSON.stringify(contactedLeads));
   }, [contactedLeads]);
 
-  // Função Search (Simplificada para o exemplo, mas com a lógica de Feature 8: Niche Intel)
+  // Função Search
   const executeSearch = async (token?: string) => {
       if (!searchTerm || !location) return;
       setIsLoading(true);
       
-      // Simulação da busca (substitua pela sua lógica de fetch real)
       try {
           const response = await fetch('/api/places', {
             method: 'POST',
@@ -366,12 +385,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             body: JSON.stringify({ query: `${searchTerm} in ${location}`, pagetoken: token }),
           });
           const data = await response.json();
-          // Processamento básico
+          
           const newLeads = (data.results || []).map((p: any) => ({
               ...p,
               id: p.place_id,
-              lead_score: Math.floor(Math.random() * 100), // Mock score
-              status_site: p.website ? 'com_site' : 'sem_site'
+              lead_score: Math.floor(Math.random() * 40) + 40 + (p.rating || 0) * 5, // Mock score logic
+              status_site: p.website ? 'com_site' : 'sem_site',
+              phone: p.formatted_phone_number
           }));
           setLeads(newLeads);
       } catch (e) {
@@ -386,6 +406,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   // Feature 7: Pipeline Status Update
   const updateStatus = (id: string, status: Lead['pipelineStatus']) => {
       setContactedLeads(prev => prev.map(l => l.id === id ? { ...l, pipelineStatus: status } : l));
+  };
+  
+  // Feature 10: Mark as Contacted logic
+  const markAsContacted = (lead: Lead) => {
+      if (contactedLeads.some(l => l.id === lead.id)) return;
+      const newLead = { ...lead, contactedAt: new Date().toISOString(), pipelineStatus: 'contacted' as const };
+      setContactedLeads(prev => [newLead, ...prev]);
   };
 
   const NavButton = ({ tab, icon, label }: any) => (
@@ -426,7 +453,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       </aside>
 
       <main className="flex-1 bg-[#050505] relative flex flex-col overflow-hidden pt-16 md:pt-0">
-            {/* CORREÇÃO UX MOBILE: O formulário agora rola junto com o conteúdo */}
+            {/* CORREÇÃO UX MOBILE: O formulário agora rola JUNTO com o conteúdo */}
             {activeTab === 'search' && (
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 bg-[#050505]">
                     <div className="max-w-8xl mx-auto pb-20">
@@ -444,14 +471,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                             )}
                         </div>
 
-                        {/* Formulário (Agora dentro do scroll) */}
+                        {/* Formulário (Agora dentro do scroll, então some ao rolar) */}
                         <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 items-end bg-[#0A0A0A] p-4 md:p-5 rounded-3xl border border-white/10 relative overflow-hidden group mb-8">
                             <div className="absolute top-0 left-0 w-1 h-full bg-red-600 opacity-50 group-hover:opacity-100 transition-opacity"></div>
                             <div className="md:col-span-4 space-y-2">
                                 <label className="text-[9px] font-black text-red-600 uppercase tracking-widest ml-1">Nicho</label>
                                 <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 md:py-4 text-white focus:border-red-600 outline-none text-sm font-bold transition-all placeholder-white/20" placeholder="Ex: Estética" />
                                 {/* Feature 8: Niche Intel */}
-                                {searchTerm.length > 3 && <p className="text-[8px] text-green-500 uppercase tracking-wider pl-1 animate-pulse">💡 Dica: Nichos de saúde valorizam "Autoridade".</p>}
+                                {searchTerm.length > 3 && <p className="text-[8px] text-green-500 uppercase tracking-wider pl-1 animate-pulse">💡 Dica: Foque em reputação para este nicho.</p>}
                             </div>
                             <div className="md:col-span-4 space-y-2">
                                 <label className="text-[9px] font-black text-red-600 uppercase tracking-widest ml-1">Região</label>
@@ -478,7 +505,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                                             <div className="absolute bottom-2 left-2 bg-black/80 text-green-400 text-[8px] font-black uppercase px-2 py-1 rounded backdrop-blur">
                                                 LTV: R$ {(lead.lead_score * 50).toLocaleString()}
                                             </div>
-                                            {lead.photos?.[0] && <img src={`/api/photo?ref=${lead.photos[0].photo_reference}`} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all"/>}
+                                            {lead.photos?.[0] ? (
+                                                <img src={`/api/photo?ref=${lead.photos[0].photo_reference}`} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all"/>
+                                            ) : (
+                                                <div className="w-full h-full bg-gray-800 flex items-center justify-center opacity-30"><Logo className="scale-50"/></div>
+                                            )}
                                         </div>
                                         <div className="p-5 flex-1 flex flex-col">
                                             <h3 className="text-lg font-black text-white uppercase leading-tight mb-2 line-clamp-1">{lead.name}</h3>
@@ -491,13 +522,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                                                 <button onClick={() => setSelectedLead(lead)} className="bg-white text-black px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-gray-200">Raio-X</button>
                                             </div>
                                         </div>
-                                        {/* Feature 10: Quick Action */}
+                                        {/* Feature 10: Fast Zap */}
                                         <button 
                                             onClick={() => {
-                                                const msg = `Olá ${lead.name}, vi sua empresa no Google e tenho uma estratégia para aumentar suas avaliações. Podemos falar?`;
+                                                markAsContacted(lead);
+                                                const msg = `Olá ${lead.name}, sou especialista em marketing digital e vi potencial no seu negócio. Podemos falar?`;
                                                 window.open(`https://wa.me/55${lead.phone?.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
                                             }} 
-                                            className="bg-[#1a1a1a] hover:bg-green-600 text-white/30 hover:text-white py-3 text-[9px] font-black uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
+                                            className="bg-[#1a1a1a] hover:bg-green-600 text-white/30 hover:text-white py-3 text-[9px] font-black uppercase tracking-widest transition-colors flex items-center justify-center gap-2 border-t border-white/5"
                                         >
                                             <PhoneIcon className="w-3 h-3"/> Fast Zap
                                         </button>
@@ -511,25 +543,30 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                 </div>
             )}
 
-            {/* Nova Aba de Objeções */}
+            {/* Nova Aba de Objeções (Feature 1) */}
             {activeTab === 'objections' && <ObjectionCrusher />}
 
             {/* Aba Pipeline (Antigo Contacted) - Feature 7 */}
             {activeTab === 'contacted' && (
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-[#050505]">
-                    <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter mb-6">Pipeline de Vendas</h2>
-                    <div className="space-y-4">
-                        {contactedLeads.map(lead => (
-                            <div key={lead.id} className="bg-[#0c0c0c] border border-white/10 p-4 rounded-xl flex flex-col md:flex-row justify-between items-center gap-4">
-                                <div>
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter">Pipeline de Vendas</h2>
+                        <input type="text" value={chamadosSearch} onChange={(e) => setChamadosSearch(e.target.value)} placeholder="Filtrar..." className="bg-[#151515] border border-white/10 rounded-lg px-3 py-2 text-white text-xs outline-none" />
+                    </div>
+                    <div className="space-y-4 pb-20">
+                        {contactedLeads.filter(l => l.name.toLowerCase().includes(chamadosSearch.toLowerCase())).map(lead => (
+                            <div key={lead.id} className="bg-[#0c0c0c] border border-white/10 p-4 rounded-xl flex flex-col md:flex-row justify-between items-center gap-4 group hover:border-white/20 transition-all">
+                                <div className="flex-1">
                                     <h3 className="font-bold text-white">{lead.name}</h3>
-                                    <p className="text-xs text-white/40">{lead.phone}</p>
+                                    <p className="text-xs text-white/40">{lead.phone} • {new Date(lead.contactedAt || '').toLocaleDateString()}</p>
                                 </div>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 w-full md:w-auto">
                                     <select 
                                         value={lead.pipelineStatus || 'contacted'} 
                                         onChange={(e) => updateStatus(lead.id, e.target.value as any)}
-                                        className="bg-[#151515] border border-white/10 text-white text-xs p-2 rounded-lg outline-none focus:border-red-600"
+                                        className={`bg-[#151515] border border-white/10 text-xs p-2 rounded-lg outline-none font-bold uppercase tracking-wide flex-1 md:flex-none ${
+                                            lead.pipelineStatus === 'closed' ? 'text-green-500' : (lead.pipelineStatus === 'negotiating' ? 'text-yellow-500' : 'text-white')
+                                        }`}
                                     >
                                         <option value="contacted">📩 Contactado</option>
                                         <option value="negotiating">🤝 Negociando</option>

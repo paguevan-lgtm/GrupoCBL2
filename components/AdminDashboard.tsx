@@ -345,6 +345,14 @@ const LeadStrategyModal = ({
             setIsScriptLoading(true);
             setGeneratedScript(''); // Limpa script anterior
             
+            // --- CÁLCULO DA SAUDAÇÃO TEMPORAL ---
+            const currentHour = new Date().getHours();
+            let timeGreeting = "Olá";
+            if (currentHour >= 5 && currentHour < 12) timeGreeting = "Bom dia";
+            else if (currentHour >= 12 && currentHour < 18) timeGreeting = "Boa tarde";
+            else timeGreeting = "Boa noite";
+            // ------------------------------------
+
             try {
                 // PROMPT DE ALTA CONVERSÃO - CAMALEÃO DE NICHO + CTA OBRIGATÓRIO
                 const prompt = `
@@ -364,8 +372,9 @@ const LeadStrategyModal = ({
                     - Se for ALIMENTAÇÃO/GERAL (Restaurante, Mercado): Tom casual e vizinho.
 
                     REGRA 2: ESTRUTURA OBRIGATÓRIA DA MENSAGEM:
-                    Parte A: GANCHO (Quebra de Padrão). Comente algo específico (falta de site, nota google, ou elogio sincero sobre a estrutura/avaliações).
-                    Parte B (FINALIZAÇÃO MANDATÓRIA): Você DEVE dizer que é especialista no assunto e perguntar quem é a pessoa do marketing para conversar se tem um tempo.
+                    Parte A: SAUDAÇÃO OBRIGATÓRIA. Comece a frase com "${timeGreeting}".
+                    Parte B: GANCHO (Quebra de Padrão). Comente algo específico (falta de site, nota google, ou elogio sincero sobre a estrutura/avaliações).
+                    Parte C (FINALIZAÇÃO MANDATÓRIA): Você DEVE dizer que é especialista no assunto e perguntar quem é a pessoa do marketing para conversar se tem um tempo.
                     
                     EXEMPLOS DE FINALIZAÇÃO (Adapte o tom, mas mantenha a essência):
                     - "Sou especialista em posicionamento pra estética. Quem cuida do marketing de vocês? Tem um tempinho pra conversar?"
@@ -396,12 +405,12 @@ const LeadStrategyModal = ({
                         setGeneratedScript(data.text.trim());
                     } else {
                         // Fallback genérico com a estrutura obrigatória
-                        setGeneratedScript(`Opa, tudo bem? Vi a ${lead.name} aqui no Google e vi uma oportunidade de melhorar o posicionamento. Sou especialista nessa área. Quem cuida do marketing de vocês? Tem um tempinho pra conversar?`);
+                        setGeneratedScript(`${timeGreeting}, tudo bem? Vi a ${lead.name} aqui no Google e vi uma oportunidade de melhorar o posicionamento. Sou especialista nessa área. Quem cuida do marketing de vocês? Tem um tempinho pra conversar?`);
                     }
                 }
             } catch (error) {
                 console.error("Erro script IA:", error);
-                if (isMounted) setGeneratedScript(`Opa, tudo bem? Vi a ${lead.name} aqui. Sou especialista em digital. Quem cuida do marketing de vocês? Tem um tempinho pra conversar?`);
+                if (isMounted) setGeneratedScript(`${timeGreeting}, tudo bem? Vi a ${lead.name} aqui. Sou especialista em digital. Quem cuida do marketing de vocês? Tem um tempinho pra conversar?`);
             } finally {
                 if (isMounted) setIsScriptLoading(false);
             }

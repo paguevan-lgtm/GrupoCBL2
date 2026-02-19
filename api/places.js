@@ -10,36 +10,35 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Query or pagetoken is required' });
   }
 
-  // Chave fornecida
   const apiKey = "AIzaSyC1mfIO67ZnVuMbbDoyibfX_A_O2D9eB5s";
 
   try {
     let searchUrl;
     
-    // Se tiver token de paginação, usa ele. Se não, faz a busca textual.
     if (pagetoken) {
         searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?pagetoken=${pagetoken}&key=${apiKey}`;
-        console.log(`[API Places] Fetching next page...`);
     } else {
         searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${apiKey}`;
-        console.log(`[API Places] Searching: ${query}`);
     }
     
     const searchResponse = await fetch(searchUrl);
     
-    if (!searchResponse.ok) throw new Error(`Search HTTP Error: ${searchResponse.status}`);
+    if (!searchResponse.ok) {
+        const errorText = await searchResponse.text();
+        throw new Error(`Google API HTTP ${searchResponse.status}: ${errorText}`);
+    }
+
     const searchData = await searchResponse.json();
 
     if (searchData.status !== 'OK' && searchData.status !== 'ZERO_RESULTS') {
-      throw new Error(`Search API Error: ${searchData.status}`);
+      throw new Error(`Google API Error: ${searchData.status} ${searchData.error_message ? '- ' + searchData.error_message : ''}`);
     }
 
     const initialResults = searchData.results || [];
-    
-    // Google Places retorna 20 resultados por página.
-    // Vamos processar todos os 20 para maximizar a eficiência da busca.
-    const detailedResults = await Promise.all(
-      initialResults.map(async (place) => {
+    const detailedResults = [];
+
+    // Process results sequentially to avoid hitting rate limits (QPS)
+    for (const place of initialResults) {
         try {
           const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,formatted_address,formatted_phone_number,international_phone_number,website,rating,user_ratings_total,types,price_level,business_status,opening_hours,photos,url&key=${apiKey}`;
           
@@ -47,20 +46,21 @@ export default async function handler(req, res) {
           const detailsData = await detailsResponse.json();
 
           if (detailsData.status === 'OK') {
-            // Mescla os dados da busca com os detalhes ricos
-            return {
+            detailedResults.push({
               ...place,
-              ...detailsData.result, // Sobrescreve com dados mais precisos
+              ...detailsData.result,
               original_search_ref: place.place_id
-            };
+            });
+          } else {
+             detailedResults.push(place);
           }
-          return place; // Fallback para o resultado básico se o details falhar
         } catch (err) {
           console.error(`Failed to fetch details for ${place.place_id}`, err);
-          return place;
+          detailedResults.push(place);
         }
-      })
-    );
+        // Small delay to be gentle with the API quota
+        await new Promise(resolve => setTimeout(resolve, 50));
+    }
 
     return res.status(200).json({ 
         results: detailedResults,

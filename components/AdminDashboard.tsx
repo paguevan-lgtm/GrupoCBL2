@@ -597,7 +597,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
         }),
       });
 
-      if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
+      if (!response.ok) {
+          // Tenta pegar o erro detalhado vindo do backend
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.details || errorData.error || `Erro HTTP ${response.status}`);
+      }
 
       const data = await response.json();
       const rawResults = data.results || [];

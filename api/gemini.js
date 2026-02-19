@@ -12,21 +12,16 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Conteúdo (contents) é obrigatório' });
   }
 
-  // Chave de API obtida via variável de ambiente
-  const apiKey = process.env.API_KEY;
-
-  if (!apiKey) {
-    console.error("API_KEY environment variable is missing");
-    return res.status(500).json({ error: 'Configuração de servidor inválida: API Key ausente.' });
-  }
-
   try {
+    // Usando a chave que você forneceu explicitamente para a IA no início.
+    const apiKey = "AIzaSyAmuRj1rPy_60TL9yoplCw_TR-A-qa_eXg";
+    
     const ai = new GoogleGenAI({ apiKey: apiKey });
     
     console.log("Iniciando requisição Gemini...");
 
     const response = await ai.models.generateContent({
-      model: model || 'gemini-3-flash-preview',
+      model: model || 'gemini-2.0-flash',
       contents: contents,
       config: config || {}
     });

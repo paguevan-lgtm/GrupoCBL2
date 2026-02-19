@@ -1,13 +1,8 @@
 
 export default async function handler(req, res) {
   const { ref } = req.query;
-  // Prioriza chave específica do Maps
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.API_KEY; 
-  
-  if (!apiKey) {
-    console.error("API Key missing");
-    return res.status(500).send('Server configuration error');
-  }
+  // Mesma chave usada no places.js
+  const apiKey = "AIzaSyC1mfIO67ZnVuMbbDoyibfX_A_O2D9eB5s"; 
   
   if (!ref) return res.status(400).send('No reference provided');
 
@@ -21,7 +16,7 @@ export default async function handler(req, res) {
     const buffer = Buffer.from(arrayBuffer);
 
     res.setHeader('Content-Type', response.headers.get('content-type') || 'image/jpeg');
-    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache por 1 dia
     res.send(buffer);
   } catch (error) {
     console.error(error);

@@ -607,10 +607,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [searchMode, setSearchMode] = useState<SearchMode>('standard');
   const [searchTerm, setSearchTerm] = useState('');
   const [location, setLocation] = useState('');
+  const [minScore, setMinScore] = useState(0); // Novo estado para filtro de Score
   
+  // Detecta se é a mesma busca para usar paginação
+  const [lastSearchTerm, setLastSearchTerm] = useState('');
+  const [lastLocation, setLastLocation] = useState('');
+
   // CRM States
   const [contactedLeads, setContactedLeads] = useState<Lead[]>([]);
-  const [viewedLeads, setViewedLeads] = useState<Lead[]>([]); // Nova lista para visualizados (ignorados)
+  const [viewedLeads, setViewedLeads] = useState<Lead[]>([]);
   const [chamadosSearch, setChamadosSearch] = useState('');
 
   // Results States
@@ -677,10 +682,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
     setIsLoading(true);
     if (!token) {
-        setLeads([]); // Limpa se for nova busca
+        setLeads([]);
     }
     setActiveTab('search');
     
+    // Salva termos atuais para comparar na proxima
+    setLastSearchTerm(searchTerm);
+    setLastLocation(location);
+
     let queryPrefix = "";
     if (searchMode === 'whale') queryPrefix = "Luxury High End ";
     
@@ -692,7 +701,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
             query: fullQuery,
-            pagetoken: token // Envia o token se existir
+            pagetoken: token
         }),
       });
 
@@ -731,15 +740,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       });
 
       // --- CRITÉRIOS DE FILTRAGEM AVANÇADA ---
-      // 1. Remove Contactados (Arquivados)
-      // 2. Remove Visualizados (Que não viraram contactados, ou seja, ignorados/lidos)
       processedLeads = processedLeads.filter((lead: Lead) => {
+          // 1. Remove Contactados
           const isContacted = contactedLeads.some(cl => cl.id === lead.id);
-          const isViewed = viewedLeads.some(vl => vl.id === lead.id);
-          
           if (isContacted) return false;
-          if (isViewed) return false; // Remove visualizados da nova busca
           
+          // 2. Remove Visualizados
+          const isViewed = viewedLeads.some(vl => vl.id === lead.id);
+          if (isViewed) return false; 
+          
+          // 3. Filtro de Score Mínimo (Slider)
+          if (lead.lead_score < minScore) return false;
+
           if (searchMode === 'ghost' && lead.status_site === 'com_site') return false;
           return true;
       });
@@ -758,9 +770,32 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     }
   };
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearchButton = (e: React.FormEvent) => {
       e.preventDefault();
-      executeSearch();
+      
+      // Mover leads ATUAIS da tela para Visualizados (Arquivar em massa)
+      const currentVisibleLeads = leads;
+      if (currentVisibleLeads.length > 0) {
+          const newViewed = [...viewedLeads, ...currentVisibleLeads];
+          // Remove duplicatas por ID apenas por segurança
+          const uniqueViewed = Array.from(new Map(newViewed.map(item => [item.id, item])).values());
+          
+          setViewedLeads(uniqueViewed);
+          localStorage.setItem('cbl_viewed_leads', JSON.stringify(uniqueViewed));
+      }
+
+      // Limpa a tela atual para trazer novos
+      setLeads([]);
+
+      // Lógica de Paginação Automática:
+      // Se o termo e local são os mesmos da última busca E existe um token de próxima página,
+      // usa o token para pegar "mais resultados" (página 2, 3, etc) em vez de repetir a página 1.
+      if (searchTerm === lastSearchTerm && location === lastLocation && nextPageToken) {
+          executeSearch(nextPageToken);
+      } else {
+          // Se mudou o termo ou não tem próxima página, faz busca nova
+          executeSearch();
+      }
   };
 
   const loadMore = () => {
@@ -772,18 +807,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const markAsContacted = (lead: Lead) => {
       const leadWithDate = { ...lead, contactedAt: new Date().toISOString() };
       setContactedLeads(prev => [leadWithDate, ...prev]);
-      
-      // Remove da lista atual e da lista de visualizados (se estiver lá)
       setLeads(prev => prev.filter(l => l.id !== lead.id));
       setViewedLeads(prev => prev.filter(l => l.id !== lead.id));
-      
       if (selectedLead?.id === lead.id) setSelectedLead(null);
   };
 
   const handleOpenLead = (lead: Lead) => {
       setSelectedLead(lead);
       
-      // Se não estiver contactado, adiciona aos visualizados
       const isContacted = contactedLeads.some(cl => cl.id === lead.id);
       if (!isContacted) {
           const isAlreadyViewed = viewedLeads.some(vl => vl.id === lead.id);
@@ -946,15 +977,31 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                             <ModeSelector />
                         </div>
                         
-                        <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 items-end bg-[#0A0A0A] p-4 md:p-5 rounded-3xl border border-white/10 relative overflow-hidden group">
+                        <form onSubmit={handleSearchButton} className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 items-end bg-[#0A0A0A] p-4 md:p-5 rounded-3xl border border-white/10 relative overflow-hidden group">
                             <div className="absolute top-0 left-0 w-1 h-full bg-red-600 opacity-50 group-hover:opacity-100 transition-opacity"></div>
-                            <div className="md:col-span-5 space-y-2">
+                            <div className="md:col-span-3 space-y-2">
                                 <label className="text-[9px] font-black text-red-600 uppercase tracking-widest ml-1">Nicho</label>
                                 <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 md:py-4 text-white focus:border-red-600 outline-none text-sm md:text-base font-bold transition-all placeholder-white/20" placeholder="Ex: Estética" />
                             </div>
-                            <div className="md:col-span-4 space-y-2">
+                            <div className="md:col-span-3 space-y-2">
                                 <label className="text-[9px] font-black text-red-600 uppercase tracking-widest ml-1">Região</label>
                                 <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 md:py-4 text-white focus:border-red-600 outline-none text-sm md:text-base font-bold transition-all placeholder-white/20" placeholder="Ex: Pinheiros, SP" />
+                            </div>
+                            <div className="md:col-span-3 space-y-2 flex flex-col justify-end h-full">
+                                <label className="text-[9px] font-black text-red-600 uppercase tracking-widest ml-1 flex justify-between">
+                                    <span>Score Min: {minScore}</span>
+                                    <span>+70 = Alta Qualidade</span>
+                                </label>
+                                <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3 md:py-4 flex items-center">
+                                    <input 
+                                        type="range" 
+                                        min="0" 
+                                        max="99" 
+                                        value={minScore} 
+                                        onChange={(e) => setMinScore(Number(e.target.value))} 
+                                        className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer accent-red-600"
+                                    />
+                                </div>
                             </div>
                             <div className="md:col-span-3">
                                 <button type="submit" disabled={isLoading} className="w-full bg-red-600 hover:bg-red-700 text-white py-3 md:py-4 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-lg shadow-red-600/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 h-[48px] md:h-[58px] transition-all hover:shadow-[0_0_30px_rgba(220,38,38,0.5)]">
@@ -971,6 +1018,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                             <div className="h-64 flex flex-col items-center justify-center text-center opacity-30">
                                 <TargetIcon className="w-16 h-16 text-white mb-4" />
                                 <p className="text-sm font-black uppercase tracking-widest">Nenhum alvo detectado</p>
+                                <p className="text-xs mt-2 text-white/50 max-w-xs">Se já buscou antes, os resultados anteriores foram movidos para a aba "Visualizados" para não repetir.</p>
                             </div>
                         )}
                         
@@ -981,6 +1029,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                                         <span className="text-3xl font-black text-white italic">{leads.length}</span>
                                         <span className="text-[10px] text-white/40 uppercase tracking-[0.3em] font-bold mt-2 leading-tight">Leads Encontrados</span>
                                     </div>
+                                    {minScore > 0 && <span className="text-[9px] text-red-500 border border-red-500/30 px-2 py-1 rounded uppercase tracking-widest">Filtro Score: &gt; {minScore}</span>}
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-8">
                                     {leads.map((lead) => <LeadCard key={lead.id} lead={lead} />)}

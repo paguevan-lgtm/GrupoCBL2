@@ -28,6 +28,8 @@ interface Lead {
   url?: string;
   phone?: string;
   international_phone?: string;
+  formatted_phone_number?: string;
+  international_phone_number?: string;
   lead_score: number;
   status_site: 'com_site' | 'sem_site' | 'site_basico';
   place_id: string;

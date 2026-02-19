@@ -72,6 +72,240 @@ interface MarketingPlan {
 
 type SearchMode = 'standard' | 'whale' | 'crisis' | 'ghost';
 
+const DEFAULT_SCRIPTS = {
+    cold_call: "Olá [Nome], aqui é [Seu Nome] da CBL. Vi que vocês são referência em [Nicho] na região, mas notei um ponto crítico na presença digital de vocês que pode estar custando clientes. Tem 30 segundos?",
+    gatekeeper: "Olá, bom dia. Quem cuida da parte de marketing ou expansão da empresa? É sobre uma parceria comercial que pode interessar a diretoria.",
+    whatsapp_intro: "Olá [Nome], tudo bem? Encontrei a [Empresa] no Google e vi um potencial enorme, mas notei que vocês não estão aproveitando [Oportunidade]. Posso te mandar um áudio rápido explicando?",
+    follow_up: "Oi [Nome], conseguiu dar uma olhada na proposta? Estou fechando a agenda da semana e queria priorizar o projeto de vocês."
+};
+
+const ScriptManager = ({ scripts, onSave }: { scripts: any, onSave: (s: any) => void }) => {
+    const [localScripts, setLocalScripts] = useState(scripts);
+    const [activeScript, setActiveScript] = useState('cold_call');
+
+    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const updated = { ...localScripts, [activeScript]: e.target.value };
+        setLocalScripts(updated);
+        onSave(updated);
+    };
+
+    return (
+        <div className="h-full flex flex-col bg-[#050505] p-6">
+            <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 bg-purple-600/20 rounded-lg text-purple-500"><BrainIcon className="w-6 h-6"/></div>
+                <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter">Script Vault</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-full">
+                <div className="space-y-2">
+                    {Object.keys(localScripts).map(key => (
+                        <button
+                            key={key}
+                            onClick={() => setActiveScript(key)}
+                            className={`w-full text-left p-4 rounded-xl border transition-all uppercase text-xs font-bold tracking-widest ${activeScript === key ? 'bg-white/10 border-purple-500 text-white' : 'bg-[#111] border-white/5 text-white/50 hover:bg-[#151515]'}`}
+                        >
+                            {key.replace('_', ' ')}
+                        </button>
+                    ))}
+                </div>
+                
+                <div className="md:col-span-2 bg-[#0c0c0c] border border-white/10 rounded-2xl p-6 flex flex-col">
+                    <div className="flex justify-between items-center mb-4">
+                        <span className="text-[10px] text-purple-500 font-black uppercase tracking-widest">Editor de Texto</span>
+                        <button onClick={() => navigator.clipboard.writeText(localScripts[activeScript])} className="text-white/40 hover:text-white text-[10px] uppercase font-bold transition-colors">Copiar</button>
+                    </div>
+                    <textarea 
+                        value={localScripts[activeScript]}
+                        onChange={handleChange}
+                        className="flex-1 bg-transparent text-white/80 font-mono text-sm resize-none outline-none custom-scrollbar leading-relaxed"
+                    />
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const LeadStrategyModal = ({ lead, onClose, onCopyPitch, onOpenWhatsapp, customScripts }: any) => {
+    const [analysis, setAnalysis] = useState<IAAnalysisResult | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        if (!lead) return;
+        
+        // Auto-analyze on open
+        const analyzeLead = async () => {
+            setIsLoading(true);
+            const prompt = `
+                ATUE COMO: Estrategista de Vendas B2B Sênior.
+                ANALISE ESTE LEAD:
+                Nome: ${lead.name}
+                Nicho Provável: Baseado no nome e tipos (${lead.types?.join(', ')})
+                Score: ${lead.lead_score}
+                Status Site: ${lead.status_site}
+                Rating: ${lead.rating} (${lead.user_ratings_total} reviews)
+                
+                TAREFA: Gere uma estratégia de abordagem fria (Cold Call/Message).
+                
+                RETORNE JSON:
+                {
+                    "pitch": "Script de abordagem de 1 parágrafo focado na dor dele (ex: falta de site, nota baixa)",
+                    "products_to_sell": ["Produto 1", "Produto 2"],
+                    "sales_strategy": "Dica tática de como abordar (ex: Elogie x, depois critique y)",
+                    "suggested_pricing": "Ticket sugerido (Baixo/Médio/Alto)",
+                    "conquest_tip": "Uma frase de efeito para fechar",
+                    "pain_points": ["Dor 1", "Dor 2"]
+                }
+            `;
+
+            try {
+                const response = await fetch('/api/gemini', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: prompt,
+                        model: 'gemini-3-flash-preview',
+                        config: { responseMimeType: 'application/json' }
+                    })
+                });
+                const data = await response.json();
+                const parsed = JSON.parse(data.text);
+                setAnalysis(parsed);
+            } catch (error) {
+                console.error("Erro na análise:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        analyzeLead();
+    }, [lead]);
+
+    if (!lead) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in duration-300" onClick={onClose}>
+            <div className="w-full max-w-4xl bg-[#0c0c0c] border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                
+                {/* Header */}
+                <div className="p-6 border-b border-white/10 flex justify-between items-start bg-[#111]">
+                    <div>
+                        <div className="flex items-center gap-3 mb-2">
+                             <div className={`w-3 h-3 rounded-full ${lead.lead_score > 70 ? 'bg-green-500' : 'bg-red-500'} shadow-[0_0_10px_currentColor]`}></div>
+                             <span className="text-[10px] font-mono text-white/40 uppercase tracking-widest">ID: {lead.place_id?.substr(-8)}</span>
+                        </div>
+                        <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter">{lead.name}</h2>
+                        <p className="text-white/60 text-sm mt-1 flex items-center gap-2">
+                            <LocationIcon className="w-4 h-4 text-red-500"/> {lead.address}
+                        </p>
+                    </div>
+                    <button onClick={onClose} className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-white/50 hover:text-white transition-colors"><XIcon/></button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        
+                        {/* Coluna 1: Dados do Lead */}
+                        <div className="space-y-6">
+                            <div className="bg-[#151515] p-5 rounded-2xl border border-white/5 space-y-4">
+                                <h3 className="text-[10px] font-black text-white/30 uppercase tracking-widest">Raio-X</h3>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between border-b border-white/5 pb-2">
+                                        <span className="text-xs text-white/60">Reputação</span>
+                                        <span className={`text-xs font-bold ${lead.rating >= 4.5 ? 'text-green-500' : 'text-yellow-500'}`}>{lead.rating} ★ ({lead.user_ratings_total})</span>
+                                    </div>
+                                    <div className="flex justify-between border-b border-white/5 pb-2">
+                                        <span className="text-xs text-white/60">Website</span>
+                                        <span className={`text-xs font-bold ${lead.status_site === 'com_site' ? 'text-green-500' : 'text-red-500'}`}>{lead.status_site === 'com_site' ? 'Online' : 'Ausente'}</span>
+                                    </div>
+                                    <div className="flex justify-between border-b border-white/5 pb-2">
+                                        <span className="text-xs text-white/60">Lead Score</span>
+                                        <span className="text-xs font-bold text-white">{lead.lead_score}/100</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                             <div className="bg-[#151515] p-5 rounded-2xl border border-white/5">
+                                <h3 className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-4">Ações Rápidas</h3>
+                                <div className="space-y-3">
+                                    <button 
+                                        onClick={() => onOpenWhatsapp(customScripts.whatsapp_intro.replace('[Nome]', 'Gestor').replace('[Empresa]', lead.name).replace('[Oportunidade]', 'o potencial digital'))}
+                                        className="w-full bg-green-600 hover:bg-green-500 text-white py-3 rounded-xl font-bold uppercase text-xs tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg shadow-green-600/20"
+                                    >
+                                        <PhoneIcon className="w-4 h-4"/> Chamar no Zap
+                                    </button>
+                                    <button 
+                                        onClick={() => onCopyPitch(customScripts.cold_call.replace('[Nome]', 'Gestor').replace('[Nicho]', 'seu nicho'))}
+                                        className="w-full bg-white/5 hover:bg-white/10 text-white py-3 rounded-xl font-bold uppercase text-xs tracking-widest transition-all border border-white/10"
+                                    >
+                                        Copiar Script Cold Call
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Coluna 2 e 3: Inteligência Artificial */}
+                        <div className="md:col-span-2 space-y-6">
+                            {isLoading ? (
+                                <div className="h-full flex flex-col items-center justify-center space-y-4 bg-[#151515] rounded-2xl border border-white/5 min-h-[300px]">
+                                    <SpinnerIcon />
+                                    <p className="text-red-500 font-black text-xs uppercase tracking-widest animate-pulse">Consultando Satélite Estratégico...</p>
+                                </div>
+                            ) : analysis ? (
+                                <>
+                                    <div className="bg-gradient-to-br from-red-900/10 to-transparent border border-red-500/20 p-6 rounded-2xl relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 p-4 opacity-10"><BrainIcon className="w-12 h-12 text-red-500"/></div>
+                                        <h3 className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-3">Pitch Gerado por IA</h3>
+                                        <p className="text-white text-lg font-medium leading-relaxed italic">"{analysis.pitch}"</p>
+                                        <div className="mt-4 flex gap-2">
+                                            <button onClick={() => onCopyPitch(analysis.pitch)} className="bg-red-600 hover:bg-red-500 text-white px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-colors">Copiar</button>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="bg-[#151515] border border-white/5 p-5 rounded-2xl">
+                                            <h3 className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-3">Estratégia de Venda</h3>
+                                            <p className="text-white/70 text-xs leading-relaxed">{analysis.sales_strategy}</p>
+                                            <div className="mt-4 space-y-2">
+                                                {analysis.pain_points.map((pain: string, i: number) => (
+                                                    <div key={i} className="flex items-center gap-2 text-xs text-white/50">
+                                                        <span className="text-red-500">⚠</span> {pain}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="bg-[#151515] border border-white/5 p-5 rounded-2xl">
+                                            <h3 className="text-[10px] font-black text-green-500 uppercase tracking-widest mb-3">Produtos Sugeridos</h3>
+                                            <div className="flex flex-wrap gap-2 mb-4">
+                                                {analysis.products_to_sell.map((prod: string, i: number) => (
+                                                    <span key={i} className="bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-1 rounded text-[10px] font-bold uppercase">{prod}</span>
+                                                ))}
+                                            </div>
+                                            <div className="border-t border-white/5 pt-3">
+                                                 <span className="text-[9px] text-white/30 uppercase tracking-widest block">Ticket Sugerido</span>
+                                                 <span className="text-white font-bold">{analysis.suggested_pricing}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="bg-[#151515] border border-white/5 p-4 rounded-xl flex items-center gap-4">
+                                        <div className="bg-yellow-500/20 p-2 rounded-lg text-yellow-500"><ZapIcon className="w-5 h-5"/></div>
+                                        <div>
+                                            <span className="text-[9px] text-white/30 uppercase tracking-widest block">Dica de Fechamento</span>
+                                            <span className="text-white text-xs font-bold italic">"{analysis.conquest_tip}"</span>
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="h-full flex items-center justify-center text-white/20">Erro na análise.</div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // --- FEATURE 1: OBJECTION CRUSHER (Agora com IA Real) ---
 const ObjectionCrusher = () => {
     const [selectedObjection, setSelectedObjection] = useState<string | null>(null);
@@ -718,228 +952,6 @@ const StrategicWarRoom = () => {
     );
 };
 
-// --- DEFINIÇÕES E COMPONENTES AUXILIARES ADICIONADOS ---
-
-const DEFAULT_SCRIPTS = [
-    { id: 'cold_call', title: 'Cold Call (Padrão)', content: "Olá [NOME], aqui é [SEU_NOME] do Grupo CBL. \n\nEstou ligando porque vi que vocês são referência em [NICHO] na região, mas notei que a presença digital de vocês não reflete essa autoridade. \n\nHoje vocês dependem 100% de indicação ou já usam tráfego pago?" },
-    { id: 'gatekeeper', title: 'Passar pela Secretária', content: "Olá, bom dia. Por favor, eu preciso falar com o responsável pela parte comercial ou de marketing. \n\nÉ sobre uma parceria estratégica que pode reduzir o custo de aquisição de clientes de vocês. \n\nQual o melhor horário para eu ligar e falar com ele por 2 minutos?" },
-    { id: 'whatsapp_first', title: 'Primeiro Contato (WhatsApp)', content: "Olá [NOME], tudo bem? \n\nEncontrei o perfil da [EMPRESA] e vi um potencial enorme que não está sendo explorado no Google/Instagram. \n\nSou especialista em alavancagem de negócios locais. Posso te enviar um áudio de 30s explicando o que encontrei de 'dinheiro na mesa' no caso de vocês?" }
-];
-
-const ScriptManager = ({ scripts, onSave }: { scripts: typeof DEFAULT_SCRIPTS, onSave: (s: typeof DEFAULT_SCRIPTS) => void }) => {
-    const [selectedScript, setSelectedScript] = useState(scripts[0]);
-    const [isEditing, setIsEditing] = useState(false);
-    const [editContent, setEditContent] = useState('');
-
-    useEffect(() => {
-        setEditContent(selectedScript.content);
-    }, [selectedScript]);
-
-    const handleSave = () => {
-        const updated = scripts.map(s => s.id === selectedScript.id ? { ...s, content: editContent } : s);
-        onSave(updated);
-        setSelectedScript({ ...selectedScript, content: editContent });
-        setIsEditing(false);
-    };
-
-    return (
-        <div className="h-full flex flex-col bg-[#050505] p-6">
-            <div className="flex items-center gap-3 mb-6">
-                 <div className="p-2 bg-purple-600/20 rounded-lg text-purple-500"><BrainIcon className="w-6 h-6"/></div>
-                 <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter">Scripts de Venda</h2>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 h-full min-h-0">
-                <div className="md:col-span-4 space-y-2 overflow-y-auto custom-scrollbar">
-                    {scripts.map(script => (
-                        <button 
-                            key={script.id}
-                            onClick={() => { setSelectedScript(script); setIsEditing(false); }}
-                            className={`w-full text-left p-4 rounded-xl border transition-all ${selectedScript.id === script.id ? 'bg-white/10 border-white/40 text-white' : 'bg-[#111] border-white/5 text-white/50 hover:bg-[#1a1a1a]'}`}
-                        >
-                            <span className="font-bold text-sm block">{script.title}</span>
-                        </button>
-                    ))}
-                </div>
-                
-                <div className="md:col-span-8 bg-[#0c0c0c] border border-white/10 rounded-3xl p-6 flex flex-col relative group">
-                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-sm font-black text-white uppercase tracking-widest">{selectedScript.title}</h3>
-                        {!isEditing ? (
-                            <button onClick={() => setIsEditing(true)} className="text-xs font-bold text-white/50 hover:text-white uppercase tracking-wider">Editar</button>
-                        ) : (
-                            <div className="flex gap-2">
-                                <button onClick={() => setIsEditing(false)} className="text-xs font-bold text-red-500 uppercase tracking-wider">Cancelar</button>
-                                <button onClick={handleSave} className="text-xs font-black text-green-500 uppercase tracking-wider">Salvar</button>
-                            </div>
-                        )}
-                     </div>
-                     
-                     {isEditing ? (
-                         <textarea 
-                            value={editContent}
-                            onChange={(e) => setEditContent(e.target.value)}
-                            className="flex-1 bg-[#151515] border border-white/10 rounded-xl p-4 text-white/80 font-mono text-sm resize-none outline-none focus:border-white/30"
-                         />
-                     ) : (
-                         <div className="flex-1 overflow-y-auto custom-scrollbar whitespace-pre-wrap text-white/80 text-sm font-light leading-relaxed p-4 bg-[#151515] border border-transparent rounded-xl">
-                            {selectedScript.content}
-                         </div>
-                     )}
-                     
-                     <div className="mt-4 pt-4 border-t border-white/5 flex justify-end">
-                         <button 
-                            onClick={() => navigator.clipboard.writeText(selectedScript.content)}
-                            className="bg-white text-black px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-gray-200 transition-colors shadow-lg"
-                         >
-                             Copiar para Área de Transferência
-                         </button>
-                     </div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const LeadStrategyModal = ({ lead, onClose, onCopyPitch, onOpenWhatsapp, customScripts }: { 
-    lead: Lead, 
-    onClose: () => void, 
-    onCopyPitch: (t: string) => void, 
-    onOpenWhatsapp: (t: string) => void,
-    customScripts: typeof DEFAULT_SCRIPTS
-}) => {
-    const [analysis, setAnalysis] = useState<IAAnalysisResult | null>(null);
-    const [loading, setLoading] = useState(false);
-
-    // Auto-analyze on mount if not analyzed
-    useEffect(() => {
-        const analyzeLead = async () => {
-            setLoading(true);
-            const prompt = `
-                ATUE COMO: Consultor de Vendas Sênior especializado em ${lead.types.join(', ')}.
-                CLIENTE: ${lead.name}
-                SCORE: ${lead.lead_score}
-                ENDEREÇO: ${lead.address}
-                NOTA: ${lead.rating} (${lead.user_ratings_total} reviews)
-                
-                TAREFA: Crie uma estratégia de abordagem.
-                
-                RETORNE JSON:
-                {
-                    "pitch": "Uma mensagem curta de quebra de gelo para WhatsApp (max 3 linhas).",
-                    "products_to_sell": ["Produto 1", "Produto 2"],
-                    "sales_strategy": "Dica de como conduzir a negociação.",
-                    "suggested_pricing": "Quanto cobrar (range) por um serviço inicial.",
-                    "conquest_tip": "Uma dica de ouro baseada no nicho.",
-                    "pain_points": ["Dor 1", "Dor 2"]
-                }
-            `;
-            
-            try {
-                const response = await fetch('/api/gemini', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: prompt,
-                        model: 'gemini-3-flash-preview',
-                        config: { responseMimeType: 'application/json' }
-                    })
-                });
-                const data = await response.json();
-                let cleanText = data.text.trim();
-                if (cleanText.startsWith('```json')) {
-                    cleanText = cleanText.replace(/^```json/, '').replace(/```$/, '');
-                }
-                const parsed = JSON.parse(cleanText);
-                setAnalysis(parsed);
-            } catch (e) {
-                console.error(e);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        if (!lead.ai_analysis) {
-            analyzeLead();
-        }
-    }, [lead]);
-
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95 duration-200" onClick={onClose}>
-            <div className="w-full max-w-4xl max-h-[90vh] bg-[#0c0c0c] border border-white/10 rounded-3xl overflow-hidden flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
-                <div className="p-6 border-b border-white/10 flex justify-between items-start bg-[#111]">
-                    <div>
-                        <h2 className="text-2xl font-black text-white uppercase">{lead.name}</h2>
-                        <p className="text-white/50 text-xs mt-1">{lead.address}</p>
-                    </div>
-                    <button onClick={onClose} className="text-white/30 hover:text-white"><XIcon /></button>
-                </div>
-                
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
-                    {loading ? (
-                        <div className="flex flex-col items-center justify-center h-64 space-y-4">
-                            <SpinnerIcon />
-                            <p className="text-red-500 font-bold uppercase tracking-widest animate-pulse">Analisando Lead...</p>
-                        </div>
-                    ) : analysis ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="space-y-6">
-                                <div className="bg-red-900/10 border border-red-500/20 p-5 rounded-2xl">
-                                    <h3 className="text-red-500 font-black uppercase text-xs tracking-widest mb-3">Pitch de Quebra de Gelo</h3>
-                                    <p className="text-white text-sm font-medium leading-relaxed italic">"{analysis.pitch}"</p>
-                                    <div className="mt-4 flex gap-3">
-                                        <button onClick={() => onCopyPitch(analysis.pitch)} className="flex-1 bg-white/10 hover:bg-white/20 text-white py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors">Copiar</button>
-                                        <button onClick={() => onOpenWhatsapp(analysis.pitch)} className="flex-1 bg-green-600 hover:bg-green-500 text-white py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors">Enviar Whats</button>
-                                    </div>
-                                </div>
-                                
-                                <div>
-                                    <h3 className="text-white/40 font-black uppercase text-xs tracking-widest mb-3">Dores Prováveis</h3>
-                                    <div className="flex flex-wrap gap-2">
-                                        {analysis.pain_points.map((p, i) => (
-                                            <span key={i} className="bg-white/5 border border-white/10 px-3 py-1.5 rounded-full text-xs text-white/80">{p}</span>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <h3 className="text-white/40 font-black uppercase text-xs tracking-widest mb-3">Produtos Recomendados</h3>
-                                    <ul className="space-y-2">
-                                        {analysis.products_to_sell.map((p, i) => (
-                                            <li key={i} className="flex items-center gap-2 text-sm text-white/80">
-                                                <span className="text-red-500">→</span> {p}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            </div>
-                            
-                            <div className="space-y-6">
-                                <div className="bg-[#151515] p-5 rounded-2xl border border-white/5">
-                                    <h3 className="text-blue-400 font-black uppercase text-xs tracking-widest mb-3">Estratégia de Venda</h3>
-                                    <p className="text-white/70 text-sm leading-relaxed">{analysis.sales_strategy}</p>
-                                </div>
-                                
-                                <div className="bg-[#151515] p-5 rounded-2xl border border-white/5">
-                                    <h3 className="text-yellow-400 font-black uppercase text-xs tracking-widest mb-3">Pricing Sugerido</h3>
-                                    <p className="text-white text-xl font-black">{analysis.suggested_pricing}</p>
-                                </div>
-
-                                <div className="bg-[#151515] p-5 rounded-2xl border border-white/5">
-                                     <h3 className="text-purple-400 font-black uppercase text-xs tracking-widest mb-3">Dica de Ouro</h3>
-                                     <p className="text-white/70 text-sm leading-relaxed italic">"{analysis.conquest_tip}"</p>
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="text-center text-white/30">Não foi possível analisar este lead.</div>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-};
-
 // --- MAIN DASHBOARD ---
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState<'search' | 'contacted' | 'ignored' | 'scripts' | 'brainstorm' | 'marketing' | 'objections'>('search');
@@ -994,8 +1006,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           });
           const data = await response.json();
           
-          if (!response.ok) {
+          if (!response.ok && !data.is_mock) { // Só lança erro se não for mock
              throw new Error(data.details || data.error || 'Erro desconhecido na API');
+          }
+
+          if (data.is_mock) {
+              setSearchError("Modo Demo Ativado: API Key inválida ou quota excedida.");
           }
 
           let newLeads = (data.results || []).map((p: any) => ({
@@ -1141,8 +1157,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                         </form>
                         
                         {searchError && (
-                            <div className="bg-red-900/20 border border-red-500/30 p-4 rounded-xl mb-6 text-center animate-in fade-in slide-in-from-top-2">
-                                <p className="text-red-500 font-bold text-xs uppercase tracking-widest mb-1">Erro na Busca</p>
+                            <div className="bg-yellow-900/20 border border-yellow-500/30 p-4 rounded-xl mb-6 text-center animate-in fade-in slide-in-from-top-2">
+                                <p className="text-yellow-500 font-bold text-xs uppercase tracking-widest mb-1">Aviso do Sistema</p>
                                 <p className="text-white/70 text-xs font-mono">{searchError}</p>
                             </div>
                         )}

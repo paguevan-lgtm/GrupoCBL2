@@ -36,10 +36,28 @@ interface Lead {
   opening_hours?: { open_now: boolean, weekday_text?: string[] };
   photos?: { photo_reference: string }[];
   contactedAt?: string;
+  viewedAt?: string;
   ai_analysis?: string;
 }
 
-// Interface para Marketing
+// Interface para Dados de Estratégia Avançada (Raio-X)
+interface LeadStrategyData {
+    executive_summary: string;
+    suggested_products: string[];
+    pricing_strategy: {
+        level: 'High Ticket' | 'Mid Market' | 'Low Entry';
+        rationale: string;
+        estimated_value: string;
+    };
+    sales_arguments: {
+        pain_points: string[];
+        hooks: string[];
+    };
+    cold_message: string;
+    owner_profile_guess: string;
+}
+
+// Interface para Marketing Command
 interface AdsStrategy {
     niche: string;
     total_budget: string;
@@ -72,7 +90,7 @@ interface AdsStrategy {
 
 type SearchMode = 'standard' | 'whale' | 'crisis' | 'ghost';
 
-// --- COMPONENTE: MARKETING COMMAND (FUNCIONAL) ---
+// --- COMPONENTE: MARKETING COMMAND ---
 const MarketingCommand = () => {
     const [formData, setFormData] = useState({ niche: '', city: '', budget: '' });
     const [isLoading, setIsLoading] = useState(false);
@@ -232,7 +250,7 @@ const MarketingCommand = () => {
     );
 };
 
-// --- COMPONENTE: STRATEGIC WAR ROOM (FUNCIONAL) ---
+// --- COMPONENTE: STRATEGIC WAR ROOM ---
 const StrategicWarRoom = () => {
     const [notes, setNotes] = useState('');
     
@@ -277,27 +295,26 @@ const DEFAULT_SCRIPTS = {
     standard: `Opa, tudo bem? Sou da CBL.\n\nEncontrei a {EMPRESA} aqui no Google e vi uns pontos que dão pra melhorar bastante pra atrair mais gente.\n\nVocê consegue encaminhar essa mensagem pro responsável ou pro dono? Obrigado!`
 };
 
-// --- MODAL DE ESTRATÉGIA (RAIO-X COM IA) ---
+// --- MODAL DE ESTRATÉGIA AVANÇADA (RAIO-X 2.0) ---
 const LeadStrategyModal = ({ 
     lead, 
     onClose, 
-    onCopyPitch, 
     onOpenWhatsapp,
     customScripts
 }: { 
     lead: Lead, 
     onClose: () => void, 
-    onCopyPitch: (text: string) => void, 
     onOpenWhatsapp: (text: string) => void,
     customScripts: typeof DEFAULT_SCRIPTS
 }) => {
     
-    const [editablePitch, setEditablePitch] = useState('');
+    const [strategy, setStrategy] = useState<LeadStrategyData | null>(null);
     const [isAiLoading, setIsAiLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState<'sales' | 'script'>('sales');
 
-    // Gera Pitch Personalizado ao abrir
+    // Gera Estratégia Completa ao abrir
     useEffect(() => {
-        const generateAiPitch = async () => {
+        const generateAiStrategy = async () => {
             setIsAiLoading(true);
             
             // Dados brutos
@@ -307,26 +324,37 @@ const LeadStrategyModal = ({
             const hasSite = lead.status_site !== 'sem_site';
             
             const prompt = `
-                ATUE COMO: Especialista em Prospecção B2B via WhatsApp.
+                ATUE COMO: Consultor de Negócios Sênior do Grupo CBL (Especialista em Vendas B2B High Ticket).
                 
-                DADOS DO LEAD:
+                DADOS DO PROSPECT (LEAD):
                 Nome: ${companyName}
                 Nota Google: ${rating} estrelas
-                Endereço: ${address}
-                Tem Site: ${hasSite ? "Sim" : "Não"}
-                Nicho: (Infira pelo nome da empresa)
+                Endereço/Região: ${address}
+                Tem Site Próprio: ${hasSite ? "Sim (" + lead.website + ")" : "Não (Usa linktree/ifood/instagram ou nada)"}
+                Nicho/Tipo: ${lead.types.join(', ')}
 
-                TAREFA: Escreva uma mensagem de abordagem fria (Cold Message) curta e altamente personalizada.
-                
-                REGRAS:
-                1. Não seja robótico. Pareça um humano mandando mensagem rápida.
-                2. Use o bairro para criar proximidade ("Vi que vcs são aí da região de X").
-                3. Se a nota for baixa (< 4.2), mencione delicadamente que isso afeta clientes.
-                4. Se não tiver site, foque nisso.
-                5. Termine com uma pergunta fácil de responder ("Tem alguém responsável por isso?").
-                6. MÁXIMO 300 caracteres.
-                
-                Apenas o texto da mensagem, sem aspas.
+                TAREFA: Gere um Raio-X comercial detalhado para que eu possa vender serviços digitais para este cliente.
+
+                RETORNE UM JSON ESTRITO COM ESTA ESTRUTURA:
+                {
+                    "executive_summary": "Uma análise curta e grossa sobre a situação digital dele. Ex: 'Empresa consolidada fisicamente mas invisível digitalmente. Deixa dinheiro na mesa por não ter site próprio.'",
+                    "suggested_products": [
+                        "Produto 1 (Ex: Site Institucional de Alta Performance)",
+                        "Produto 2 (Ex: Tráfego Pago Google Ads)",
+                        "Produto 3 (Ex: Gestão de Reputação/Reviews)"
+                    ],
+                    "pricing_strategy": {
+                        "level": "High Ticket" ou "Mid Market" ou "Low Entry",
+                        "rationale": "Por que cobrar esse preço? (Baseado na aparência do local e nicho)",
+                        "estimated_value": "Ex: R$ 3.000 a R$ 5.000"
+                    },
+                    "sales_arguments": {
+                        "pain_points": ["Dor 1", "Dor 2", "Dor 3"],
+                        "hooks": ["Gancho de venda 1", "Gancho de venda 2"]
+                    },
+                    "owner_profile_guess": "Chute educado sobre quem é o dono (Ex: 'Provavelmente um empresário tradicional que não entende de tech, foca em qualidade do produto.')",
+                    "cold_message": "Um script de abordagem direta para WhatsApp, curto e focado na dor identificada."
+                }
             `;
 
             try {
@@ -336,112 +364,175 @@ const LeadStrategyModal = ({
                     body: JSON.stringify({
                         contents: { parts: [{ text: prompt }] },
                         model: 'gemini-3-flash-preview',
-                        config: { responseMimeType: 'text/plain' }
+                        config: { responseMimeType: 'application/json' }
                     })
                 });
                 const data = await response.json();
-                setEditablePitch(data.text.trim());
+                const cleanText = data.text.replace(/```json/g, '').replace(/```/g, '');
+                setStrategy(JSON.parse(cleanText));
             } catch (error) {
-                console.error("Erro na IA, usando fallback", error);
-                // Fallback para template padrão se IA falhar
-                let template = customScripts.standard;
-                const platform = lead.website?.includes('anota') ? 'Anota AI' : 'Linktree';
-                setEditablePitch(template.replace('{EMPRESA}', companyName).replace('{NOTA}', rating.toString()).replace('{PLATAFORMA}', platform));
+                console.error("Erro na IA", error);
+                // Fallback simples se der erro
+                setStrategy({
+                    executive_summary: "Erro ao gerar análise detalhada. Use o script padrão.",
+                    suggested_products: ["Site Institucional", "Tráfego Local"],
+                    pricing_strategy: { level: 'Mid Market', rationale: 'Sem dados suficientes.', estimated_value: 'R$ 1.500+' },
+                    sales_arguments: { pain_points: ["Falta de visibilidade"], hooks: ["Aumentar vendas"] },
+                    owner_profile_guess: "Empresário local",
+                    cold_message: customScripts.standard.replace('{EMPRESA}', companyName)
+                });
             } finally {
                 setIsAiLoading(false);
             }
         };
 
-        generateAiPitch();
+        generateAiStrategy();
     }, [lead, customScripts]);
 
+    const handleCopy = (text: string) => {
+        navigator.clipboard.writeText(text);
+        alert("Copiado!");
+    };
+
     return (
-        <div className="fixed inset-0 z-[200] flex items-end md:items-center justify-center bg-black/90 backdrop-blur-md p-0 md:p-4 animate-in fade-in duration-200" onClick={onClose}>
+        <div className="fixed inset-0 z-[200] flex items-end md:items-center justify-center bg-black/95 backdrop-blur-xl p-0 md:p-4 animate-in fade-in duration-200" onClick={onClose}>
             <div 
-                className="w-full md:max-w-5xl h-[95vh] md:h-auto md:max-h-[90vh] bg-[#0c0c0c] border border-white/10 rounded-t-3xl md:rounded-3xl overflow-hidden flex flex-col shadow-2xl relative" 
+                className="w-full md:max-w-6xl h-[95vh] md:h-[90vh] bg-[#0c0c0c] border border-white/10 rounded-t-3xl md:rounded-3xl overflow-hidden flex flex-col shadow-2xl relative" 
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
                 <div className="p-6 border-b border-white/10 bg-[#111] flex justify-between items-start shrink-0">
-                    <div>
-                        <div className="flex items-center gap-3 mb-1">
-                            <h2 className="text-xl md:text-2xl font-black text-white uppercase italic tracking-tighter truncate max-w-[250px] md:max-w-none">{lead.name}</h2>
-                            <span className={`text-[8px] font-bold px-2 py-0.5 rounded uppercase border ${lead.business_status === 'OPERATIONAL' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}`}>
-                                {lead.business_status === 'OPERATIONAL' ? 'Aberto' : 'Fechado'}
-                            </span>
+                    <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center border ${lead.lead_score > 70 ? 'bg-green-500/10 border-green-500/30 text-green-500' : 'bg-red-500/10 border-red-500/30 text-red-500'}`}>
+                            <span className="font-black text-xl">{lead.lead_score}</span>
                         </div>
-                        <p className="text-white/50 text-xs flex items-center gap-2">
-                            <LocationIcon className="w-3 h-3 text-white/30"/> {lead.address}
-                        </p>
+                        <div>
+                            <h2 className="text-xl md:text-2xl font-black text-white uppercase italic tracking-tighter truncate max-w-[250px] md:max-w-none">{lead.name}</h2>
+                            <p className="text-white/50 text-xs flex items-center gap-2 uppercase tracking-widest">
+                                Raio-X de Inteligência • {lead.business_status === 'OPERATIONAL' ? 'Ativo' : 'Inativo'}
+                            </p>
+                        </div>
                     </div>
                     <button onClick={onClose} className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-white/50 hover:text-white transition-colors">
                         <XIcon />
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar bg-[#0c0c0c]">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                        {/* Coluna Esquerda: Dados Táticos */}
-                        <div className="lg:col-span-4 space-y-6">
-                            <div className="bg-[#111] border border-white/5 rounded-xl p-4">
-                                <h3 className="text-white/40 text-[10px] uppercase tracking-[0.2em] font-black mb-2">Google Score</h3>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-2xl font-black text-white">{lead.rating}</span>
-                                    <div className="flex text-yellow-500 text-xs">{'★'.repeat(Math.round(lead.rating))}</div>
-                                    <span className="text-white/30 text-xs">({lead.user_ratings_total} reviews)</span>
-                                </div>
-                            </div>
-                            
-                            <div className="bg-[#111] border border-white/5 rounded-xl p-4 space-y-3">
-                                <h3 className="text-white/40 text-[10px] uppercase tracking-[0.2em] font-black">Status Digital</h3>
-                                <div>
-                                    <span className="text-[9px] text-white/30 uppercase block">Website</span>
-                                    {lead.website ? (
-                                        <a href={lead.website} target="_blank" className="text-blue-400 text-xs truncate block hover:underline">{lead.website}</a>
-                                    ) : (
-                                        <span className="text-red-500 text-xs font-bold">Inexistente</span>
-                                    )}
-                                </div>
-                                <div>
-                                    <span className="text-[9px] text-white/30 uppercase block">Telefone</span>
-                                    <span className="text-white text-xs font-mono">{lead.phone || "N/A"}</span>
-                                </div>
-                            </div>
-                        </div>
+                <div className="flex-1 overflow-y-auto custom-scrollbar bg-[#0c0c0c] flex flex-col md:flex-row">
+                    
+                    {/* Sidebar de Navegação Interna */}
+                    <div className="w-full md:w-64 bg-[#0a0a0a] border-r border-white/5 p-4 flex flex-row md:flex-col gap-2 shrink-0 overflow-x-auto md:overflow-visible">
+                        <button onClick={() => setActiveTab('sales')} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'sales' ? 'bg-white text-black' : 'text-white/40 hover:text-white hover:bg-white/5'}`}>
+                            <TargetIcon className="w-4 h-4" /> Estratégia
+                        </button>
+                        <button onClick={() => setActiveTab('script')} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'script' ? 'bg-white text-black' : 'text-white/40 hover:text-white hover:bg-white/5'}`}>
+                            <ConsultingIcon className="w-4 h-4" /> Abordagem
+                        </button>
+                    </div>
 
-                        {/* Coluna Direita: Editor de Script */}
-                        <div className="lg:col-span-8 flex flex-col h-full">
-                             <div className="flex items-center justify-between mb-3">
-                                <h3 className="text-white/40 text-[10px] uppercase tracking-[0.2em] font-black flex items-center gap-2">
-                                    <ConsultingIcon className="w-4 h-4" /> Script Inteligente (IA)
-                                </h3>
-                                <button onClick={() => onCopyPitch(editablePitch)} className="text-[9px] bg-white text-black px-3 py-1.5 rounded uppercase font-black hover:bg-gray-200 transition-colors">Copiar</button>
-                             </div>
-                             
-                             <div className="relative">
-                                {isAiLoading && (
-                                    <div className="absolute inset-0 bg-[#151515]/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-2xl">
-                                        <div className="flex flex-col items-center">
-                                            <SpinnerIcon />
-                                            <span className="text-[9px] text-white/50 uppercase tracking-widest mt-2 animate-pulse">Analisando Dados do Lead...</span>
+                    {/* Conteúdo Principal */}
+                    <div className="flex-1 p-6 md:p-8">
+                        {isAiLoading ? (
+                            <div className="h-full flex flex-col items-center justify-center space-y-4">
+                                <SpinnerIcon />
+                                <span className="text-[10px] uppercase tracking-[0.3em] text-white/50 animate-pulse">Compilando Dados de Mercado...</span>
+                            </div>
+                        ) : strategy ? (
+                            <>
+                                {activeTab === 'sales' && (
+                                    <div className="space-y-8 animate-in slide-in-from-bottom-4">
+                                        {/* Sumário Executivo */}
+                                        <div className="bg-gradient-to-r from-white/5 to-transparent border border-white/10 p-6 rounded-2xl relative overflow-hidden">
+                                            <div className="absolute top-0 left-0 w-1 h-full bg-red-600"></div>
+                                            <h3 className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mb-3">Diagnóstico Executivo</h3>
+                                            <p className="text-white text-lg leading-relaxed font-light italic">"{strategy.executive_summary}"</p>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            {/* Oportunidades de Venda */}
+                                            <div className="bg-[#111] border border-white/5 p-6 rounded-2xl">
+                                                <h3 className="text-[10px] font-black text-green-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                                                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span> O que vender?
+                                                </h3>
+                                                <ul className="space-y-3">
+                                                    {strategy.suggested_products.map((prod, i) => (
+                                                        <li key={i} className="flex items-start gap-3 text-sm text-white/80">
+                                                            <span className="text-green-500 font-bold">✓</span> {prod}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+
+                                            {/* Estratégia de Preço */}
+                                            <div className="bg-[#111] border border-white/5 p-6 rounded-2xl">
+                                                <h3 className="text-[10px] font-black text-yellow-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                                                    <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full"></span> Precificação Sugerida
+                                                </h3>
+                                                <div className="mb-3">
+                                                    <span className="inline-block px-3 py-1 bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-xs font-black uppercase tracking-widest rounded mb-2">
+                                                        {strategy.pricing_strategy.level}
+                                                    </span>
+                                                    <div className="text-2xl font-black text-white">{strategy.pricing_strategy.estimated_value}</div>
+                                                </div>
+                                                <p className="text-xs text-white/50 leading-relaxed">{strategy.pricing_strategy.rationale}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            {/* Dores (Pain Points) */}
+                                            <div className="bg-[#111] border border-white/5 p-6 rounded-2xl">
+                                                <h3 className="text-[10px] font-black text-red-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                                                    <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span> Pontos de Dor
+                                                </h3>
+                                                <ul className="space-y-2">
+                                                    {strategy.sales_arguments.pain_points.map((pain, i) => (
+                                                        <li key={i} className="text-xs text-white/70 border-l border-red-500/30 pl-3 py-1">{pain}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                            
+                                            {/* Perfil do Dono */}
+                                            <div className="bg-[#111] border border-white/5 p-6 rounded-2xl">
+                                                <h3 className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                                                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span> Perfil do Decisor
+                                                </h3>
+                                                <p className="text-sm text-white/80 italic leading-relaxed">"{strategy.owner_profile_guess}"</p>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
-                                <textarea 
-                                    value={editablePitch}
-                                    onChange={(e) => setEditablePitch(e.target.value)}
-                                    className="w-full h-64 bg-[#151515] border border-white/10 rounded-2xl p-6 text-sm text-white/90 leading-relaxed font-sans focus:outline-none focus:border-red-600/50 resize-none custom-scrollbar mb-4"
-                                />
-                             </div>
 
-                             <button 
-                                onClick={() => onOpenWhatsapp(editablePitch)}
-                                className="w-full bg-[#25D366] hover:bg-[#20b858] text-black py-4 rounded-xl font-black uppercase text-xs tracking-[0.2em] shadow-lg shadow-green-600/20 active:scale-[0.98] flex items-center justify-center gap-2 transition-all"
-                             >
-                                <PhoneIcon className="w-4 h-4 text-black fill-current" />
-                                Enviar no WhatsApp
-                             </button>
-                        </div>
+                                {activeTab === 'script' && (
+                                    <div className="space-y-6 h-full flex flex-col animate-in slide-in-from-bottom-4">
+                                        <div className="flex-1 bg-[#151515] border border-white/10 rounded-2xl p-6 relative">
+                                            <h3 className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-4">Script de Alta Conversão</h3>
+                                            <textarea 
+                                                className="w-full h-full bg-transparent border-none outline-none text-white text-base leading-relaxed resize-none font-sans"
+                                                value={strategy.cold_message}
+                                                readOnly
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4 shrink-0">
+                                            <button 
+                                                onClick={() => handleCopy(strategy.cold_message)}
+                                                className="bg-white/5 hover:bg-white/10 text-white py-4 rounded-xl font-black uppercase text-xs tracking-[0.2em] border border-white/10 transition-colors"
+                                            >
+                                                Copiar Texto
+                                            </button>
+                                            <button 
+                                                onClick={() => onOpenWhatsapp(strategy.cold_message)}
+                                                className="bg-[#25D366] hover:bg-[#20b858] text-black py-4 rounded-xl font-black uppercase text-xs tracking-[0.2em] shadow-lg shadow-green-600/20 active:scale-[0.98] flex items-center justify-center gap-2 transition-all"
+                                            >
+                                                <PhoneIcon className="w-4 h-4 text-black fill-current" />
+                                                Enviar Agora
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <div className="text-center text-white/50">Erro ao carregar dados.</div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -449,7 +540,7 @@ const LeadStrategyModal = ({
     );
 };
 
-// --- COMPONENTE: GERENCIADOR DE SCRIPTS (FUNCIONAL) ---
+// --- COMPONENTE: GERENCIADOR DE SCRIPTS ---
 const ScriptManager = ({ scripts, onSave }: { scripts: typeof DEFAULT_SCRIPTS, onSave: (s: typeof DEFAULT_SCRIPTS) => void }) => {
     const [localScripts, setLocalScripts] = useState(scripts);
     const [hasChanges, setHasChanges] = useState(false);
@@ -493,13 +584,12 @@ const ScriptManager = ({ scripts, onSave }: { scripts: typeof DEFAULT_SCRIPTS, o
 
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
-  const [activeTab, setActiveTab] = useState<'search' | 'contacted' | 'scripts' | 'brainstorm' | 'marketing'>('search');
+  const [activeTab, setActiveTab] = useState<'search' | 'contacted' | 'viewed' | 'scripts' | 'brainstorm' | 'marketing'>('search');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Script State
   const [customScripts, setCustomScripts] = useState<typeof DEFAULT_SCRIPTS>(DEFAULT_SCRIPTS);
 
-  // Carregar Scripts Salvos
   useEffect(() => {
       const saved = localStorage.getItem('cbl_custom_scripts');
       if (saved) {
@@ -520,6 +610,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   
   // CRM States
   const [contactedLeads, setContactedLeads] = useState<Lead[]>([]);
+  const [viewedLeads, setViewedLeads] = useState<Lead[]>([]); // Nova lista para visualizados (ignorados)
   const [chamadosSearch, setChamadosSearch] = useState('');
 
   // Results States
@@ -536,11 +627,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     if (saved) {
         try { setContactedLeads(JSON.parse(saved)); } catch (e) { console.error(e); }
     }
+    const savedViewed = localStorage.getItem('cbl_viewed_leads');
+    if (savedViewed) {
+        try { setViewedLeads(JSON.parse(savedViewed)); } catch (e) { console.error(e); }
+    }
   }, []);
 
   useEffect(() => {
     localStorage.setItem('cbl_contacted_leads', JSON.stringify(contactedLeads));
   }, [contactedLeads]);
+
+  useEffect(() => {
+    localStorage.setItem('cbl_viewed_leads', JSON.stringify(viewedLeads));
+  }, [viewedLeads]);
 
   const classifySite = (url?: string): 'com_site' | 'sem_site' | 'site_basico' => {
       if (!url) return 'sem_site';
@@ -598,7 +697,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       });
 
       if (!response.ok) {
-          // Tenta pegar o erro detalhado vindo do backend
           const errorData = await response.json().catch(() => ({}));
           throw new Error(errorData.details || errorData.error || `Erro HTTP ${response.status}`);
       }
@@ -606,10 +704,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       const data = await response.json();
       const rawResults = data.results || [];
       
-      // Atualiza o token para a próxima página
       setNextPageToken(data.next_page_token || null);
 
-      const processedLeads: Lead[] = rawResults.map((place: any) => {
+      let processedLeads: Lead[] = rawResults.map((place: any) => {
           const siteStatus = classifySite(place.website);
           const score = calculateLeadScore(place, siteStatus, searchMode);
           return {
@@ -633,16 +730,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           };
       });
 
-      // Filtra arquivados
-      const filteredLeads = processedLeads.filter((lead: Lead) => {
+      // --- CRITÉRIOS DE FILTRAGEM AVANÇADA ---
+      // 1. Remove Contactados (Arquivados)
+      // 2. Remove Visualizados (Que não viraram contactados, ou seja, ignorados/lidos)
+      processedLeads = processedLeads.filter((lead: Lead) => {
           const isContacted = contactedLeads.some(cl => cl.id === lead.id);
+          const isViewed = viewedLeads.some(vl => vl.id === lead.id);
+          
           if (isContacted) return false;
+          if (isViewed) return false; // Remove visualizados da nova busca
+          
           if (searchMode === 'ghost' && lead.status_site === 'com_site') return false;
           return true;
       });
 
-      // Se for paginação, adiciona. Se for nova busca, substitui.
-      setLeads(prev => token ? [...prev, ...filteredLeads] : filteredLeads);
+      // --- CRITÉRIO DE ORDENAÇÃO ---
+      // Ordena pelo SCORE (Do maior para o menor)
+      processedLeads.sort((a, b) => b.lead_score - a.lead_score);
+
+      setLeads(prev => token ? [...prev, ...processedLeads] : processedLeads);
 
     } catch (error: any) {
       console.error(error);
@@ -666,8 +772,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const markAsContacted = (lead: Lead) => {
       const leadWithDate = { ...lead, contactedAt: new Date().toISOString() };
       setContactedLeads(prev => [leadWithDate, ...prev]);
+      
+      // Remove da lista atual e da lista de visualizados (se estiver lá)
       setLeads(prev => prev.filter(l => l.id !== lead.id));
+      setViewedLeads(prev => prev.filter(l => l.id !== lead.id));
+      
       if (selectedLead?.id === lead.id) setSelectedLead(null);
+  };
+
+  const handleOpenLead = (lead: Lead) => {
+      setSelectedLead(lead);
+      
+      // Se não estiver contactado, adiciona aos visualizados
+      const isContacted = contactedLeads.some(cl => cl.id === lead.id);
+      if (!isContacted) {
+          const isAlreadyViewed = viewedLeads.some(vl => vl.id === lead.id);
+          if (!isAlreadyViewed) {
+              const viewedLead = { ...lead, viewedAt: new Date().toISOString() };
+              setViewedLeads(prev => [viewedLead, ...prev]);
+          }
+      }
   };
 
   const openWhatsApp = (lead: Lead, customMessage?: string) => {
@@ -723,8 +847,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       </div>
   );
 
-  const LeadCard: React.FC<{ lead: Lead; isArchived?: boolean }> = ({ lead, isArchived = false }) => (
-      <div className={`bg-[#0c0c0c] border ${isArchived ? 'border-blue-900/30' : 'border-white/10'} rounded-3xl flex flex-col justify-between h-full group transition-all duration-300 relative overflow-hidden shadow-2xl mb-4 md:mb-0`}>
+  const LeadCard: React.FC<{ lead: Lead; isArchived?: boolean; isViewed?: boolean }> = ({ lead, isArchived = false, isViewed = false }) => (
+      <div className={`bg-[#0c0c0c] border ${isArchived ? 'border-blue-900/30' : (isViewed ? 'border-white/5 opacity-70 hover:opacity-100' : 'border-white/10')} rounded-3xl flex flex-col justify-between h-full group transition-all duration-300 relative overflow-hidden shadow-2xl mb-4 md:mb-0`}>
              <div className="h-40 w-full bg-gray-900 relative overflow-hidden shrink-0">
                  {lead.photos && lead.photos.length > 0 ? (
                      <img src={`/api/photo?ref=${lead.photos[0].photo_reference}`} className={`w-full h-full object-cover transition-all duration-700 ${isArchived ? 'grayscale' : 'opacity-80 group-hover:opacity-100'}`} alt={lead.name} />
@@ -734,6 +858,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                  <div className="absolute inset-0 bg-gradient-to-t from-[#0c0c0c] via-[#0c0c0c]/40 to-transparent"></div>
                  <div className="absolute top-3 left-3 flex gap-2">
                      {isArchived && <span className="bg-blue-600 text-white text-[8px] font-black px-2 py-1 rounded uppercase tracking-wide shadow-lg">Processado</span>}
+                     {isViewed && !isArchived && <span className="bg-white/10 text-white/60 text-[8px] font-black px-2 py-1 rounded uppercase tracking-wide border border-white/10">Visualizado</span>}
                      {lead.opening_hours?.open_now ? <span className="bg-green-500/90 text-black text-[8px] font-black px-2 py-1 rounded uppercase">Aberto</span> : <span className="bg-red-600/90 text-white text-[8px] font-black px-2 py-1 rounded uppercase">Fechado</span>}
                  </div>
                  <div className="absolute top-3 right-3 bg-black/80 px-2 py-1 rounded-lg flex items-center gap-1 border border-white/10">
@@ -746,7 +871,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                  <div className="flex items-start gap-2 mb-3 min-h-[30px]"><LocationIcon className="w-3 h-3 text-white/30 mt-0.5 shrink-0" /><span className="text-white/60 text-[10px] line-clamp-2 font-medium">{lead.address}</span></div>
                  
                  <div className="flex justify-between items-center border-t border-white/10 pt-3 mb-4 mt-auto">
-                     <button onClick={() => setSelectedLead(lead)} className="bg-white/5 hover:bg-white/10 text-red-500 text-[9px] font-black uppercase tracking-[0.15em] px-4 py-2 rounded-lg border border-red-900/30 hover:border-red-600 transition-all flex items-center gap-2">Ver Raio-X <span className="text-[10px]">→</span></button>
+                     <button onClick={() => handleOpenLead(lead)} className="bg-white/5 hover:bg-white/10 text-red-500 text-[9px] font-black uppercase tracking-[0.15em] px-4 py-2 rounded-lg border border-red-900/30 hover:border-red-600 transition-all flex items-center gap-2">Ver Raio-X <span className="text-[10px]">→</span></button>
                      <div className="flex flex-col items-center">
                         <span className={`text-xl font-black ${lead.lead_score > 70 ? 'text-green-500' : 'text-red-600'}`}>{lead.lead_score}</span>
                         <span className="text-[7px] text-white/20 uppercase tracking-widest">Score</span>
@@ -790,6 +915,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
              <div className="md:hidden lg:block text-[9px] text-white/30 uppercase tracking-[0.2em] mb-2 pl-2">Ferramentas</div>
              <NavButton tab="search" icon={<TargetIcon className="w-5 h-5" />} label={<span className="md:hidden lg:inline">Prospecção</span>} />
              <NavButton tab="contacted" icon={<PhoneIcon className="w-5 h-5" />} label={<span className="md:hidden lg:inline">Histórico</span>} />
+             {/* NOVA ABA: Visualizados */}
+             <NavButton tab="viewed" icon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>} label={<span className="md:hidden lg:inline">Visualizados</span>} />
+             
              <NavButton tab="brainstorm" icon={<BrainIcon className="w-5 h-5" />} label={<span className="md:hidden lg:inline">War Room</span>} />
              <NavButton tab="marketing" icon={<MegaphoneIcon className="w-5 h-5" />} label={<span className="md:hidden lg:inline">Marketing</span>} />
              <NavButton tab="scripts" icon={<ConsultingIcon className="w-5 h-5" />} label={<span className="md:hidden lg:inline">Scripts</span>} />
@@ -890,6 +1018,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                     </div>
                 </div>
             )}
+
+            {activeTab === 'viewed' && (
+                <div className="flex-1 flex flex-col bg-[#050505] p-4 md:p-6 overflow-hidden">
+                    <div className="max-w-7xl mx-auto w-full h-full flex flex-col">
+                        <div className="mb-6 flex flex-col md:flex-row justify-between items-end gap-4 border-b border-white/5 pb-6">
+                            <div><h1 className="text-3xl font-black uppercase italic tracking-tighter text-white">Visualizados</h1><p className="text-white/40 text-[10px] font-mono uppercase tracking-[0.2em] mt-1">Leads que você já olhou mas não contactou</p></div>
+                            <input type="text" value={chamadosSearch} onChange={(e) => setChamadosSearch(e.target.value)} placeholder="Filtrar..." className="w-full md:w-96 bg-[#0c0c0c] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-600 outline-none text-sm font-medium" />
+                        </div>
+                        <div className="flex-1 overflow-y-auto custom-scrollbar">
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-8 pb-20">
+                                {viewedLeads.filter(l => l.name.toLowerCase().includes(chamadosSearch.toLowerCase())).map((lead) => <LeadCard key={lead.id} lead={lead} isViewed={true} />)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
             
             {/* Outras Abas (Funcionais) */}
             {(activeTab === 'brainstorm' || activeTab === 'marketing' || activeTab === 'scripts') && (
@@ -901,7 +1045,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             )}
       </main>
 
-      {selectedLead && <LeadStrategyModal lead={selectedLead} onClose={() => setSelectedLead(null)} onCopyPitch={(text) => copyPitch(selectedLead, text)} onOpenWhatsapp={(text) => openWhatsApp(selectedLead, text)} customScripts={customScripts} />}
+      {selectedLead && <LeadStrategyModal lead={selectedLead} onClose={() => setSelectedLead(null)} onOpenWhatsapp={(text) => openWhatsApp(selectedLead, text)} customScripts={customScripts} />}
     </div>
   );
 };

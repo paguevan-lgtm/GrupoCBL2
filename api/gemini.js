@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 
 export default async function handler(req, res) {
@@ -11,8 +12,11 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Conteúdo (contents) é obrigatório' });
   }
 
+  // Chave de API definida explicitamente conforme solicitado
+  const apiKey = "AIzaSyDB3Kt75mYC0cz0dWBoG_-OTCTWVhHvVig";
+
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: apiKey });
     
     console.log("Iniciando requisição Gemini...");
 

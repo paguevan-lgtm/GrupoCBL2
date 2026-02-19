@@ -38,6 +38,7 @@ interface Lead {
   contactedAt?: string;
   viewedAt?: string;
   ai_analysis?: string;
+  geometry?: { location: { lat: number; lng: number } };
 }
 
 // Interface para Dados de Estratégia Avançada (Raio-X)
@@ -110,6 +111,177 @@ const getScoreDetails = (lead: Lead, mode: SearchMode) => {
     }
 
     return reasons;
+};
+
+// --- COMPONENTE: MAPA DE HISTÓRICO ---
+const HistoryMap = ({ leads }: { leads: Lead[] }) => {
+    const mapRef = useRef<HTMLDivElement>(null);
+    const [mapError, setMapError] = useState(false);
+
+    useEffect(() => {
+        if (!mapRef.current) return;
+
+        // Verifica se a API do Google Maps está carregada
+        const google = (window as any).google;
+        if (!google || !google.maps) {
+            setMapError(true);
+            return;
+        }
+
+        // Estilo Dark Mode para o Mapa
+        const mapStyles = [
+            { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+            { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+            { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+            {
+                featureType: "administrative.locality",
+                elementType: "labels.text.fill",
+                stylers: [{ color: "#d59563" }],
+            },
+            {
+                featureType: "poi",
+                elementType: "labels.text.fill",
+                stylers: [{ color: "#d59563" }],
+            },
+            {
+                featureType: "poi.park",
+                elementType: "geometry",
+                stylers: [{ color: "#263c3f" }],
+            },
+            {
+                featureType: "poi.park",
+                elementType: "labels.text.fill",
+                stylers: [{ color: "#6b9a76" }],
+            },
+            {
+                featureType: "road",
+                elementType: "geometry",
+                stylers: [{ color: "#38414e" }],
+            },
+            {
+                featureType: "road",
+                elementType: "geometry.stroke",
+                stylers: [{ color: "#212a37" }],
+            },
+            {
+                featureType: "road",
+                elementType: "labels.text.fill",
+                stylers: [{ color: "#9ca5b3" }],
+            },
+            {
+                featureType: "road.highway",
+                elementType: "geometry",
+                stylers: [{ color: "#746855" }],
+            },
+            {
+                featureType: "road.highway",
+                elementType: "geometry.stroke",
+                stylers: [{ color: "#1f2835" }],
+            },
+            {
+                featureType: "road.highway",
+                elementType: "labels.text.fill",
+                stylers: [{ color: "#f3d19c" }],
+            },
+            {
+                featureType: "transit",
+                elementType: "geometry",
+                stylers: [{ color: "#2f3948" }],
+            },
+            {
+                featureType: "transit.station",
+                elementType: "labels.text.fill",
+                stylers: [{ color: "#d59563" }],
+            },
+            {
+                featureType: "water",
+                elementType: "geometry",
+                stylers: [{ color: "#17263c" }],
+            },
+            {
+                featureType: "water",
+                elementType: "labels.text.fill",
+                stylers: [{ color: "#515c6d" }],
+            },
+            {
+                featureType: "water",
+                elementType: "labels.text.stroke",
+                stylers: [{ color: "#17263c" }],
+            },
+        ];
+
+        const map = new google.maps.Map(mapRef.current, {
+            center: { lat: -23.55052, lng: -46.633309 }, // Default SP
+            zoom: 12,
+            styles: mapStyles,
+            disableDefaultUI: false,
+            backgroundColor: '#050505',
+        });
+
+        const bounds = new google.maps.LatLngBounds();
+        let hasPoints = false;
+
+        const infoWindow = new google.maps.InfoWindow({
+            content: "",
+            disableAutoPan: true,
+        });
+
+        leads.forEach((lead) => {
+            if (lead.geometry && lead.geometry.location) {
+                hasPoints = true;
+                const position = lead.geometry.location;
+                
+                // Marcador Vermelho Personalizado
+                const marker = new google.maps.Marker({
+                    position: position,
+                    map: map,
+                    title: lead.name,
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 8,
+                        fillColor: "#DC2626", // Red 600
+                        fillOpacity: 1,
+                        strokeColor: "#FFFFFF",
+                        strokeWeight: 2,
+                    },
+                });
+
+                // Conteúdo do InfoWindow ao clicar
+                marker.addListener("click", () => {
+                    const contentString = `
+                        <div style="color: #000; padding: 5px; max-width: 200px;">
+                            <h3 style="margin: 0; font-weight: 900; font-size: 14px; text-transform: uppercase;">${lead.name}</h3>
+                            <p style="margin: 5px 0; font-size: 12px; color: #555;">${lead.address}</p>
+                            <div style="margin-top: 5px; font-weight: bold; font-size: 10px; text-transform: uppercase; color: #DC2626;">
+                                Score: ${lead.lead_score}
+                            </div>
+                        </div>
+                    `;
+                    infoWindow.setContent(contentString);
+                    infoWindow.open(map, marker);
+                });
+
+                bounds.extend(position);
+            }
+        });
+
+        if (hasPoints) {
+            map.fitBounds(bounds);
+        }
+
+    }, [leads]);
+
+    if (mapError) {
+        return (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-[#0c0c0c] border border-white/10 rounded-3xl p-8 text-center">
+                <LocationIcon className="w-12 h-12 text-white/20 mb-4" />
+                <h3 className="text-white font-black uppercase tracking-widest mb-2">Mapa Indisponível</h3>
+                <p className="text-white/40 text-xs">A API do Google Maps Javascript não foi carregada corretamente.</p>
+            </div>
+        );
+    }
+
+    return <div ref={mapRef} className="w-full h-full rounded-3xl overflow-hidden border border-white/10 shadow-2xl relative" />;
 };
 
 // --- COMPONENTE: MARKETING COMMAND ---
@@ -384,6 +556,7 @@ const LeadStrategyModal = ({
                     REGRAS GERAIS:
                     - Texto CURTO (max 3 frases).
                     - Zero "Prezados" ou formalidades de e-mail.
+                    - IMPORTANTE: GERE A RESPOSTA EM UTF-8 COM EMOJIS COMPATÍVEIS.
                     
                     Gere APENAS o texto da mensagem.
                 `;
@@ -679,7 +852,7 @@ const LeadStrategyModal = ({
 };
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
-  const [activeTab, setActiveTab] = useState<'search' | 'contacted' | 'viewed' | 'brainstorm' | 'marketing'>('search');
+  const [activeTab, setActiveTab] = useState<'search' | 'contacted' | 'viewed' | 'excluded' | 'brainstorm' | 'marketing'>('search');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Search Configuration
@@ -695,6 +868,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   // CRM States
   const [contactedLeads, setContactedLeads] = useState<Lead[]>([]);
   const [viewedLeads, setViewedLeads] = useState<Lead[]>([]);
+  const [excludedLeads, setExcludedLeads] = useState<Lead[]>([]);
   const [chamadosSearch, setChamadosSearch] = useState('');
 
   // Results States
@@ -715,6 +889,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     if (savedViewed) {
         try { setViewedLeads(JSON.parse(savedViewed)); } catch (e) { console.error(e); }
     }
+    const savedExcluded = localStorage.getItem('cbl_excluded_leads');
+    if (savedExcluded) {
+        try { setExcludedLeads(JSON.parse(savedExcluded)); } catch (e) { console.error(e); }
+    }
   }, []);
 
   useEffect(() => {
@@ -724,6 +902,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   useEffect(() => {
     localStorage.setItem('cbl_viewed_leads', JSON.stringify(viewedLeads));
   }, [viewedLeads]);
+
+  useEffect(() => {
+    localStorage.setItem('cbl_excluded_leads', JSON.stringify(excludedLeads));
+  }, [excludedLeads]);
 
   const classifySite = (url?: string): 'com_site' | 'sem_site' | 'site_basico' => {
       if (!url) return 'sem_site';
@@ -814,7 +996,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               price_level: place.price_level,
               business_status: place.business_status,
               opening_hours: place.opening_hours,
-              photos: place.photos
+              photos: place.photos,
+              geometry: place.geometry, // Captura da geometria para o mapa
           };
       });
 
@@ -827,8 +1010,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           // 2. Remove Visualizados
           const isViewed = viewedLeads.some(vl => vl.id === lead.id);
           if (isViewed) return false; 
+
+          // 3. Remove Excluídos
+          const isExcluded = excludedLeads.some(el => el.id === lead.id);
+          if (isExcluded) return false;
           
-          // 3. Filtro de Score Mínimo (Slider)
+          // 4. Filtro de Score Mínimo (Slider)
           if (lead.lead_score < minScore) return false;
 
           if (searchMode === 'ghost' && lead.status_site === 'com_site') return false;
@@ -885,6 +1072,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       setContactedLeads(prev => [leadWithDate, ...prev]);
       setLeads(prev => prev.filter(l => l.id !== lead.id));
       setViewedLeads(prev => prev.filter(l => l.id !== lead.id));
+      if (selectedLead?.id === lead.id) setSelectedLead(null);
+  };
+
+  const markAsExcluded = (lead: Lead) => {
+      setExcludedLeads(prev => [lead, ...prev]);
+      setLeads(prev => prev.filter(l => l.id !== lead.id));
+      setViewedLeads(prev => prev.filter(l => l.id !== lead.id));
+      setContactedLeads(prev => prev.filter(l => l.id !== lead.id));
       if (selectedLead?.id === lead.id) setSelectedLead(null);
   };
 
@@ -954,7 +1149,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       </div>
   );
 
-  const LeadCard: React.FC<{ lead: Lead; isArchived?: boolean; isViewed?: boolean }> = ({ lead, isArchived = false, isViewed = false }) => {
+  const LeadCard: React.FC<{ lead: Lead; isArchived?: boolean; isViewed?: boolean; isExcluded?: boolean }> = ({ lead, isArchived = false, isViewed = false, isExcluded = false }) => {
       // Cálculo de Tags Dinâmicas
       const isHighScore = lead.lead_score > 70;
       const isLowScore = lead.lead_score < 40;
@@ -964,7 +1159,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             bg-[#0f0f0f] border rounded-3xl flex flex-col justify-between h-full group transition-all duration-300 relative overflow-hidden shadow-2xl mb-4 md:mb-0
             ${isHighScore ? 'border-green-500/20 shadow-[0_0_20px_rgba(34,197,94,0.05)]' : (isLowScore ? 'border-red-500/10' : 'border-white/10')}
             ${isArchived ? 'opacity-50 grayscale' : ''}
-            ${isViewed && !isArchived ? 'opacity-80 border-white/5' : ''}
+            ${isViewed && !isArchived && !isExcluded ? 'opacity-80 border-white/5' : ''}
+            ${isExcluded ? 'opacity-40 grayscale border-red-900/20' : ''}
         `}>
              {/* Header de Imagem e Score */}
              <div className="h-40 md:h-48 w-full bg-gray-900 relative overflow-hidden shrink-0 group-hover:scale-[1.01] transition-transform duration-700">
@@ -1023,7 +1219,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
              </div>
 
              {/* Footer de Ações (Control Panel Style) */}
-             <div className="grid grid-cols-4 gap-px bg-[#222] border-t border-white/5">
+             <div className="grid grid-cols-5 gap-px bg-[#222] border-t border-white/5">
                  <button onClick={() => openWhatsApp(lead)} className="col-span-1 bg-[#0f0f0f] hover:bg-[#25D366] text-white/30 hover:text-black py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95 group/btn">
                     <PhoneIcon className="w-5 h-5 text-current" />
                  </button>
@@ -1033,6 +1229,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                  <button onClick={() => handleOpenLead(lead)} className="col-span-1 bg-[#0f0f0f] hover:bg-white text-white/30 hover:text-black py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95 group/btn">
                     <ZapIcon className="w-5 h-5 text-current" />
                  </button>
+                 
+                 {/* Lógica de Botão de Check/Restaurar */}
                  {isArchived ? (
                      <button onClick={() => setContactedLeads(prev => prev.filter(l => l.id !== lead.id))} className="col-span-1 bg-[#0f0f0f] hover:bg-blue-600 text-blue-600 hover:text-white py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95">
                         <span className="text-xl font-black">↩</span>
@@ -1042,6 +1240,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                         <span className="text-xl font-black">✓</span>
                      </button>
                  )}
+
+                 {/* Botão de Excluir */}
+                 <button onClick={() => markAsExcluded(lead)} className="col-span-1 bg-[#0f0f0f] hover:bg-red-900 text-red-900 hover:text-white py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95 group/btn border-l border-white/5">
+                    <XIcon className="w-5 h-5 text-current" />
+                 </button>
              </div>
       </div>
       );
@@ -1071,6 +1274,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
              <NavButton tab="search" icon={<TargetIcon className="w-5 h-5" />} label={<span className="md:hidden lg:inline">Prospecção</span>} />
              <NavButton tab="contacted" icon={<PhoneIcon className="w-5 h-5" />} label={<span className="md:hidden lg:inline">Histórico</span>} />
              <NavButton tab="viewed" icon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>} label={<span className="md:hidden lg:inline">Visualizados</span>} />
+             <NavButton tab="excluded" icon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>} label={<span className="md:hidden lg:inline">Lixeira</span>} />
              
              <NavButton tab="brainstorm" icon={<BrainIcon className="w-5 h-5" />} label={<span className="md:hidden lg:inline">War Room</span>} />
              <NavButton tab="marketing" icon={<MegaphoneIcon className="w-5 h-5" />} label={<span className="md:hidden lg:inline">Marketing</span>} />
@@ -1179,13 +1383,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                 <div className="flex-1 flex flex-col bg-[#050505] p-4 md:p-6 pb-24 md:pb-6 overflow-hidden">
                     <div className="max-w-7xl mx-auto w-full h-full flex flex-col">
                         <div className="mb-6 flex flex-col md:flex-row justify-between items-end gap-4 border-b border-white/5 pb-6">
-                            <div><h1 className="text-3xl font-black uppercase italic tracking-tighter text-white">Histórico</h1><p className="text-white/40 text-[10px] font-mono uppercase tracking-[0.2em] mt-1">Leads Processados</p></div>
+                            <div><h1 className="text-3xl font-black uppercase italic tracking-tighter text-white">Histórico</h1><p className="text-white/40 text-[10px] font-mono uppercase tracking-[0.2em] mt-1">Mapa de Leads Contactados</p></div>
                             <input type="text" value={chamadosSearch} onChange={(e) => setChamadosSearch(e.target.value)} placeholder="Filtrar..." className="w-full md:w-96 bg-[#0c0c0c] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-600 outline-none text-sm font-medium" />
                         </div>
-                        <div className="flex-1 overflow-y-auto custom-scrollbar">
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-8 pb-20">
-                                {contactedLeads.filter(l => l.name.toLowerCase().includes(chamadosSearch.toLowerCase())).map((lead) => <LeadCard key={lead.id} lead={lead} isArchived={true} />)}
-                            </div>
+                        <div className="flex-1 overflow-hidden rounded-3xl border border-white/10">
+                            {/* MAPA DE HISTÓRICO SUBSTITUI O GRID */}
+                            <HistoryMap leads={contactedLeads.filter(l => l.name.toLowerCase().includes(chamadosSearch.toLowerCase()))} />
                         </div>
                     </div>
                 </div>
@@ -1201,6 +1404,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                         <div className="flex-1 overflow-y-auto custom-scrollbar">
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-8 pb-20">
                                 {viewedLeads.filter(l => l.name.toLowerCase().includes(chamadosSearch.toLowerCase())).map((lead) => <LeadCard key={lead.id} lead={lead} isViewed={true} />)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'excluded' && (
+                <div className="flex-1 flex flex-col bg-[#050505] p-4 md:p-6 pb-24 md:pb-6 overflow-hidden">
+                    <div className="max-w-7xl mx-auto w-full h-full flex flex-col">
+                        <div className="mb-6 flex flex-col md:flex-row justify-between items-end gap-4 border-b border-white/5 pb-6">
+                            <div><h1 className="text-3xl font-black uppercase italic tracking-tighter text-white">Lixeira</h1><p className="text-white/40 text-[10px] font-mono uppercase tracking-[0.2em] mt-1">Leads Descartados / Excluídos</p></div>
+                            <input type="text" value={chamadosSearch} onChange={(e) => setChamadosSearch(e.target.value)} placeholder="Filtrar..." className="w-full md:w-96 bg-[#0c0c0c] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-600 outline-none text-sm font-medium" />
+                        </div>
+                        <div className="flex-1 overflow-y-auto custom-scrollbar">
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-8 pb-20">
+                                {excludedLeads.filter(l => l.name.toLowerCase().includes(chamadosSearch.toLowerCase())).map((lead) => <LeadCard key={lead.id} lead={lead} isExcluded={true} />)}
                             </div>
                         </div>
                     </div>

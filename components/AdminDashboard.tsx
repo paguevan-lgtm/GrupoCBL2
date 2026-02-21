@@ -116,59 +116,6 @@ const getScoreDetails = (lead: Lead, mode: SearchMode) => {
     return reasons;
 };
 
-// --- SNIPER MODES CONFIG ---
-const SNIPER_MODES = [
-    {
-        id: 'gold_mine',
-        label: 'Ouro Escondido',
-        description: 'Alta Reputação + Sem Site',
-        color: 'yellow',
-        icon: '👑',
-        apply: (setSearchTerm: any, setMinScore: any, setSearchMode: any) => {
-            setSearchTerm('Restaurante'); // Exemplo padrão
-            setMinScore(60);
-            setSearchMode('standard');
-        }
-    },
-    {
-        id: 'crisis_mgmt',
-        label: 'Gigante Ferido',
-        description: 'Muito Movimento + Nota Baixa',
-        color: 'red',
-        icon: '🚑',
-        apply: (setSearchTerm: any, setMinScore: any, setSearchMode: any) => {
-            setSearchTerm('Bar');
-            setMinScore(40);
-            setSearchMode('crisis');
-        }
-    },
-    {
-        id: 'high_ticket',
-        label: 'High Ticket',
-        description: 'Público Rico + Site Ruim',
-        color: 'emerald',
-        icon: '💎',
-        apply: (setSearchTerm: any, setMinScore: any, setSearchMode: any) => {
-            setSearchTerm('Clínica Estética');
-            setMinScore(50);
-            setSearchMode('whale');
-        }
-    },
-    {
-        id: 'blue_ocean',
-        label: 'Oceano Azul',
-        description: 'Web Hunter (Fora do Maps)',
-        color: 'blue',
-        icon: '🌐',
-        apply: (setSearchTerm: any, setMinScore: any, setSearchMode: any, setUseWebHunter: any) => {
-            setSearchTerm('Startups');
-            setMinScore(0);
-            setSearchMode('standard');
-            setUseWebHunter(true);
-        }
-    }
-];
-
 // --- COMPONENTE: MARKETING COMMAND ---
 const MarketingCommand = () => {
     const [formData, setFormData] = useState({ niche: '', city: '', budget: '' });
@@ -745,7 +692,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [location, setLocation] = useState('');
   const [minScore, setMinScore] = useState(0); 
-  const [activeSniper, setActiveSniper] = useState<string | null>(null);
   const [useWebHunter, setUseWebHunter] = useState(false);
 
   // Detecta se é a mesma busca para usar paginação
@@ -1130,24 +1076,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   );
 
   const LeadCard: React.FC<{ lead: Lead; isArchived?: boolean; isViewed?: boolean; isExcluded?: boolean }> = ({ lead, isArchived = false, isViewed = false, isExcluded = false }) => {
+      if (!lead) return null;
+
       // Cálculo de Tags Dinâmicas
       const isHighScore = lead.lead_score > 70;
       const isLowScore = lead.lead_score < 40;
       const isBlocked = countdownTimer > 0 && !isArchived && !isExcluded;
       
-      const handleSniperClick = (mode: any) => {
-          if (activeSniper === mode.id) {
-              setActiveSniper(null);
-              setSearchTerm('');
-              setMinScore(0);
-              setSearchMode('standard');
-              setUseWebHunter(false);
-          } else {
-              setActiveSniper(mode.id);
-              mode.apply(setSearchTerm, setMinScore, setSearchMode, setUseWebHunter);
-          }
-      };
-
       return (
         <div className={`
             bg-[#0f0f0f] border rounded-3xl flex flex-col justify-between h-full group transition-all duration-300 relative overflow-hidden shadow-2xl mb-4 md:mb-0
@@ -1184,35 +1119,35 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                      {/* Badges de Topo */}
                      <div className="absolute top-2 left-2 flex flex-col gap-1 z-20 items-start">
                          {lead.source === 'web_hunter' ? (
-                             <span className="bg-blue-600/90 text-white text-[8px] font-mono font-black px-1.5 py-0.5 rounded backdrop-blur-md uppercase tracking-wider flex items-center gap-1 shadow-lg">
+                             <span className="bg-blue-600/90 text-white text-[10px] font-mono font-black px-2 py-1 rounded backdrop-blur-md uppercase tracking-wider flex items-center gap-1 shadow-lg">
                                  🌐 WEB HUNTER
                              </span>
                          ) : (
-                             <span className="bg-green-600/90 text-white text-[8px] font-mono font-black px-1.5 py-0.5 rounded backdrop-blur-md uppercase tracking-wider flex items-center gap-1 shadow-lg">
+                             <span className="bg-green-600/90 text-white text-[10px] font-mono font-black px-2 py-1 rounded backdrop-blur-md uppercase tracking-wider flex items-center gap-1 shadow-lg">
                                  📍 GOOGLE MAPS
                              </span>
                          )}
 
                          {lead.opening_hours?.open_now 
-                            ? <span className="bg-emerald-500/90 text-black text-[8px] font-mono font-black px-1.5 py-0.5 rounded backdrop-blur-md uppercase tracking-wider shadow-lg">ABERTO</span> 
-                            : <span className="bg-red-600/90 text-white text-[8px] font-mono font-black px-1.5 py-0.5 rounded backdrop-blur-md uppercase tracking-wider shadow-lg">FECHADO</span>
+                            ? <span className="bg-emerald-500/90 text-black text-[10px] font-mono font-black px-2 py-1 rounded backdrop-blur-md uppercase tracking-wider shadow-lg">ABERTO</span> 
+                            : <span className="bg-red-600/90 text-white text-[10px] font-mono font-black px-2 py-1 rounded backdrop-blur-md uppercase tracking-wider shadow-lg">FECHADO</span>
                          }
                          
                          {/* SALES TRIGGER BADGES (Gatilhos Mentais) */}
                          {lead.status_site === 'sem_site' && lead.rating > 4.0 && (
-                             <span className="bg-yellow-500 text-black text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider shadow-lg animate-pulse">👑 Ouro</span>
+                             <span className="bg-yellow-500 text-black text-[10px] font-black px-2 py-1 rounded uppercase tracking-wider shadow-lg animate-pulse">👑 Ouro</span>
                          )}
                          {lead.rating < 4.0 && lead.user_ratings_total > 50 && (
-                             <span className="bg-red-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider shadow-lg">🚑 Socorro</span>
+                             <span className="bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded uppercase tracking-wider shadow-lg">🚑 Socorro</span>
                          )}
                          {(lead.price_level || 0) >= 3 && (
-                             <span className="bg-emerald-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider shadow-lg">💎 High Ticket</span>
+                             <span className="bg-emerald-500 text-white text-[10px] font-black px-2 py-1 rounded uppercase tracking-wider shadow-lg">💎 High Ticket</span>
                          )}
                          {lead.user_ratings_total > 100 && lead.rating >= 4.5 && (
-                             <span className="bg-purple-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider shadow-lg">⭐ Autoridade</span>
+                             <span className="bg-purple-500 text-white text-[10px] font-black px-2 py-1 rounded uppercase tracking-wider shadow-lg">⭐ Autoridade</span>
                          )}
                          {lead.user_ratings_total < 10 && (
-                             <span className="bg-gray-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider shadow-lg">🆕 Novo</span>
+                             <span className="bg-gray-500 text-white text-[10px] font-black px-2 py-1 rounded uppercase tracking-wider shadow-lg">🆕 Novo</span>
                          )}
                      </div>
 
@@ -1339,43 +1274,32 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                                     <div className="flex flex-col gap-2">
                                         <h1 className="text-2xl md:text-3xl font-black uppercase italic tracking-tighter text-white">Busca <span className="text-red-600">Deep Dive</span></h1>
                                         
-                                        {/* Toggle Switch */}
-                                        <div className="flex items-center gap-3 bg-white/5 px-3 py-1.5 rounded-full border border-white/10 w-fit">
-                                            <span className="text-[9px] font-mono uppercase tracking-widest text-white/60">Auto Countdown</span>
-                                            <button 
-                                                onClick={() => setAutoCountdown(!autoCountdown)}
-                                                className={`w-10 h-5 rounded-full relative transition-colors duration-300 ${autoCountdown ? 'bg-green-500' : 'bg-white/10'}`}
-                                            >
-                                                <div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-all duration-300 ${autoCountdown ? 'left-6' : 'left-1'}`}></div>
-                                            </button>
-                                            {countdownTimer > 0 && <span className="text-[9px] font-mono font-bold text-red-500 animate-pulse">{countdownTimer}s</span>}
+                                        <div className="flex flex-wrap gap-3">
+                                            {/* Toggle Switch */}
+                                            <div className="flex items-center gap-3 bg-white/5 px-3 py-1.5 rounded-full border border-white/10 w-fit">
+                                                <span className="text-[10px] font-mono uppercase tracking-widest text-white/60">Auto Countdown</span>
+                                                <button 
+                                                    onClick={() => setAutoCountdown(!autoCountdown)}
+                                                    className={`w-10 h-5 rounded-full relative transition-colors duration-300 ${autoCountdown ? 'bg-green-500' : 'bg-white/10'}`}
+                                                >
+                                                    <div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-all duration-300 ${autoCountdown ? 'left-6' : 'left-1'}`}></div>
+                                                </button>
+                                                {countdownTimer > 0 && <span className="text-[10px] font-mono font-bold text-red-500 animate-pulse">{countdownTimer}s</span>}
+                                            </div>
+
+                                            {/* Web Hunter Toggle */}
+                                            <div className="flex items-center gap-3 bg-white/5 px-3 py-1.5 rounded-full border border-white/10 w-fit">
+                                                <span className="text-[10px] font-mono uppercase tracking-widest text-white/60">Web Hunter (IA)</span>
+                                                <button 
+                                                    onClick={() => setUseWebHunter(!useWebHunter)}
+                                                    className={`w-10 h-5 rounded-full relative transition-colors duration-300 ${useWebHunter ? 'bg-blue-500' : 'bg-white/10'}`}
+                                                >
+                                                    <div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-all duration-300 ${useWebHunter ? 'left-6' : 'left-1'}`}></div>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                     <ModeSelector />
-                                </div>
-
-                                {/* SNIPER MODES BAR */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                    {SNIPER_MODES.map((mode) => (
-                                        <button
-                                            key={mode.id}
-                                            onClick={() => handleSniperClick(mode)}
-                                            className={`
-                                                relative overflow-hidden rounded-2xl p-4 border transition-all duration-300 text-left group
-                                                ${activeSniper === mode.id 
-                                                    ? `bg-${mode.color}-500/10 border-${mode.color}-500 ring-1 ring-${mode.color}-500` 
-                                                    : 'bg-[#0f0f0f] border-white/5 hover:border-white/20 hover:bg-white/5'
-                                                }
-                                            `}
-                                        >
-                                            <div className="flex items-center justify-between mb-1">
-                                                <span className="text-2xl">{mode.icon}</span>
-                                                {activeSniper === mode.id && <div className={`w-2 h-2 rounded-full bg-${mode.color}-500 animate-pulse`}></div>}
-                                            </div>
-                                            <h3 className={`text-sm font-black uppercase tracking-wider ${activeSniper === mode.id ? 'text-white' : 'text-white/80'}`}>{mode.label}</h3>
-                                            <p className="text-[10px] text-white/40 font-mono mt-1">{mode.description}</p>
-                                        </button>
-                                    ))}
                                 </div>
                             </div>
                             

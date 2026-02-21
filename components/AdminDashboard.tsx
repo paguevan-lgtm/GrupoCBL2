@@ -1170,7 +1170,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
              {/* Content Wrapper - Applies Grayscale Only Here */}
              <div className={`flex flex-col justify-between h-full w-full transition-all duration-300 ${isBlocked ? 'grayscale opacity-20' : ''}`}>
                  {/* Header de Imagem e Score */}
-                 <div className="h-40 md:h-48 w-full bg-gray-900 relative overflow-hidden shrink-0 group-hover:scale-[1.01] transition-transform duration-700">
+                 <div className="h-32 w-full bg-gray-900 relative overflow-hidden shrink-0 group-hover:scale-[1.01] transition-transform duration-700">
                      {/* Scanline Effect */}
                      <div className="absolute inset-0 z-10 pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
                      <div className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-t from-[#0f0f0f] via-transparent to-transparent"></div>
@@ -1182,62 +1182,74 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                      )}
 
                      {/* Badges de Topo */}
-                     <div className="absolute top-3 left-3 flex flex-col gap-2 z-20 items-start">
+                     <div className="absolute top-2 left-2 flex flex-col gap-1 z-20 items-start">
                          {lead.source === 'web_hunter' ? (
-                             <span className="bg-blue-600/90 text-white text-[9px] font-mono font-black px-2 py-1 rounded backdrop-blur-md uppercase tracking-wider flex items-center gap-1">
+                             <span className="bg-blue-600/90 text-white text-[8px] font-mono font-black px-1.5 py-0.5 rounded backdrop-blur-md uppercase tracking-wider flex items-center gap-1 shadow-lg">
                                  🌐 WEB HUNTER
                              </span>
                          ) : (
-                             lead.opening_hours?.open_now 
-                                ? <span className="bg-green-500/90 text-black text-[9px] font-mono font-black px-2 py-1 rounded backdrop-blur-md uppercase tracking-wider">Aberto</span> 
-                                : <span className="bg-red-600/90 text-white text-[9px] font-mono font-black px-2 py-1 rounded backdrop-blur-md uppercase tracking-wider">Fechado</span>
+                             <span className="bg-green-600/90 text-white text-[8px] font-mono font-black px-1.5 py-0.5 rounded backdrop-blur-md uppercase tracking-wider flex items-center gap-1 shadow-lg">
+                                 📍 GOOGLE MAPS
+                             </span>
                          )}
+
+                         {lead.opening_hours?.open_now 
+                            ? <span className="bg-emerald-500/90 text-black text-[8px] font-mono font-black px-1.5 py-0.5 rounded backdrop-blur-md uppercase tracking-wider shadow-lg">ABERTO</span> 
+                            : <span className="bg-red-600/90 text-white text-[8px] font-mono font-black px-1.5 py-0.5 rounded backdrop-blur-md uppercase tracking-wider shadow-lg">FECHADO</span>
+                         }
                          
                          {/* SALES TRIGGER BADGES (Gatilhos Mentais) */}
                          {lead.status_site === 'sem_site' && lead.rating > 4.0 && (
-                             <span className="bg-yellow-500 text-black text-[9px] font-black px-2 py-1 rounded uppercase tracking-wider shadow-lg animate-pulse">👑 Ouro Escondido</span>
+                             <span className="bg-yellow-500 text-black text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider shadow-lg animate-pulse">👑 Ouro</span>
                          )}
                          {lead.rating < 4.0 && lead.user_ratings_total > 50 && (
-                             <span className="bg-red-600 text-white text-[9px] font-black px-2 py-1 rounded uppercase tracking-wider shadow-lg">🚑 Socorro</span>
+                             <span className="bg-red-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider shadow-lg">🚑 Socorro</span>
                          )}
-                         {(lead.price_level || 0) >= 3 && (lead.status_site === 'sem_site' || lead.status_site === 'site_basico') && (
-                             <span className="bg-emerald-500 text-white text-[9px] font-black px-2 py-1 rounded uppercase tracking-wider shadow-lg">💎 High Ticket</span>
+                         {(lead.price_level || 0) >= 3 && (
+                             <span className="bg-emerald-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider shadow-lg">💎 High Ticket</span>
+                         )}
+                         {lead.user_ratings_total > 100 && lead.rating >= 4.5 && (
+                             <span className="bg-purple-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider shadow-lg">⭐ Autoridade</span>
+                         )}
+                         {lead.user_ratings_total < 10 && (
+                             <span className="bg-gray-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider shadow-lg">🆕 Novo</span>
                          )}
                      </div>
 
                      {/* Score Ring Visual */}
-                     <div className="absolute top-3 right-3 z-20">
-                         <div className="relative w-12 h-12 flex items-center justify-center bg-black/60 backdrop-blur-md rounded-full border border-white/10">
+                     <div className="absolute top-2 right-2 z-20">
+                         <div className="relative w-10 h-10 flex items-center justify-center bg-black/60 backdrop-blur-md rounded-full border border-white/10 shadow-xl">
                             <svg className="w-full h-full transform -rotate-90 absolute">
-                                <circle cx="24" cy="24" r="22" stroke="currentColor" strokeWidth="2" fill="transparent" className="text-white/10" />
-                                <circle cx="24" cy="24" r="22" stroke="currentColor" strokeWidth="2" fill="transparent" 
+                                <circle cx="20" cy="20" r="18" stroke="currentColor" strokeWidth="2" fill="transparent" className="text-white/10" />
+                                <circle cx="20" cy="20" r="18" stroke="currentColor" strokeWidth="2" fill="transparent" 
                                     className={`${isHighScore ? 'text-green-500' : 'text-red-500'}`}
-                                    strokeDasharray={138}
-                                    strokeDashoffset={138 - (138 * lead.lead_score) / 100}
+                                    strokeDasharray={113}
+                                    strokeDashoffset={113 - (113 * lead.lead_score) / 100}
                                 />
                             </svg>
-                            <span className={`text-sm font-black ${isHighScore ? 'text-green-500' : 'text-white'}`}>{lead.lead_score}</span>
+                            <span className={`text-xs font-black ${isHighScore ? 'text-green-500' : 'text-white'}`}>{lead.lead_score}</span>
                          </div>
                      </div>
                  </div>
                  
                  {/* Corpo do Card */}
-                 <div className="p-5 flex-1 flex flex-col relative z-20 -mt-6">
-                     <h3 className="text-lg font-black text-white uppercase leading-tight line-clamp-2 mb-2 group-hover:text-red-500 transition-colors">
+                 <div className="p-4 flex-1 flex flex-col relative z-20 -mt-4">
+                     <h3 className="text-base font-black text-white uppercase leading-tight line-clamp-2 mb-2 group-hover:text-red-500 transition-colors drop-shadow-md">
                         {lead.name}
                      </h3>
                      
                      {/* Smart Tags (Nova Feature) */}
-                     <div className="flex flex-wrap gap-2 mb-4">
-                        {lead.status_site === 'sem_site' && <span className="text-[8px] font-mono uppercase bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 rounded tracking-widest">[SEM SITE]</span>}
-                        {lead.status_site === 'site_basico' && <span className="text-[8px] font-mono uppercase bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-2 py-0.5 rounded tracking-widest">[LINKTREE]</span>}
-                        {(lead.price_level || 0) >= 3 && <span className="text-[8px] font-mono uppercase bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 rounded tracking-widest">[HIGH TICKET]</span>}
-                        {lead.rating < 4.0 && <span className="text-[8px] font-mono uppercase bg-orange-500/10 text-orange-500 border border-orange-500/20 px-2 py-0.5 rounded tracking-widest">[BAIXA REP]</span>}
+                     <div className="flex flex-wrap gap-1.5 mb-3">
+                        {lead.status_site === 'sem_site' && <span className="text-[7px] font-mono uppercase bg-red-500/10 text-red-500 border border-red-500/20 px-1.5 py-0.5 rounded tracking-widest">[SEM SITE]</span>}
+                        {lead.status_site === 'site_basico' && <span className="text-[7px] font-mono uppercase bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-1.5 py-0.5 rounded tracking-widest">[LINKTREE]</span>}
+                        {(lead.price_level || 0) >= 3 && <span className="text-[7px] font-mono uppercase bg-green-500/10 text-green-500 border border-green-500/20 px-1.5 py-0.5 rounded tracking-widest">[HIGH TICKET]</span>}
+                        {lead.rating < 4.0 && <span className="text-[7px] font-mono uppercase bg-orange-500/10 text-orange-500 border border-orange-500/20 px-1.5 py-0.5 rounded tracking-widest">[BAIXA REP]</span>}
+                        {lead.user_ratings_total > 100 && <span className="text-[7px] font-mono uppercase bg-blue-500/10 text-blue-500 border border-blue-500/20 px-1.5 py-0.5 rounded tracking-widest">[POPULAR]</span>}
                      </div>
 
-                     <div className="flex items-start gap-3 mt-auto">
-                        <LocationIcon className="w-4 h-4 text-white/20 mt-0.5 shrink-0" />
-                        <span className="text-white/50 text-[10px] font-medium leading-relaxed line-clamp-2">{lead.address}</span>
+                     <div className="flex items-start gap-2 mt-auto">
+                        <LocationIcon className="w-3 h-3 text-white/30 mt-0.5 shrink-0" />
+                        <span className="text-white/50 text-[9px] font-medium leading-relaxed line-clamp-2">{lead.address}</span>
                      </div>
                  </div>
 
@@ -1319,8 +1331,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             </header>
 
             {activeTab === 'search' && (
-                <div className="flex-1 flex flex-col h-full overflow-y-auto md:overflow-hidden custom-scrollbar md:custom-scrollbar-none">
-                    <div className="p-4 md:p-6 border-b border-white/5 bg-[#050505]/95 backdrop-blur z-10 shrink-0">
+                <div className="flex-1 flex flex-col h-full overflow-y-auto custom-scrollbar">
+                    <div className="p-4 md:p-6 border-b border-white/5 bg-[#050505] z-10 shrink-0">
                         <div className="max-w-7xl mx-auto w-full">
                             <div className="mb-4 flex flex-col gap-4">
                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -1402,7 +1414,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                         </div>
                     </div>
                     
-                    <div className="p-4 md:p-6 bg-[#050505] pb-24 md:pb-24 md:flex-1 md:overflow-y-auto md:custom-scrollbar">
+                    <div className="p-4 md:p-6 bg-[#050505] pb-24 md:pb-24">
                         <div className="max-w-8xl mx-auto">
                             {!isLoading && leads.length === 0 && (
                                 <div className="h-64 flex flex-col items-center justify-center text-center opacity-30">

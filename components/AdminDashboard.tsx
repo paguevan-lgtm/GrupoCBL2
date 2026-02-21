@@ -956,7 +956,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
 
       if (autoCountdown) {
-          setCountdownTimer(20); // 20 seconds countdown
+          setCountdownTimer(45); // 45 seconds countdown (Safer limit)
       }
   };
 
@@ -1033,6 +1033,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       // Cálculo de Tags Dinâmicas
       const isHighScore = lead.lead_score > 70;
       const isLowScore = lead.lead_score < 40;
+      const isBlocked = countdownTimer > 0 && !isArchived && !isExcluded;
       
       return (
         <div className={`
@@ -1041,7 +1042,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             ${isArchived ? 'opacity-50 grayscale' : ''}
             ${isViewed && !isArchived && !isExcluded ? 'opacity-80 border-white/5' : ''}
             ${isExcluded ? 'opacity-40 grayscale border-red-900/20' : ''}
+            ${isBlocked ? 'grayscale pointer-events-none' : ''}
         `}>
+             {/* Countdown Overlay */}
+             {isBlocked && (
+                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[2px]">
+                     <div className="text-center animate-pulse">
+                         <span className="block text-4xl font-black text-red-600 tracking-tighter">{countdownTimer}s</span>
+                         <span className="text-[10px] uppercase tracking-widest text-white/80 font-bold">Aguarde...</span>
+                     </div>
+                 </div>
+             )}
+
              {/* Header de Imagem e Score */}
              <div className="h-40 md:h-48 w-full bg-gray-900 relative overflow-hidden shrink-0 group-hover:scale-[1.01] transition-transform duration-700">
                  {/* Scanline Effect */}

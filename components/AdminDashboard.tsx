@@ -1042,101 +1042,104 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             ${isArchived ? 'opacity-50 grayscale' : ''}
             ${isViewed && !isArchived && !isExcluded ? 'opacity-80 border-white/5' : ''}
             ${isExcluded ? 'opacity-40 grayscale border-red-900/20' : ''}
-            ${isBlocked ? 'grayscale pointer-events-none' : ''}
+            ${isBlocked ? 'pointer-events-none' : ''}
         `}>
-             {/* Countdown Overlay */}
+             {/* Countdown Overlay - Outside Grayscale Context */}
              {isBlocked && (
-                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[2px]">
+                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
                      <div className="text-center animate-pulse">
-                         <span className="block text-4xl font-black text-red-600 tracking-tighter">{countdownTimer}s</span>
-                         <span className="text-[10px] uppercase tracking-widest text-white/80 font-bold">Aguarde...</span>
+                         <span className="block text-6xl font-black text-[#ff0000] tracking-tighter drop-shadow-[0_0_25px_rgba(255,0,0,0.8)]">{countdownTimer}</span>
+                         <span className="text-[10px] uppercase tracking-widest text-white font-bold mt-2 block">Aguarde...</span>
                      </div>
                  </div>
              )}
 
-             {/* Header de Imagem e Score */}
-             <div className="h-40 md:h-48 w-full bg-gray-900 relative overflow-hidden shrink-0 group-hover:scale-[1.01] transition-transform duration-700">
-                 {/* Scanline Effect */}
-                 <div className="absolute inset-0 z-10 pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
-                 <div className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-t from-[#0f0f0f] via-transparent to-transparent"></div>
-                 
-                 {lead.photos && lead.photos.length > 0 ? (
-                     <img src={`/api/photo?ref=${lead.photos[0].photo_reference}`} className="w-full h-full object-cover transition-all duration-700 opacity-60 group-hover:opacity-80" alt={lead.name} />
-                 ) : (
-                     <div className="w-full h-full bg-gradient-to-br from-[#1a1a1a] to-black flex items-center justify-center opacity-50"><Logo className="scale-75 opacity-20" /></div>
-                 )}
+             {/* Content Wrapper - Applies Grayscale Only Here */}
+             <div className={`flex flex-col justify-between h-full w-full transition-all duration-300 ${isBlocked ? 'grayscale opacity-20' : ''}`}>
+                 {/* Header de Imagem e Score */}
+                 <div className="h-40 md:h-48 w-full bg-gray-900 relative overflow-hidden shrink-0 group-hover:scale-[1.01] transition-transform duration-700">
+                     {/* Scanline Effect */}
+                     <div className="absolute inset-0 z-10 pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
+                     <div className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-t from-[#0f0f0f] via-transparent to-transparent"></div>
+                     
+                     {lead.photos && lead.photos.length > 0 ? (
+                         <img src={`/api/photo?ref=${lead.photos[0].photo_reference}`} className="w-full h-full object-cover transition-all duration-700 opacity-60 group-hover:opacity-80" alt={lead.name} />
+                     ) : (
+                         <div className="w-full h-full bg-gradient-to-br from-[#1a1a1a] to-black flex items-center justify-center opacity-50"><Logo className="scale-75 opacity-20" /></div>
+                     )}
 
-                 {/* Badges de Topo */}
-                 <div className="absolute top-3 left-3 flex gap-2 z-20">
-                     {lead.opening_hours?.open_now 
-                        ? <span className="bg-green-500/90 text-black text-[9px] font-mono font-black px-2 py-1 rounded backdrop-blur-md uppercase tracking-wider">Aberto</span> 
-                        : <span className="bg-red-600/90 text-white text-[9px] font-mono font-black px-2 py-1 rounded backdrop-blur-md uppercase tracking-wider">Fechado</span>
-                     }
-                 </div>
+                     {/* Badges de Topo */}
+                     <div className="absolute top-3 left-3 flex gap-2 z-20">
+                         {lead.opening_hours?.open_now 
+                            ? <span className="bg-green-500/90 text-black text-[9px] font-mono font-black px-2 py-1 rounded backdrop-blur-md uppercase tracking-wider">Aberto</span> 
+                            : <span className="bg-red-600/90 text-white text-[9px] font-mono font-black px-2 py-1 rounded backdrop-blur-md uppercase tracking-wider">Fechado</span>
+                         }
+                     </div>
 
-                 {/* Score Ring Visual */}
-                 <div className="absolute top-3 right-3 z-20">
-                     <div className="relative w-12 h-12 flex items-center justify-center bg-black/60 backdrop-blur-md rounded-full border border-white/10">
-                        <svg className="w-full h-full transform -rotate-90 absolute">
-                            <circle cx="24" cy="24" r="22" stroke="currentColor" strokeWidth="2" fill="transparent" className="text-white/10" />
-                            <circle cx="24" cy="24" r="22" stroke="currentColor" strokeWidth="2" fill="transparent" 
-                                className={`${isHighScore ? 'text-green-500' : 'text-red-500'}`}
-                                strokeDasharray={138}
-                                strokeDashoffset={138 - (138 * lead.lead_score) / 100}
-                            />
-                        </svg>
-                        <span className={`text-sm font-black ${isHighScore ? 'text-green-500' : 'text-white'}`}>{lead.lead_score}</span>
+                     {/* Score Ring Visual */}
+                     <div className="absolute top-3 right-3 z-20">
+                         <div className="relative w-12 h-12 flex items-center justify-center bg-black/60 backdrop-blur-md rounded-full border border-white/10">
+                            <svg className="w-full h-full transform -rotate-90 absolute">
+                                <circle cx="24" cy="24" r="22" stroke="currentColor" strokeWidth="2" fill="transparent" className="text-white/10" />
+                                <circle cx="24" cy="24" r="22" stroke="currentColor" strokeWidth="2" fill="transparent" 
+                                    className={`${isHighScore ? 'text-green-500' : 'text-red-500'}`}
+                                    strokeDasharray={138}
+                                    strokeDashoffset={138 - (138 * lead.lead_score) / 100}
+                                />
+                            </svg>
+                            <span className={`text-sm font-black ${isHighScore ? 'text-green-500' : 'text-white'}`}>{lead.lead_score}</span>
+                         </div>
                      </div>
                  </div>
-             </div>
-             
-             {/* Corpo do Card */}
-             <div className="p-5 flex-1 flex flex-col relative z-20 -mt-6">
-                 <h3 className="text-lg font-black text-white uppercase leading-tight line-clamp-2 mb-2 group-hover:text-red-500 transition-colors">
-                    {lead.name}
-                 </h3>
                  
-                 {/* Smart Tags (Nova Feature) */}
-                 <div className="flex flex-wrap gap-2 mb-4">
-                    {lead.status_site === 'sem_site' && <span className="text-[8px] font-mono uppercase bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 rounded tracking-widest">[SEM SITE]</span>}
-                    {lead.status_site === 'site_basico' && <span className="text-[8px] font-mono uppercase bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-2 py-0.5 rounded tracking-widest">[LINKTREE]</span>}
-                    {(lead.price_level || 0) >= 3 && <span className="text-[8px] font-mono uppercase bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 rounded tracking-widest">[HIGH TICKET]</span>}
-                    {lead.rating < 4.0 && <span className="text-[8px] font-mono uppercase bg-orange-500/10 text-orange-500 border border-orange-500/20 px-2 py-0.5 rounded tracking-widest">[BAIXA REP]</span>}
+                 {/* Corpo do Card */}
+                 <div className="p-5 flex-1 flex flex-col relative z-20 -mt-6">
+                     <h3 className="text-lg font-black text-white uppercase leading-tight line-clamp-2 mb-2 group-hover:text-red-500 transition-colors">
+                        {lead.name}
+                     </h3>
+                     
+                     {/* Smart Tags (Nova Feature) */}
+                     <div className="flex flex-wrap gap-2 mb-4">
+                        {lead.status_site === 'sem_site' && <span className="text-[8px] font-mono uppercase bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 rounded tracking-widest">[SEM SITE]</span>}
+                        {lead.status_site === 'site_basico' && <span className="text-[8px] font-mono uppercase bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-2 py-0.5 rounded tracking-widest">[LINKTREE]</span>}
+                        {(lead.price_level || 0) >= 3 && <span className="text-[8px] font-mono uppercase bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 rounded tracking-widest">[HIGH TICKET]</span>}
+                        {lead.rating < 4.0 && <span className="text-[8px] font-mono uppercase bg-orange-500/10 text-orange-500 border border-orange-500/20 px-2 py-0.5 rounded tracking-widest">[BAIXA REP]</span>}
+                     </div>
+
+                     <div className="flex items-start gap-3 mt-auto">
+                        <LocationIcon className="w-4 h-4 text-white/20 mt-0.5 shrink-0" />
+                        <span className="text-white/50 text-[10px] font-medium leading-relaxed line-clamp-2">{lead.address}</span>
+                     </div>
                  </div>
 
-                 <div className="flex items-start gap-3 mt-auto">
-                    <LocationIcon className="w-4 h-4 text-white/20 mt-0.5 shrink-0" />
-                    <span className="text-white/50 text-[10px] font-medium leading-relaxed line-clamp-2">{lead.address}</span>
+                 {/* Footer de Ações (Control Panel Style) */}
+                 <div className="grid grid-cols-5 gap-px bg-[#222] border-t border-white/5">
+                     <button onClick={() => openWhatsApp(lead)} className="col-span-1 bg-[#0f0f0f] hover:bg-[#25D366] text-white/30 hover:text-black py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95 group/btn">
+                        <PhoneIcon className="w-5 h-5 text-current" />
+                     </button>
+                     <button onClick={() => openInstagram(lead)} disabled={loadingInstagramId === lead.id} className="col-span-1 bg-[#0f0f0f] hover:bg-pink-600 text-white/30 hover:text-white py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95 group/btn disabled:opacity-50 disabled:cursor-not-allowed">
+                        {loadingInstagramId === lead.id ? <SpinnerIcon className="w-5 h-5 animate-spin text-pink-500" /> : <InstagramIcon className="w-5 h-5 text-current" />}
+                     </button>
+                     <button onClick={() => handleOpenLead(lead)} className="col-span-1 bg-[#0f0f0f] hover:bg-white text-white/30 hover:text-black py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95 group/btn">
+                        <ZapIcon className="w-5 h-5 text-current" />
+                     </button>
+                     
+                     {/* Lógica de Botão de Check/Restaurar */}
+                     {isArchived ? (
+                         <button onClick={() => setContactedLeads(prev => prev.filter(l => l.id !== lead.id))} className="col-span-1 bg-[#0f0f0f] hover:bg-blue-600 text-blue-600 hover:text-white py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95">
+                            <span className="text-xl font-black">↩</span>
+                         </button>
+                     ) : (
+                         <button onClick={() => markAsContacted(lead)} className="col-span-1 bg-[#0f0f0f] hover:bg-green-600 text-green-600 hover:text-white py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95">
+                            <span className="text-xl font-black">✓</span>
+                         </button>
+                     )}
+
+                     {/* Botão de Excluir */}
+                     <button onClick={() => markAsExcluded(lead)} className="col-span-1 bg-[#0f0f0f] hover:bg-red-900 text-red-900 hover:text-white py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95 group/btn border-l border-white/5">
+                        <XIcon className="w-5 h-5 text-current" />
+                     </button>
                  </div>
-             </div>
-
-             {/* Footer de Ações (Control Panel Style) */}
-             <div className="grid grid-cols-5 gap-px bg-[#222] border-t border-white/5">
-                 <button onClick={() => openWhatsApp(lead)} className="col-span-1 bg-[#0f0f0f] hover:bg-[#25D366] text-white/30 hover:text-black py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95 group/btn">
-                    <PhoneIcon className="w-5 h-5 text-current" />
-                 </button>
-                 <button onClick={() => openInstagram(lead)} disabled={loadingInstagramId === lead.id} className="col-span-1 bg-[#0f0f0f] hover:bg-pink-600 text-white/30 hover:text-white py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95 group/btn disabled:opacity-50 disabled:cursor-not-allowed">
-                    {loadingInstagramId === lead.id ? <SpinnerIcon className="w-5 h-5 animate-spin text-pink-500" /> : <InstagramIcon className="w-5 h-5 text-current" />}
-                 </button>
-                 <button onClick={() => handleOpenLead(lead)} className="col-span-1 bg-[#0f0f0f] hover:bg-white text-white/30 hover:text-black py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95 group/btn">
-                    <ZapIcon className="w-5 h-5 text-current" />
-                 </button>
-                 
-                 {/* Lógica de Botão de Check/Restaurar */}
-                 {isArchived ? (
-                     <button onClick={() => setContactedLeads(prev => prev.filter(l => l.id !== lead.id))} className="col-span-1 bg-[#0f0f0f] hover:bg-blue-600 text-blue-600 hover:text-white py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95">
-                        <span className="text-xl font-black">↩</span>
-                     </button>
-                 ) : (
-                     <button onClick={() => markAsContacted(lead)} className="col-span-1 bg-[#0f0f0f] hover:bg-green-600 text-green-600 hover:text-white py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95">
-                        <span className="text-xl font-black">✓</span>
-                     </button>
-                 )}
-
-                 {/* Botão de Excluir */}
-                 <button onClick={() => markAsExcluded(lead)} className="col-span-1 bg-[#0f0f0f] hover:bg-red-900 text-red-900 hover:text-white py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95 group/btn border-l border-white/5">
-                    <XIcon className="w-5 h-5 text-current" />
-                 </button>
              </div>
       </div>
       );

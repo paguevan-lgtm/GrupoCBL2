@@ -769,48 +769,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     return () => clearInterval(interval);
   }, [countdownTimer]);
 
-  // --- AUTOMATION LOOP ---
-  useEffect(() => {
-      if (!isAutoMode || leads.length === 0 || countdownTimer > 0 || isProcessingAuto) return;
 
-      const processNextLead = async () => {
-          setIsProcessingAuto(true);
-          const currentLead = leads[0]; // Always process the first one as they get removed
-
-          try {
-              // Check phone validity first to avoid alerts in openWhatsApp
-              const rawPhone = currentLead.international_phone || currentLead.phone;
-              
-              if (rawPhone) {
-                  // 1. Generate Script
-                  const script = await generateScript(currentLead);
-
-                  // 2. Open WhatsApp (this might set countdown if enabled)
-                  openWhatsApp(currentLead, script);
-              } else {
-                  console.log(`[Auto Mode] Skipping ${currentLead.name} - No Phone`);
-              }
-
-              // 3. Mark as Contacted (removes from list)
-              // Small delay to ensure UI updates and browser handles the popup
-              setTimeout(() => {
-                  markAsContacted(currentLead);
-                  setIsProcessingAuto(false);
-                  
-                  // If autoCountdown is NOT on, force a small safety delay anyway
-                  if (!autoCountdown) {
-                      setCountdownTimer(5);
-                  }
-              }, 2000);
-
-          } catch (error) {
-              console.error("Auto Process Error:", error);
-              setIsProcessingAuto(false);
-          }
-      };
-
-      processNextLead();
-  }, [isAutoMode, leads, countdownTimer, isProcessingAuto, autoCountdown]);
 
   const classifySite = (url?: string): 'com_site' | 'sem_site' | 'site_basico' => {
       if (!url) return 'sem_site';
@@ -1056,7 +1015,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       
       const message = customMessage || `Olá ${lead.name}, gostaria de falar sobre o marketing de vocês.`;
       const text = encodeURIComponent(message);
-      window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
+      // Use api.whatsapp.com for better compatibility with emojis
+      window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${text}`, '_blank');
 
       if (autoCountdown) {
           setCountdownTimer(45); // 45 seconds countdown (Safer limit)
@@ -1098,6 +1058,62 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           setLoadingInstagramId(null);
       }
   };
+
+  // --- AUTOMATION LOOP (MOVED HERE TO ACCESS FUNCTIONS) ---
+  useEffect(() => {
+      if (!isAutoMode || countdownTimer > 0 || isProcessingAuto) return;
+
+      // Logic to handle empty leads list: Try to load more or stop
+      if (leads.length === 0) {
+          if (nextPageToken) {
+              console.log("[Auto Mode] Loading more leads...");
+              executeSearch(nextPageToken);
+          } else {
+              console.log("[Auto Mode] No more leads. Stopping.");
+              setIsAutoMode(false);
+              alert("Automação finalizada: Não há mais leads para carregar.");
+          }
+          return;
+      }
+
+      const processNextLead = async () => {
+          setIsProcessingAuto(true);
+          const currentLead = leads[0]; // Always process the first one as they get removed
+
+          try {
+              // Check phone validity first to avoid alerts in openWhatsApp
+              const rawPhone = currentLead.international_phone || currentLead.phone;
+              
+              if (rawPhone) {
+                  // 1. Generate Script
+                  const script = await generateScript(currentLead);
+
+                  // 2. Open WhatsApp (this might set countdown if enabled)
+                  openWhatsApp(currentLead, script);
+              } else {
+                  console.log(`[Auto Mode] Skipping ${currentLead.name} - No Phone`);
+              }
+
+              // 3. Mark as Contacted (removes from list)
+              // Small delay to ensure UI updates and browser handles the popup
+              setTimeout(() => {
+                  markAsContacted(currentLead);
+                  setIsProcessingAuto(false);
+                  
+                  // If autoCountdown is NOT on, force a small safety delay anyway
+                  if (!autoCountdown) {
+                      setCountdownTimer(5);
+                  }
+              }, 2000);
+
+          } catch (error) {
+              console.error("Auto Process Error:", error);
+              setIsProcessingAuto(false);
+          }
+      };
+
+      processNextLead();
+  }, [isAutoMode, leads, countdownTimer, isProcessingAuto, autoCountdown, nextPageToken]);
 
   const copyPitch = (lead: Lead, pitchText?: string) => {
       let textToCopy = pitchText || "Olá";

@@ -31,6 +31,7 @@ export default async function handler(req, res) {
 
     console.log("Resposta Gemini recebida com sucesso.");
 
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
     return res.status(200).json({ 
       text: response.text 
     });

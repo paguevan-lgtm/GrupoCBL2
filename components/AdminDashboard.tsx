@@ -388,7 +388,7 @@ const LeadStrategyModal = ({
                     REGRAS GERAIS:
                     - Texto CURTO (max 3 frases).
                     - Zero "Prezados" ou formalidades de e-mail.
-                    - IMPORTANTE: GERE A RESPOSTA EM UTF-8 COM EMOJIS COMPATÍVEIS.
+                    - IMPORTANTE: Use apenas emojis padrão Unicode (ex: 🚀, 💰, 🤝). NÃO use códigos de escape ou emojis proprietários.
                     
                     Gere APENAS o texto da mensagem.
                 `;

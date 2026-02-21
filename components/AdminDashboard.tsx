@@ -693,6 +693,19 @@ const LeadStrategyModal = ({
     );
 };
 
+const NICHES = [
+    "Dentista", "Advogado", "Pizzaria", "Estética", "Oficina Mecânica", 
+    "Imobiliária", "Academia", "Pet Shop", "Salão de Beleza", "Restaurante",
+    "Contabilidade", "Arquitetura", "Engenharia", "Marketing Digital", "Consultoria",
+    "Psicólogo", "Nutricionista", "Fisioterapia", "Personal Trainer", "Barbearia",
+    "Loja de Roupas", "Farmácia", "Supermercado", "Padaria", "Confeitaria",
+    "Hotel", "Pousada", "Agência de Viagens", "Escola", "Curso de Idiomas",
+    "Clínica Veterinária", "Lavanderia", "Floricultura", "Papelaria", "Livraria",
+    "Loja de Móveis", "Loja de Eletrônicos", "Loja de Informática", "Assistência Técnica",
+    "Gráfica", "Despachante", "Seguradora", "Plano de Saúde", "Consórcio",
+    "Empréstimo", "Investimentos", "Câmbio", "Cartório", "Auto Escola"
+];
+
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState<'search' | 'contacted' | 'viewed' | 'excluded' | 'brainstorm' | 'marketing'>('search');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -718,6 +731,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [excludedLeads, setExcludedLeads] = useState<Lead[]>([]);
   const [chamadosSearch, setChamadosSearch] = useState('');
 
+  // Stats States
+  const [contactedCount24h, setContactedCount24h] = useState(0);
+  const [firstContactTime, setFirstContactTime] = useState<Date | null>(null);
+  const [elapsedTime, setElapsedTime] = useState("00:00:00");
+  const [exhaustedSearches, setExhaustedSearches] = useState<Set<string>>(new Set());
+
   // Results States
   const [isLoading, setIsLoading] = useState(false);
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -735,7 +754,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   useEffect(() => {
     const saved = localStorage.getItem('cbl_contacted_leads');
     if (saved) {
-        try { setContactedLeads(JSON.parse(saved)); } catch (e) { console.error(e); }
+        try { 
+            const parsed = JSON.parse(saved);
+            setContactedLeads(parsed);
+            
+            // Calculate 24h stats on load
+            const now = new Date();
+            const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            const recentContacts = parsed.filter((l: Lead) => l.contactedAt && new Date(l.contactedAt) > oneDayAgo);
+            setContactedCount24h(recentContacts.length);
+            
+            if (recentContacts.length > 0) {
+                // Find the earliest contact in the last 24h window
+                const sorted = recentContacts.sort((a: Lead, b: Lead) => new Date(a.contactedAt!).getTime() - new Date(b.contactedAt!).getTime());
+                setFirstContactTime(new Date(sorted[0].contactedAt!));
+            }
+        } catch (e) { console.error(e); }
     }
     const savedViewed = localStorage.getItem('cbl_viewed_leads');
     if (savedViewed) {
@@ -745,7 +779,45 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     if (savedExcluded) {
         try { setExcludedLeads(JSON.parse(savedExcluded)); } catch (e) { console.error(e); }
     }
+    const savedExhausted = localStorage.getItem('cbl_exhausted_searches');
+    if (savedExhausted) {
+        try { setExhaustedSearches(new Set(JSON.parse(savedExhausted))); } catch (e) { console.error(e); }
+    }
   }, []);
+
+  // Timer Effect
+  useEffect(() => {
+      if (!firstContactTime) return;
+      
+      const interval = setInterval(() => {
+          const now = new Date();
+          const diff = now.getTime() - firstContactTime.getTime();
+          
+          const hours = Math.floor(diff / (1000 * 60 * 60));
+          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+          
+          setElapsedTime(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+      }, 1000);
+      
+      return () => clearInterval(interval);
+  }, [firstContactTime]);
+
+  const generateRandomNiche = () => {
+      const availableNiches = NICHES.filter(n => !exhaustedSearches.has(`${n.toLowerCase()}-${location.toLowerCase()}`));
+      if (availableNiches.length === 0) return null;
+      const randomIndex = Math.floor(Math.random() * availableNiches.length);
+      return availableNiches[randomIndex];
+  };
+
+  const handleGenerateNiche = () => {
+      const niche = generateRandomNiche();
+      if (niche) {
+          setSearchTerm(niche);
+      } else {
+          alert("Todos os nichos disponíveis já foram explorados para esta localização!");
+      }
+  };
 
   useEffect(() => {
     localStorage.setItem('cbl_contacted_leads', JSON.stringify(contactedLeads));
@@ -802,8 +874,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     return Math.min(Math.max(score, 0), 99);
   };
 
-  const executeSearch = async (token?: string) => {
-    if (!searchTerm || !location) return;
+  const executeSearch = async (token?: string, overrideTerm?: string) => {
+    const termToUse = overrideTerm || searchTerm;
+    if (!termToUse || !location) return;
 
     setIsLoading(true);
     if (!token) {
@@ -812,7 +885,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     setActiveTab('search');
     
     // Salva termos atuais para comparar na proxima
-    setLastSearchTerm(searchTerm);
+    setLastSearchTerm(termToUse);
     setLastLocation(location);
 
     try {
@@ -824,7 +897,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           const response = await fetch('/api/web-hunter', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ query: searchTerm, location: location })
+              body: JSON.stringify({ query: termToUse, location: location })
           });
           
           if (!response.ok) throw new Error("Erro no Web Hunter");
@@ -858,7 +931,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           // --- STANDARD GOOGLE MAPS MODE ---
           let queryPrefix = "";
           if (searchMode === 'whale') queryPrefix = "Luxury High End ";
-          const fullQuery = `${queryPrefix}${searchTerm} in ${location}`;
+          const fullQuery = `${queryPrefix}${termToUse} in ${location}`;
 
           const response = await fetch('/api/places', {
             method: 'POST',
@@ -932,6 +1005,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       // Ordena pelo SCORE (Do maior para o menor)
       processedLeads.sort((a, b) => b.lead_score - a.lead_score);
 
+      // Check if we found leads. If not, and it's the first page, mark as exhausted
+      if (processedLeads.length === 0 && !token) {
+           const key = `${termToUse.toLowerCase()}-${location.toLowerCase()}`;
+           setExhaustedSearches(prev => {
+               const newSet = new Set(prev).add(key);
+               localStorage.setItem('cbl_exhausted_searches', JSON.stringify(Array.from(newSet)));
+               return newSet;
+           });
+      }
+
       setLeads(prev => token ? [...prev, ...processedLeads] : processedLeads);
 
     } catch (error: any) {
@@ -979,6 +1062,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       setLeads(prev => prev.filter(l => l.id !== lead.id));
       setViewedLeads(prev => prev.filter(l => l.id !== lead.id));
       if (selectedLead?.id === lead.id) setSelectedLead(null);
+      
+      // Update Stats
+      setContactedCount24h(prev => prev + 1);
+      if (!firstContactTime) {
+          setFirstContactTime(new Date());
+      }
   };
 
   const markAsExcluded = (lead: Lead) => {
@@ -1019,7 +1108,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${text}`, '_blank');
 
       if (autoCountdown) {
-          setCountdownTimer(45); // 45 seconds countdown (Safer limit)
+          // Random countdown between 60 and 120 seconds for safer automation
+          const randomCountdown = Math.floor(Math.random() * (120 - 60 + 1)) + 60;
+          setCountdownTimer(randomCountdown); 
       }
   };
 
@@ -1069,9 +1160,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               console.log("[Auto Mode] Loading more leads...");
               executeSearch(nextPageToken);
           } else {
-              console.log("[Auto Mode] No more leads. Stopping.");
-              setIsAutoMode(false);
-              alert("Automação finalizada: Não há mais leads para carregar.");
+              // Try to switch niche
+              const nextNiche = generateRandomNiche();
+              if (nextNiche) {
+                  console.log(`[Auto Mode] Niche exhausted. Switching to: ${nextNiche}`);
+                  setSearchTerm(nextNiche);
+                  // Mark current as exhausted
+                  const key = `${searchTerm.toLowerCase()}-${location.toLowerCase()}`;
+                  setExhaustedSearches(prev => {
+                      const newSet = new Set(prev).add(key);
+                      localStorage.setItem('cbl_exhausted_searches', JSON.stringify(Array.from(newSet)));
+                      return newSet;
+                  });
+                  
+                  // Trigger search with new niche (overrideTerm is important because state update might be slow)
+                  executeSearch(undefined, nextNiche);
+              } else {
+                  console.log("[Auto Mode] No more leads and no more niches. Stopping.");
+                  setIsAutoMode(false);
+                  alert("Automação finalizada: Não há mais leads e todos os nichos foram explorados.");
+              }
           }
           return;
       }
@@ -1102,7 +1210,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   
                   // If autoCountdown is NOT on, force a small safety delay anyway
                   if (!autoCountdown) {
-                      setCountdownTimer(5);
+                      // Random countdown between 5 and 15 seconds
+                      const randomShortCountdown = Math.floor(Math.random() * (15 - 5 + 1)) + 5;
+                      setCountdownTimer(randomShortCountdown);
                   }
               }, 2000);
 
@@ -1332,7 +1442,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       <main className="flex-1 bg-[#050505] relative flex flex-col overflow-hidden pt-16 md:pt-0">
             {/* Desktop Header */}
             <header className="hidden md:flex h-16 border-b border-white/10 items-center justify-between px-6 bg-[#0A0A0A]/90 backdrop-blur-md shrink-0 z-20">
-                <div className="flex items-center gap-4"><div className="h-4 w-px bg-white/10"></div><span className="text-[10px] font-mono text-white/50 uppercase tracking-widest">Intelligence Hub v4.5</span></div>
+                <div className="flex items-center gap-4">
+                    <div className="h-4 w-px bg-white/10"></div>
+                    <span className="text-[10px] font-mono text-white/50 uppercase tracking-widest">Intelligence Hub v4.5</span>
+                    
+                    {/* Stats Bar */}
+                    <div className="flex items-center gap-4 ml-4 border-l border-white/10 pl-4">
+                        <div className="flex flex-col">
+                            <span className="text-[8px] uppercase text-white/30 tracking-widest">Tempo Ativo</span>
+                            <span className="text-xs font-mono font-bold text-white">{elapsedTime}</span>
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-[8px] uppercase text-white/30 tracking-widest">Contatados (24h)</span>
+                            <span className="text-xs font-mono font-bold text-green-500">{contactedCount24h}</span>
+                        </div>
+                    </div>
+                </div>
                 <div className="flex items-center gap-6">
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/5"><span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span><span className="text-[9px] font-mono text-green-500 uppercase tracking-widest">Deep Search: ON</span></div>
                 </div>
@@ -1392,7 +1517,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                                 <div className="absolute top-0 left-0 w-1 h-full bg-red-600 opacity-50 group-hover:opacity-100 transition-opacity"></div>
                                 <div className="md:col-span-3 space-y-2">
                                     <label className="text-[9px] font-black text-red-600 uppercase tracking-widest ml-1">Nicho</label>
-                                    <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 md:py-4 text-white focus:border-red-600 outline-none text-sm md:text-base font-bold transition-all placeholder-white/20" placeholder="Ex: Estética" />
+                                    <div className="flex gap-2">
+                                        <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 md:py-4 text-white focus:border-red-600 outline-none text-sm md:text-base font-bold transition-all placeholder-white/20" placeholder="Ex: Estética" />
+                                        <button type="button" onClick={handleGenerateNiche} className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl px-3 flex items-center justify-center text-white/50 hover:text-white transition-colors" title="Gerar Nicho Aleatório">
+                                            <BrainIcon className="w-5 h-5" />
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="md:col-span-3 space-y-2">
                                     <label className="text-[9px] font-black text-red-600 uppercase tracking-widest ml-1">Região</label>

@@ -95,7 +95,7 @@ interface AdsStrategy {
 type SearchMode = 'standard' | 'whale' | 'crisis' | 'ghost';
 
 // --- FUNÇÕES UTILITÁRIAS ---
-const generateScript = async (lead: Lead) => {
+const generateScript = async (lead: Lead, customContext?: string) => {
     // --- CÁLCULO DA SAUDAÇÃO TEMPORAL ---
     const currentHour = new Date().getHours();
     let timeGreeting = "Olá";
@@ -114,6 +114,9 @@ const generateScript = async (lead: Lead) => {
             - Site: ${lead.website || 'Sem site'}
             - Nome da Empresa: ${lead.name}
             
+            CONTEXTO PERSONALIZADO (MUITO IMPORTANTE):
+            ${customContext ? `O usuário pediu especificamente para focar nisto: "${customContext}". Adapte a mensagem para falar sobre esse assunto.` : 'Foque na falta de site, avaliações ou oportunidade de crescimento.'}
+
             REGRA 1: ADAPTAÇÃO TOTAL AO NICHO (TOM DE VOZ):
             - Se for FEMININO/ESTÉTICA (Salão, Spa, Moda, Clínica, Loja de Roupas): Use um tom elegante, leve, empático. Use emojis sutis (✨, 🌷). Fale sobre "Imagem", "Experiência", "Valorização".
             - Se for MASCULINO/TÉCNICO (Oficina, Obras, Carros, Indústria): Use um tom direto, prático, "de homem pra homem". Fale sobre "Grana na mesa", "Demanda", "Oportunidade".
@@ -122,7 +125,7 @@ const generateScript = async (lead: Lead) => {
 
             REGRA 2: ESTRUTURA OBRIGATÓRIA DA MENSAGEM:
             Parte A: SAUDAÇÃO OBRIGATÓRIA. Comece a frase com "${timeGreeting}".
-            Parte B: GANCHO (Quebra de Padrão). Comente algo específico (falta de site, nota google, ou elogio sincero sobre a estrutura/avaliações).
+            Parte B: GANCHO (Quebra de Padrão). ${customContext ? `Use o contexto "${customContext}" como gancho principal.` : 'Comente algo específico (falta de site, nota google, ou elogio sincero sobre a estrutura/avaliações).'}
             Parte C (FINALIZAÇÃO MANDATÓRIA): Você DEVE dizer que é especialista no assunto e perguntar quem é a pessoa do marketing para conversar se tem um tempo.
             
             EXEMPLOS DE FINALIZAÇÃO (Adapte o tom, mas mantenha a essência):
@@ -401,9 +404,23 @@ const LeadStrategyModal = ({
     // Estado para Script Personalizado IA
     const [generatedScript, setGeneratedScript] = useState('');
     const [isScriptLoading, setIsScriptLoading] = useState(false);
+    const [customContext, setCustomContext] = useState('');
 
     // Dados para o Score Breakdown
     const scoreReasons = getScoreDetails(lead, searchMode);
+
+    // Load custom context from local storage on mount
+    useEffect(() => {
+        const savedContext = localStorage.getItem('cbl_custom_script_context');
+        if (savedContext) setCustomContext(savedContext);
+    }, []);
+
+    // Save custom context when it changes
+    const handleContextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newVal = e.target.value;
+        setCustomContext(newVal);
+        localStorage.setItem('cbl_custom_script_context', newVal);
+    };
 
     // Efeito para Gerar Script Automaticamente ao abrir o modal
     useEffect(() => {
@@ -421,7 +438,9 @@ const LeadStrategyModal = ({
             // ------------------------------------
 
             try {
-                const script = await generateScript(lead);
+                // Pass customContext if it exists in localStorage (even if state isn't fully ready on first render)
+                const savedContext = localStorage.getItem('cbl_custom_script_context') || '';
+                const script = await generateScript(lead, savedContext);
                 if (isMounted) setGeneratedScript(script);
             } catch (error) {
                 console.error("Erro script IA:", error);
@@ -435,6 +454,18 @@ const LeadStrategyModal = ({
 
         return () => { isMounted = false; };
     }, [lead]); // Recarrega se o lead mudar
+
+    const handleRegenerateScript = async () => {
+        setIsScriptLoading(true);
+        try {
+            const script = await generateScript(lead, customContext);
+            setGeneratedScript(script);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsScriptLoading(false);
+        }
+    };
 
     // Função Manual para Gerar Estratégia Completa (Aba 2)
     const generateAiStrategy = async () => {
@@ -601,6 +632,28 @@ const LeadStrategyModal = ({
                                             onChange={(e) => setGeneratedScript(e.target.value)}
                                             placeholder="Aguarde, gerando texto..."
                                         />
+                                    </div>
+
+                                    {/* Custom Context Input */}
+                                    <div className="mt-4 pt-4 border-t border-white/5">
+                                        <label className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-2 block">Personalizar Assunto (Persiste para próximos)</label>
+                                        <div className="flex gap-2">
+                                            <input 
+                                                type="text" 
+                                                value={customContext}
+                                                onChange={handleContextChange}
+                                                placeholder="Ex: Fale sobre o site lento..."
+                                                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:border-red-600 outline-none placeholder-white/20"
+                                            />
+                                            <button 
+                                                onClick={handleRegenerateScript}
+                                                disabled={isScriptLoading}
+                                                className="bg-white/10 hover:bg-white/20 text-white p-2 rounded-xl transition-colors disabled:opacity-50"
+                                                title="Regerar com novo contexto"
+                                            >
+                                                <BrainIcon className="w-4 h-4" />
+                                            </button>
+                                        </div>
                                     </div>
 
                                     <button 

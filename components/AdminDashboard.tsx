@@ -709,6 +709,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   // Feedback
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // Countdown & Instagram Logic
+  const [autoCountdown, setAutoCountdown] = useState(false);
+  const [countdownTimer, setCountdownTimer] = useState(0);
+  const [loadingInstagramId, setLoadingInstagramId] = useState<string | null>(null);
+
   useEffect(() => {
     const saved = localStorage.getItem('cbl_contacted_leads');
     if (saved) {
@@ -735,6 +740,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   useEffect(() => {
     localStorage.setItem('cbl_excluded_leads', JSON.stringify(excludedLeads));
   }, [excludedLeads]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (countdownTimer > 0) {
+      interval = setInterval(() => {
+        setCountdownTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [countdownTimer]);
 
   const classifySite = (url?: string): 'com_site' | 'sem_site' | 'site_basico' => {
       if (!url) return 'sem_site';
@@ -926,6 +941,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   };
 
   const openWhatsApp = (lead: Lead, customMessage?: string) => {
+      if (countdownTimer > 0) {
+          alert(`Aguarde ${countdownTimer}s para evitar bloqueios do WhatsApp.`);
+          return;
+      }
+
       const rawPhone = lead.international_phone || lead.phone;
       if (!rawPhone) { alert("Telefone não disponível."); return; }
       let cleanPhone = rawPhone.replace(/\D/g, '');
@@ -934,15 +954,46 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       const message = customMessage || `Olá ${lead.name}, gostaria de falar sobre o marketing de vocês.`;
       const text = encodeURIComponent(message);
       window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
+
+      if (autoCountdown) {
+          setCountdownTimer(20); // 20 seconds countdown
+      }
   };
 
-  const openInstagram = (lead: Lead) => {
+  const openInstagram = async (lead: Lead) => {
       if (lead.website && lead.website.toLowerCase().includes('instagram.com')) {
           window.open(lead.website, '_blank');
           return;
       }
-      const query = `site:instagram.com "${lead.name}" ${location}`;
-      window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
+      
+      setLoadingInstagramId(lead.id);
+      try {
+          // Tenta buscar via API robusta (Gemini + Google Search)
+          const response = await fetch('/api/find-instagram', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                  name: lead.name, 
+                  address: lead.address, 
+                  website: lead.website 
+              })
+          });
+          
+          const data = await response.json();
+          if (data.url) {
+              window.open(data.url, '_blank');
+          } else {
+              // Fallback to Google Search if not found
+              const query = `site:instagram.com "${lead.name}" ${location}`;
+              window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
+          }
+      } catch (error) {
+          console.error("Erro ao buscar Instagram:", error);
+          const query = `site:instagram.com "${lead.name}" ${location}`;
+          window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
+      } finally {
+          setLoadingInstagramId(null);
+      }
   };
 
   const copyPitch = (lead: Lead, pitchText?: string) => {
@@ -1052,8 +1103,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                  <button onClick={() => openWhatsApp(lead)} className="col-span-1 bg-[#0f0f0f] hover:bg-[#25D366] text-white/30 hover:text-black py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95 group/btn">
                     <PhoneIcon className="w-5 h-5 text-current" />
                  </button>
-                 <button onClick={() => openInstagram(lead)} className="col-span-1 bg-[#0f0f0f] hover:bg-pink-600 text-white/30 hover:text-white py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95 group/btn">
-                    <InstagramIcon className="w-5 h-5 text-current" />
+                 <button onClick={() => openInstagram(lead)} disabled={loadingInstagramId === lead.id} className="col-span-1 bg-[#0f0f0f] hover:bg-pink-600 text-white/30 hover:text-white py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95 group/btn disabled:opacity-50 disabled:cursor-not-allowed">
+                    {loadingInstagramId === lead.id ? <SpinnerIcon className="w-5 h-5 animate-spin text-pink-500" /> : <InstagramIcon className="w-5 h-5 text-current" />}
                  </button>
                  <button onClick={() => handleOpenLead(lead)} className="col-span-1 bg-[#0f0f0f] hover:bg-white text-white/30 hover:text-black py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95 group/btn">
                     <ZapIcon className="w-5 h-5 text-current" />
@@ -1128,7 +1179,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                     <div className="p-4 md:p-6 border-b border-white/5 bg-[#050505]/95 backdrop-blur z-10 shrink-0">
                         <div className="max-w-7xl mx-auto w-full">
                             <div className="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                                <h1 className="text-2xl md:text-3xl font-black uppercase italic tracking-tighter text-white">Busca <span className="text-red-600">Deep Dive</span></h1>
+                                <div className="flex flex-col gap-2">
+                                    <h1 className="text-2xl md:text-3xl font-black uppercase italic tracking-tighter text-white">Busca <span className="text-red-600">Deep Dive</span></h1>
+                                    
+                                    {/* Toggle Switch */}
+                                    <div className="flex items-center gap-3 bg-white/5 px-3 py-1.5 rounded-full border border-white/10 w-fit">
+                                        <span className="text-[9px] font-mono uppercase tracking-widest text-white/60">Auto Countdown</span>
+                                        <button 
+                                            onClick={() => setAutoCountdown(!autoCountdown)}
+                                            className={`w-10 h-5 rounded-full relative transition-colors duration-300 ${autoCountdown ? 'bg-green-500' : 'bg-white/10'}`}
+                                        >
+                                            <div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-all duration-300 ${autoCountdown ? 'left-6' : 'left-1'}`}></div>
+                                        </button>
+                                        {countdownTimer > 0 && <span className="text-[9px] font-mono font-bold text-red-500 animate-pulse">{countdownTimer}s</span>}
+                                    </div>
+                                </div>
                                 <ModeSelector />
                             </div>
                             

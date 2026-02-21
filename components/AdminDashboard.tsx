@@ -803,6 +803,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       return () => clearInterval(interval);
   }, [firstContactTime]);
 
+  const [isNicheLoading, setIsNicheLoading] = useState(false);
+
   const generateRandomNiche = () => {
       const availableNiches = NICHES.filter(n => !exhaustedSearches.has(`${n.toLowerCase()}-${location.toLowerCase()}`));
       if (availableNiches.length === 0) return null;
@@ -810,12 +812,57 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       return availableNiches[randomIndex];
   };
 
-  const handleGenerateNiche = () => {
-      const niche = generateRandomNiche();
-      if (niche) {
-          setSearchTerm(niche);
-      } else {
-          alert("Todos os nichos disponíveis já foram explorados para esta localização!");
+  const handleGenerateNiche = async () => {
+      setIsNicheLoading(true);
+      
+      try {
+          // Tenta usar IA primeiro
+          const prompt = `
+            ATUE COMO: Estrategista de Vendas B2B.
+            CONTEXTO: Eu vendo Sites, Tráfego Pago e Software para empresas locais.
+            LOCALIZAÇÃO ALVO: ${location || "Brasil (Geral)"}
+            
+            TAREFA: Sugira UM ÚNICO nicho de mercado (ex: "Clínica de Estética", "Energia Solar", "Advocacia Trabalhista") que:
+            1. Tenha alto ticket ou alto volume (bom para pagar meus serviços).
+            2. Seja abundante nesta região específica (${location}).
+            3. Tenha dor latente por digitalização.
+            
+            IMPORTANTE:
+            - Retorne APENAS o nome do nicho. Nada mais.
+            - Não use pontuação final.
+            - Seja específico (ex: prefira "Implantes Dentários" a "Dentista").
+          `;
+
+          const response = await fetch('/api/gemini', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  contents: { parts: [{ text: prompt }] },
+                  model: 'gemini-3-flash-preview',
+                  config: { responseMimeType: 'text/plain' }
+              })
+          });
+
+          const data = await response.json();
+          
+          if (data.text) {
+              const aiNiche = data.text.trim().replace(/\.$/, '');
+              setSearchTerm(aiNiche);
+          } else {
+              throw new Error("No text from AI");
+          }
+
+      } catch (error) {
+          console.error("Erro ao gerar nicho com IA, usando fallback:", error);
+          // Fallback para lista estática
+          const niche = generateRandomNiche();
+          if (niche) {
+              setSearchTerm(niche);
+          } else {
+              alert("Todos os nichos disponíveis já foram explorados para esta localização!");
+          }
+      } finally {
+          setIsNicheLoading(false);
       }
   };
 
@@ -1519,8 +1566,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                                     <label className="text-[9px] font-black text-red-600 uppercase tracking-widest ml-1">Nicho</label>
                                     <div className="flex gap-2">
                                         <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 md:py-4 text-white focus:border-red-600 outline-none text-sm md:text-base font-bold transition-all placeholder-white/20" placeholder="Ex: Estética" />
-                                        <button type="button" onClick={handleGenerateNiche} className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl px-3 flex items-center justify-center text-white/50 hover:text-white transition-colors" title="Gerar Nicho Aleatório">
-                                            <BrainIcon className="w-5 h-5" />
+                                        <button type="button" onClick={handleGenerateNiche} disabled={isNicheLoading} className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl px-3 flex items-center justify-center text-white/50 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Gerar Nicho com IA">
+                                            {isNicheLoading ? <SpinnerIcon className="w-5 h-5 animate-spin" /> : <BrainIcon className="w-5 h-5" />}
                                         </button>
                                     </div>
                                 </div>

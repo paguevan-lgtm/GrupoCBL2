@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import HeroSection from './components/HeroSection';
 import AboutSection from './components/AboutSection';
+import MissionVisionValuesSection from './components/MissionVisionValuesSection';
 import ServicesSection from './components/ServicesSection';
 import DifferentiatorsSection from './components/DifferentiatorsSection';
 import CtaSection from './components/CtaSection';
@@ -84,6 +85,7 @@ const App: React.FC = () => {
           startAnimation={!showIntro} 
         />
         <AboutSection />
+        <MissionVisionValuesSection />
         <ServicesSection />
         <DifferentiatorsSection />
         <CtaSection onOpenModal={() => setIsModalOpen(true)} />

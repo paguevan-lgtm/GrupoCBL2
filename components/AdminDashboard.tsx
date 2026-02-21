@@ -39,6 +39,9 @@ interface Lead {
   viewedAt?: string;
   ai_analysis?: string;
   geometry?: { location: { lat: number; lng: number } };
+  source?: 'google_maps' | 'web_hunter';
+  ai_snippet?: string;
+  vibe?: string;
 }
 
 // Interface para Dados de Estratégia Avançada (Raio-X)
@@ -112,6 +115,59 @@ const getScoreDetails = (lead: Lead, mode: SearchMode) => {
 
     return reasons;
 };
+
+// --- SNIPER MODES CONFIG ---
+const SNIPER_MODES = [
+    {
+        id: 'gold_mine',
+        label: 'Ouro Escondido',
+        description: 'Alta Reputação + Sem Site',
+        color: 'yellow',
+        icon: '👑',
+        apply: (setSearchTerm: any, setMinScore: any, setSearchMode: any) => {
+            setSearchTerm('Restaurante'); // Exemplo padrão
+            setMinScore(60);
+            setSearchMode('standard');
+        }
+    },
+    {
+        id: 'crisis_mgmt',
+        label: 'Gigante Ferido',
+        description: 'Muito Movimento + Nota Baixa',
+        color: 'red',
+        icon: '🚑',
+        apply: (setSearchTerm: any, setMinScore: any, setSearchMode: any) => {
+            setSearchTerm('Bar');
+            setMinScore(40);
+            setSearchMode('crisis');
+        }
+    },
+    {
+        id: 'high_ticket',
+        label: 'High Ticket',
+        description: 'Público Rico + Site Ruim',
+        color: 'emerald',
+        icon: '💎',
+        apply: (setSearchTerm: any, setMinScore: any, setSearchMode: any) => {
+            setSearchTerm('Clínica Estética');
+            setMinScore(50);
+            setSearchMode('whale');
+        }
+    },
+    {
+        id: 'blue_ocean',
+        label: 'Oceano Azul',
+        description: 'Web Hunter (Fora do Maps)',
+        color: 'blue',
+        icon: '🌐',
+        apply: (setSearchTerm: any, setMinScore: any, setSearchMode: any, setUseWebHunter: any) => {
+            setSearchTerm('Startups');
+            setMinScore(0);
+            setSearchMode('standard');
+            setUseWebHunter(true);
+        }
+    }
+];
 
 // --- COMPONENTE: MARKETING COMMAND ---
 const MarketingCommand = () => {
@@ -689,7 +745,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [location, setLocation] = useState('');
   const [minScore, setMinScore] = useState(0); 
-  
+  const [activeSniper, setActiveSniper] = useState<string | null>(null);
+  const [useWebHunter, setUseWebHunter] = useState(false);
+
   // Detecta se é a mesma busca para usar paginação
   const [lastSearchTerm, setLastSearchTerm] = useState('');
   const [lastLocation, setLastLocation] = useState('');
@@ -795,55 +853,97 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     setLastSearchTerm(searchTerm);
     setLastLocation(location);
 
-    let queryPrefix = "";
-    if (searchMode === 'whale') queryPrefix = "Luxury High End ";
-    
-    const fullQuery = `${queryPrefix}${searchTerm} in ${location}`;
-
     try {
-      const response = await fetch('/api/places', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-            query: fullQuery,
-            pagetoken: token
-        }),
-      });
+      let processedLeads: Lead[] = [];
+      let nextToken = null;
 
-      if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.details || errorData.error || `Erro HTTP ${response.status}`);
+      if (useWebHunter && !token) {
+          // --- WEB HUNTER MODE (AI SEARCH) ---
+          const response = await fetch('/api/web-hunter', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ query: searchTerm, location: location })
+          });
+          
+          if (!response.ok) throw new Error("Erro no Web Hunter");
+          const data = await response.json();
+          
+          processedLeads = data.results.map((item: any) => {
+              const siteStatus = classifySite(item.website);
+              // Web leads start with a base score, adjusted by vibe if possible
+              let score = 60; 
+              if (siteStatus === 'sem_site') score += 20;
+              return {
+                  id: item.place_id,
+                  place_id: item.place_id,
+                  name: item.name,
+                  address: item.formatted_address,
+                  rating: 0,
+                  user_ratings_total: 0,
+                  website: item.website,
+                  phone: item.formatted_phone_number,
+                  lead_score: score,
+                  status_site: siteStatus,
+                  types: item.types,
+                  business_status: 'OPERATIONAL',
+                  source: 'web_hunter',
+                  ai_snippet: item.ai_snippet,
+                  vibe: item.vibe
+              };
+          });
+
+      } else {
+          // --- STANDARD GOOGLE MAPS MODE ---
+          let queryPrefix = "";
+          if (searchMode === 'whale') queryPrefix = "Luxury High End ";
+          const fullQuery = `${queryPrefix}${searchTerm} in ${location}`;
+
+          const response = await fetch('/api/places', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                query: fullQuery,
+                pagetoken: token
+            }),
+          });
+
+          if (!response.ok) {
+              const errorData = await response.json().catch(() => ({}));
+              throw new Error(errorData.details || errorData.error || `Erro HTTP ${response.status}`);
+          }
+
+          const data = await response.json();
+          const rawResults = data.results || [];
+          nextToken = data.next_page_token || null;
+
+          processedLeads = rawResults.map((place: any) => {
+              const siteStatus = classifySite(place.website);
+              const score = calculateLeadScore(place, siteStatus, searchMode);
+              return {
+                  id: place.place_id,
+                  place_id: place.place_id,
+                  name: place.name,
+                  address: place.formatted_address,
+                  rating: place.rating || 0,
+                  user_ratings_total: place.user_ratings_total || 0,
+                  website: place.website,
+                  url: place.url,
+                  phone: place.formatted_phone_number,
+                  international_phone: place.international_phone_number,
+                  lead_score: score,
+                  status_site: siteStatus,
+                  types: place.types || [],
+                  price_level: place.price_level,
+                  business_status: place.business_status,
+                  opening_hours: place.opening_hours,
+                  photos: place.photos,
+                  geometry: place.geometry,
+                  source: 'google_maps'
+              };
+          });
       }
 
-      const data = await response.json();
-      const rawResults = data.results || [];
-      
-      setNextPageToken(data.next_page_token || null);
-
-      let processedLeads: Lead[] = rawResults.map((place: any) => {
-          const siteStatus = classifySite(place.website);
-          const score = calculateLeadScore(place, siteStatus, searchMode);
-          return {
-              id: place.place_id,
-              place_id: place.place_id,
-              name: place.name,
-              address: place.formatted_address,
-              rating: place.rating || 0,
-              user_ratings_total: place.user_ratings_total || 0,
-              website: place.website,
-              url: place.url,
-              phone: place.formatted_phone_number,
-              international_phone: place.international_phone_number,
-              lead_score: score,
-              status_site: siteStatus,
-              types: place.types || [],
-              price_level: place.price_level,
-              business_status: place.business_status,
-              opening_hours: place.opening_hours,
-              photos: place.photos,
-              geometry: place.geometry, // Captura da geometria para o mapa
-          };
-      });
+      setNextPageToken(nextToken);
 
       // --- CRITÉRIOS DE FILTRAGEM AVANÇADA ---
       processedLeads = processedLeads.filter((lead: Lead) => {
@@ -1035,6 +1135,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       const isLowScore = lead.lead_score < 40;
       const isBlocked = countdownTimer > 0 && !isArchived && !isExcluded;
       
+      const handleSniperClick = (mode: any) => {
+          if (activeSniper === mode.id) {
+              setActiveSniper(null);
+              setSearchTerm('');
+              setMinScore(0);
+              setSearchMode('standard');
+              setUseWebHunter(false);
+          } else {
+              setActiveSniper(mode.id);
+              mode.apply(setSearchTerm, setMinScore, setSearchMode, setUseWebHunter);
+          }
+      };
+
       return (
         <div className={`
             bg-[#0f0f0f] border rounded-3xl flex flex-col justify-between h-full group transition-all duration-300 relative overflow-hidden shadow-2xl mb-4 md:mb-0
@@ -1069,11 +1182,27 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                      )}
 
                      {/* Badges de Topo */}
-                     <div className="absolute top-3 left-3 flex gap-2 z-20">
-                         {lead.opening_hours?.open_now 
-                            ? <span className="bg-green-500/90 text-black text-[9px] font-mono font-black px-2 py-1 rounded backdrop-blur-md uppercase tracking-wider">Aberto</span> 
-                            : <span className="bg-red-600/90 text-white text-[9px] font-mono font-black px-2 py-1 rounded backdrop-blur-md uppercase tracking-wider">Fechado</span>
-                         }
+                     <div className="absolute top-3 left-3 flex flex-col gap-2 z-20 items-start">
+                         {lead.source === 'web_hunter' ? (
+                             <span className="bg-blue-600/90 text-white text-[9px] font-mono font-black px-2 py-1 rounded backdrop-blur-md uppercase tracking-wider flex items-center gap-1">
+                                 🌐 WEB HUNTER
+                             </span>
+                         ) : (
+                             lead.opening_hours?.open_now 
+                                ? <span className="bg-green-500/90 text-black text-[9px] font-mono font-black px-2 py-1 rounded backdrop-blur-md uppercase tracking-wider">Aberto</span> 
+                                : <span className="bg-red-600/90 text-white text-[9px] font-mono font-black px-2 py-1 rounded backdrop-blur-md uppercase tracking-wider">Fechado</span>
+                         )}
+                         
+                         {/* SALES TRIGGER BADGES (Gatilhos Mentais) */}
+                         {lead.status_site === 'sem_site' && lead.rating > 4.0 && (
+                             <span className="bg-yellow-500 text-black text-[9px] font-black px-2 py-1 rounded uppercase tracking-wider shadow-lg animate-pulse">👑 Ouro Escondido</span>
+                         )}
+                         {lead.rating < 4.0 && lead.user_ratings_total > 50 && (
+                             <span className="bg-red-600 text-white text-[9px] font-black px-2 py-1 rounded uppercase tracking-wider shadow-lg">🚑 Socorro</span>
+                         )}
+                         {(lead.price_level || 0) >= 3 && (lead.status_site === 'sem_site' || lead.status_site === 'site_basico') && (
+                             <span className="bg-emerald-500 text-white text-[9px] font-black px-2 py-1 rounded uppercase tracking-wider shadow-lg">💎 High Ticket</span>
+                         )}
                      </div>
 
                      {/* Score Ring Visual */}
@@ -1193,23 +1322,49 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                 <div className="flex-1 flex flex-col h-full overflow-y-auto md:overflow-hidden custom-scrollbar md:custom-scrollbar-none">
                     <div className="p-4 md:p-6 border-b border-white/5 bg-[#050505]/95 backdrop-blur z-10 shrink-0">
                         <div className="max-w-7xl mx-auto w-full">
-                            <div className="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                                <div className="flex flex-col gap-2">
-                                    <h1 className="text-2xl md:text-3xl font-black uppercase italic tracking-tighter text-white">Busca <span className="text-red-600">Deep Dive</span></h1>
-                                    
-                                    {/* Toggle Switch */}
-                                    <div className="flex items-center gap-3 bg-white/5 px-3 py-1.5 rounded-full border border-white/10 w-fit">
-                                        <span className="text-[9px] font-mono uppercase tracking-widest text-white/60">Auto Countdown</span>
-                                        <button 
-                                            onClick={() => setAutoCountdown(!autoCountdown)}
-                                            className={`w-10 h-5 rounded-full relative transition-colors duration-300 ${autoCountdown ? 'bg-green-500' : 'bg-white/10'}`}
-                                        >
-                                            <div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-all duration-300 ${autoCountdown ? 'left-6' : 'left-1'}`}></div>
-                                        </button>
-                                        {countdownTimer > 0 && <span className="text-[9px] font-mono font-bold text-red-500 animate-pulse">{countdownTimer}s</span>}
+                            <div className="mb-4 flex flex-col gap-4">
+                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                    <div className="flex flex-col gap-2">
+                                        <h1 className="text-2xl md:text-3xl font-black uppercase italic tracking-tighter text-white">Busca <span className="text-red-600">Deep Dive</span></h1>
+                                        
+                                        {/* Toggle Switch */}
+                                        <div className="flex items-center gap-3 bg-white/5 px-3 py-1.5 rounded-full border border-white/10 w-fit">
+                                            <span className="text-[9px] font-mono uppercase tracking-widest text-white/60">Auto Countdown</span>
+                                            <button 
+                                                onClick={() => setAutoCountdown(!autoCountdown)}
+                                                className={`w-10 h-5 rounded-full relative transition-colors duration-300 ${autoCountdown ? 'bg-green-500' : 'bg-white/10'}`}
+                                            >
+                                                <div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-all duration-300 ${autoCountdown ? 'left-6' : 'left-1'}`}></div>
+                                            </button>
+                                            {countdownTimer > 0 && <span className="text-[9px] font-mono font-bold text-red-500 animate-pulse">{countdownTimer}s</span>}
+                                        </div>
                                     </div>
+                                    <ModeSelector />
                                 </div>
-                                <ModeSelector />
+
+                                {/* SNIPER MODES BAR */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    {SNIPER_MODES.map((mode) => (
+                                        <button
+                                            key={mode.id}
+                                            onClick={() => handleSniperClick(mode)}
+                                            className={`
+                                                relative overflow-hidden rounded-2xl p-4 border transition-all duration-300 text-left group
+                                                ${activeSniper === mode.id 
+                                                    ? `bg-${mode.color}-500/10 border-${mode.color}-500 ring-1 ring-${mode.color}-500` 
+                                                    : 'bg-[#0f0f0f] border-white/5 hover:border-white/20 hover:bg-white/5'
+                                                }
+                                            `}
+                                        >
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="text-2xl">{mode.icon}</span>
+                                                {activeSniper === mode.id && <div className={`w-2 h-2 rounded-full bg-${mode.color}-500 animate-pulse`}></div>}
+                                            </div>
+                                            <h3 className={`text-sm font-black uppercase tracking-wider ${activeSniper === mode.id ? 'text-white' : 'text-white/80'}`}>{mode.label}</h3>
+                                            <p className="text-[10px] text-white/40 font-mono mt-1">{mode.description}</p>
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                             
                             <form onSubmit={handleSearchButton} className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 items-end bg-[#0A0A0A] p-4 md:p-5 rounded-3xl border border-white/10 relative overflow-hidden group">

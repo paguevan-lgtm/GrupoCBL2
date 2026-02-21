@@ -95,6 +95,69 @@ interface AdsStrategy {
 type SearchMode = 'standard' | 'whale' | 'crisis' | 'ghost';
 
 // --- FUNÇÕES UTILITÁRIAS ---
+const generateScript = async (lead: Lead) => {
+    // --- CÁLCULO DA SAUDAÇÃO TEMPORAL ---
+    const currentHour = new Date().getHours();
+    let timeGreeting = "Olá";
+    if (currentHour >= 5 && currentHour < 12) timeGreeting = "Bom dia";
+    else if (currentHour >= 12 && currentHour < 18) timeGreeting = "Boa tarde";
+    else timeGreeting = "Boa noite";
+
+    try {
+        const prompt = `
+            ATUE COMO: Especialista em Vendas e Posicionamento Digital (Humano, Casual, Brasileiro).
+            OBJETIVO: Enviar uma mensagem de WhatsApp para o dono da "${lead.name}" para conseguir uma reunião.
+            
+            DADOS DO LEAD:
+            - Nicho: ${lead.types?.[0] || 'Comércio'} (Isso define o TOM de voz)
+            - Nota: ${lead.rating}
+            - Site: ${lead.website || 'Sem site'}
+            - Nome da Empresa: ${lead.name}
+            
+            REGRA 1: ADAPTAÇÃO TOTAL AO NICHO (TOM DE VOZ):
+            - Se for FEMININO/ESTÉTICA (Salão, Spa, Moda, Clínica, Loja de Roupas): Use um tom elegante, leve, empático. Use emojis sutis (✨, 🌷). Fale sobre "Imagem", "Experiência", "Valorização".
+            - Se for MASCULINO/TÉCNICO (Oficina, Obras, Carros, Indústria): Use um tom direto, prático, "de homem pra homem". Fale sobre "Grana na mesa", "Demanda", "Oportunidade".
+            - Se for SAÚDE/FORMAL (Advogado, Médico, Dentista): Use um tom profissional, respeitoso, mas firme. Fale sobre "Autoridade", "Captação qualificada".
+            - Se for ALIMENTAÇÃO/GERAL (Restaurante, Mercado): Tom casual e vizinho.
+
+            REGRA 2: ESTRUTURA OBRIGATÓRIA DA MENSAGEM:
+            Parte A: SAUDAÇÃO OBRIGATÓRIA. Comece a frase com "${timeGreeting}".
+            Parte B: GANCHO (Quebra de Padrão). Comente algo específico (falta de site, nota google, ou elogio sincero sobre a estrutura/avaliações).
+            Parte C (FINALIZAÇÃO MANDATÓRIA): Você DEVE dizer que é especialista no assunto e perguntar quem é a pessoa do marketing para conversar se tem um tempo.
+            
+            EXEMPLOS DE FINALIZAÇÃO (Adapte o tom, mas mantenha a essência):
+            - "Sou especialista em posicionamento pra estética. Quem cuida do marketing de vocês? Tem um tempinho pra conversar?"
+            - "Trabalho só com alavancagem de oficinas. Quem toca o marketing aí? Consegue falar rapidinho?"
+            - "Sou especialista nessa área. Quem cuida dessa parte do marketing aí? Tem um tempo pra gente falar?"
+            
+            REGRAS GERAIS:
+            - Texto CURTO (max 3 frases).
+            - Zero "Prezados" ou formalidades de e-mail.
+            - IMPORTANTE: Use apenas emojis padrão Unicode (ex: 🚀, 💰, 🤝). NÃO use códigos de escape ou emojis proprietários.
+            
+            Gere APENAS o texto da mensagem.
+        `;
+
+        const response = await fetch('/api/gemini', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: { parts: [{ text: prompt }] },
+                model: 'gemini-3-flash-preview',
+                config: { responseMimeType: 'text/plain' }
+            })
+        });
+
+        const data = await response.json();
+        if (data.text) return data.text.trim();
+        
+        throw new Error("No text generated");
+    } catch (error) {
+        console.error("Erro script IA:", error);
+        return `${timeGreeting}, tudo bem? Vi a ${lead.name} aqui no Google e vi uma oportunidade de melhorar o posicionamento. Sou especialista nessa área. Quem cuida do marketing de vocês? Tem um tempinho pra conversar?`;
+    }
+};
+
 const getScoreDetails = (lead: Lead, mode: SearchMode) => {
     const reasons = [];
     reasons.push({ label: "Base Score", points: 50, color: "text-white" });
@@ -358,61 +421,8 @@ const LeadStrategyModal = ({
             // ------------------------------------
 
             try {
-                // PROMPT DE ALTA CONVERSÃO - CAMALEÃO DE NICHO + CTA OBRIGATÓRIO
-                const prompt = `
-                    ATUE COMO: Especialista em Vendas e Posicionamento Digital (Humano, Casual, Brasileiro).
-                    OBJETIVO: Enviar uma mensagem de WhatsApp para o dono da "${lead.name}" para conseguir uma reunião.
-                    
-                    DADOS DO LEAD:
-                    - Nicho: ${lead.types?.[0] || 'Comércio'} (Isso define o TOM de voz)
-                    - Nota: ${lead.rating}
-                    - Site: ${lead.website || 'Sem site'}
-                    - Nome da Empresa: ${lead.name}
-                    
-                    REGRA 1: ADAPTAÇÃO TOTAL AO NICHO (TOM DE VOZ):
-                    - Se for FEMININO/ESTÉTICA (Salão, Spa, Moda, Clínica, Loja de Roupas): Use um tom elegante, leve, empático. Use emojis sutis (✨, 🌷). Fale sobre "Imagem", "Experiência", "Valorização".
-                    - Se for MASCULINO/TÉCNICO (Oficina, Obras, Carros, Indústria): Use um tom direto, prático, "de homem pra homem". Fale sobre "Grana na mesa", "Demanda", "Oportunidade".
-                    - Se for SAÚDE/FORMAL (Advogado, Médico, Dentista): Use um tom profissional, respeitoso, mas firme. Fale sobre "Autoridade", "Captação qualificada".
-                    - Se for ALIMENTAÇÃO/GERAL (Restaurante, Mercado): Tom casual e vizinho.
-
-                    REGRA 2: ESTRUTURA OBRIGATÓRIA DA MENSAGEM:
-                    Parte A: SAUDAÇÃO OBRIGATÓRIA. Comece a frase com "${timeGreeting}".
-                    Parte B: GANCHO (Quebra de Padrão). Comente algo específico (falta de site, nota google, ou elogio sincero sobre a estrutura/avaliações).
-                    Parte C (FINALIZAÇÃO MANDATÓRIA): Você DEVE dizer que é especialista no assunto e perguntar quem é a pessoa do marketing para conversar se tem um tempo.
-                    
-                    EXEMPLOS DE FINALIZAÇÃO (Adapte o tom, mas mantenha a essência):
-                    - "Sou especialista em posicionamento pra estética. Quem cuida do marketing de vocês? Tem um tempinho pra conversar?"
-                    - "Trabalho só com alavancagem de oficinas. Quem toca o marketing aí? Consegue falar rapidinho?"
-                    - "Sou especialista nessa área. Quem cuida dessa parte do marketing aí? Tem um tempo pra gente falar?"
-                    
-                    REGRAS GERAIS:
-                    - Texto CURTO (max 3 frases).
-                    - Zero "Prezados" ou formalidades de e-mail.
-                    - IMPORTANTE: Use apenas emojis padrão Unicode (ex: 🚀, 💰, 🤝). NÃO use códigos de escape ou emojis proprietários.
-                    
-                    Gere APENAS o texto da mensagem.
-                `;
-
-                const response = await fetch('/api/gemini', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: { parts: [{ text: prompt }] },
-                        model: 'gemini-3-flash-preview',
-                        config: { responseMimeType: 'text/plain' }
-                    })
-                });
-
-                const data = await response.json();
-                
-                if (isMounted) {
-                    if (data.text) {
-                        setGeneratedScript(data.text.trim());
-                    } else {
-                        // Fallback genérico com a estrutura obrigatória
-                        setGeneratedScript(`${timeGreeting}, tudo bem? Vi a ${lead.name} aqui no Google e vi uma oportunidade de melhorar o posicionamento. Sou especialista nessa área. Quem cuida do marketing de vocês? Tem um tempinho pra conversar?`);
-                    }
-                }
+                const script = await generateScript(lead);
+                if (isMounted) setGeneratedScript(script);
             } catch (error) {
                 console.error("Erro script IA:", error);
                 if (isMounted) setGeneratedScript(`${timeGreeting}, tudo bem? Vi a ${lead.name} aqui. Sou especialista em digital. Quem cuida do marketing de vocês? Tem um tempinho pra conversar?`);
@@ -693,6 +703,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [location, setLocation] = useState('');
   const [minScore, setMinScore] = useState(0); 
   const [useWebHunter, setUseWebHunter] = useState(false);
+  
+  // Automation State
+  const [isAutoMode, setIsAutoMode] = useState(false);
+  const [isProcessingAuto, setIsProcessingAuto] = useState(false);
 
   // Detecta se é a mesma busca para usar paginação
   const [lastSearchTerm, setLastSearchTerm] = useState('');
@@ -754,6 +768,49 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     }
     return () => clearInterval(interval);
   }, [countdownTimer]);
+
+  // --- AUTOMATION LOOP ---
+  useEffect(() => {
+      if (!isAutoMode || leads.length === 0 || countdownTimer > 0 || isProcessingAuto) return;
+
+      const processNextLead = async () => {
+          setIsProcessingAuto(true);
+          const currentLead = leads[0]; // Always process the first one as they get removed
+
+          try {
+              // Check phone validity first to avoid alerts in openWhatsApp
+              const rawPhone = currentLead.international_phone || currentLead.phone;
+              
+              if (rawPhone) {
+                  // 1. Generate Script
+                  const script = await generateScript(currentLead);
+
+                  // 2. Open WhatsApp (this might set countdown if enabled)
+                  openWhatsApp(currentLead, script);
+              } else {
+                  console.log(`[Auto Mode] Skipping ${currentLead.name} - No Phone`);
+              }
+
+              // 3. Mark as Contacted (removes from list)
+              // Small delay to ensure UI updates and browser handles the popup
+              setTimeout(() => {
+                  markAsContacted(currentLead);
+                  setIsProcessingAuto(false);
+                  
+                  // If autoCountdown is NOT on, force a small safety delay anyway
+                  if (!autoCountdown) {
+                      setCountdownTimer(5);
+                  }
+              }, 2000);
+
+          } catch (error) {
+              console.error("Auto Process Error:", error);
+              setIsProcessingAuto(false);
+          }
+      };
+
+      processNextLead();
+  }, [isAutoMode, leads, countdownTimer, isProcessingAuto, autoCountdown]);
 
   const classifySite = (url?: string): 'com_site' | 'sem_site' | 'site_basico' => {
       if (!url) return 'sem_site';
@@ -1275,6 +1332,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                                         <h1 className="text-2xl md:text-3xl font-black uppercase italic tracking-tighter text-white">Busca <span className="text-red-600">Deep Dive</span></h1>
                                         
                                         <div className="flex flex-wrap gap-3">
+                                            {/* Auto Mode Toggle */}
+                                            <div className="flex items-center gap-3 bg-white/5 px-3 py-1.5 rounded-full border border-white/10 w-fit">
+                                                <span className="text-[10px] font-mono uppercase tracking-widest text-white/60">Modo Automático</span>
+                                                <button 
+                                                    onClick={() => setIsAutoMode(!isAutoMode)}
+                                                    className={`w-10 h-5 rounded-full relative transition-colors duration-300 ${isAutoMode ? 'bg-purple-500' : 'bg-white/10'}`}
+                                                >
+                                                    <div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-all duration-300 ${isAutoMode ? 'left-6' : 'left-1'}`}></div>
+                                                </button>
+                                                {isAutoMode && <span className="text-[10px] font-mono font-bold text-purple-500 animate-pulse">ON</span>}
+                                            </div>
+
                                             {/* Toggle Switch */}
                                             <div className="flex items-center gap-3 bg-white/5 px-3 py-1.5 rounded-full border border-white/10 w-fit">
                                                 <span className="text-[10px] font-mono uppercase tracking-widest text-white/60">Auto Countdown</span>

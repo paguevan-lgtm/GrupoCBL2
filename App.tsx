@@ -17,12 +17,15 @@ import IntroAnimation from './components/IntroAnimation';
 import { Toast } from './components/Toast';
 import { ScrollProgress } from './components/ui/ScrollProgress';
 
+import InternalBrowser from './components/InternalBrowser';
+
 const App: React.FC = () => {
   // Estados do Site Público
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isImagineModalOpen, setIsImagineModalOpen] = useState(false);
   const [isNeuroModalOpen, setIsNeuroModalOpen] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
+  const [isBrowserOpen, setIsBrowserOpen] = useState(false);
   
   // Estados Administrativos
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
@@ -56,6 +59,23 @@ const App: React.FC = () => {
           />
         )}
         <AdminDashboard onLogout={() => setIsAdminLoggedIn(false)} />
+        <InternalBrowser isOpen={isBrowserOpen} onClose={() => setIsBrowserOpen(false)} />
+        
+        {/* Floating Toggle for Browser when Admin is logged in */}
+        {!isBrowserOpen && (
+            <button 
+                onClick={() => setIsBrowserOpen(true)}
+                className="fixed bottom-4 right-4 z-50 bg-[#0A0A0A] border border-white/10 text-white p-3 rounded-full shadow-2xl hover:bg-white/10 transition-all group"
+                title="Abrir Navegador Interno"
+            >
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-600 rounded-full animate-pulse"></div>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="2" y1="12" x2="22" y2="12"></line>
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                </svg>
+            </button>
+        )}
       </>
     );
   }

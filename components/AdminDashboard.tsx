@@ -1204,14 +1204,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       
       const message = customMessage || `Olá ${lead.name}, gostaria de falar sobre o marketing de vocês.`;
       const text = encodeURIComponent(message);
-      // Use api.whatsapp.com for better compatibility with emojis
-      window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${text}`, '_blank');
+      
+      const url = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${text}`;
+      
+      // Tenta abrir na janela dedicada do Navegador Interno
+      const win = window.open(url, 'cbl_whatsapp_window');
+      if (win) {
+          win.focus();
+      } else {
+          // Fallback
+          window.open(url, '_blank');
+      }
 
       if (autoCountdown) {
           // Random countdown between 60 and 120 seconds for safer automation
           const randomCountdown = Math.floor(Math.random() * (120 - 60 + 1)) + 60;
           setCountdownTimer(randomCountdown); 
       }
+      
+      // Marca como contatado
+      markAsContacted(lead);
   };
 
   const openInstagram = async (lead: Lead) => {

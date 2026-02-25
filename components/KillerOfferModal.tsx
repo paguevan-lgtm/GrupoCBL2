@@ -47,6 +47,10 @@ const KillerOfferModal: React.FC<KillerOfferModalProps> = ({ lead, onClose, onOp
             3. Defina um preço âncora (alto) e um preço de oferta (baixo/irresistível).
             4. Escreva um script de abordagem curto, direto e que toque na ferida.
             
+            IMPORTANTE:
+            - No script, cite explicitamente o bairro ou cidade do lead (${lead.address}) para gerar proximidade.
+            - Use gatilhos de urgência e escassez.
+            
             RETORNE APENAS JSON:
             {
                 "hook": "Uma frase curta que chame atenção imediata (ex: 'Vi que você está perdendo clientes por causa de X')",

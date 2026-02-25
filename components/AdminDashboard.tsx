@@ -1211,16 +1211,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       const message = customMessage || `Olá ${lead.name}, gostaria de falar sobre o marketing de vocês.`;
       const text = encodeURIComponent(message);
       
-      const url = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${text}`;
+      // Use api.whatsapp.com to allow opening the Desktop App
+      const url = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${text}`;
       
-      // Tenta abrir na janela dedicada do Navegador Interno
-      const win = window.open(url, 'cbl_whatsapp_window');
-      if (win) {
-          win.focus();
-      } else {
-          // Fallback
-          window.open(url, '_blank');
-      }
+      window.open(url, '_blank');
 
       if (autoCountdown) {
           // Random countdown between 60 and 120 seconds for safer automation

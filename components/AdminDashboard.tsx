@@ -12,6 +12,7 @@ import { BrainIcon } from './icons/BrainIcon';
 import { MegaphoneIcon } from './icons/MegaphoneIcon';
 import { MenuIcon } from './icons/MenuIcon';
 import { ArrowUpRightIcon } from './icons/ArrowUpRightIcon';
+import KillerOfferModal from './KillerOfferModal';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -759,6 +760,10 @@ const NICHES = [
     "Empréstimo", "Investimentos", "Câmbio", "Cartório", "Auto Escola"
 ];
 
+interface AdminDashboardProps {
+    onLogout: () => void;
+}
+
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState<'search' | 'contacted' | 'viewed' | 'excluded' | 'brainstorm' | 'marketing'>('search');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -794,6 +799,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [selectedKillerLead, setSelectedKillerLead] = useState<Lead | null>(null);
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   
   // Feedback
@@ -1484,7 +1490,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                  </div>
 
                  {/* Footer de Ações (Control Panel Style) */}
-                 <div className="grid grid-cols-5 gap-px bg-[#222] border-t border-white/5">
+                 <div className="grid grid-cols-6 gap-px bg-[#222] border-t border-white/5">
                      <button onClick={() => openWhatsApp(lead)} className="col-span-1 bg-[#0f0f0f] hover:bg-[#25D366] text-white/30 hover:text-black py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95 group/btn">
                         <PhoneIcon className="w-5 h-5 text-current" />
                      </button>
@@ -1495,6 +1501,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                         <ZapIcon className="w-5 h-5 text-current" />
                      </button>
                      
+                     {/* Botão Oferta Matadora */}
+                     <button onClick={() => setSelectedKillerLead(lead)} className="col-span-1 bg-[#0f0f0f] hover:bg-red-600 text-red-600 hover:text-white py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95 group/btn shadow-[inset_0_0_10px_rgba(220,38,38,0.1)] hover:shadow-[inset_0_0_20px_rgba(220,38,38,0.5)]">
+                        <TargetIcon className="w-5 h-5 text-current" />
+                     </button>
+
                      {/* Lógica de Botão de Check/Restaurar */}
                      {isArchived ? (
                          <button onClick={() => setContactedLeads(prev => prev.filter(l => l.id !== lead.id))} className="col-span-1 bg-[#0f0f0f] hover:bg-blue-600 text-blue-600 hover:text-white py-4 flex flex-col items-center justify-center transition-all h-14 active:scale-95">
@@ -1763,6 +1774,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       </main>
 
       {selectedLead && <LeadStrategyModal lead={selectedLead} onClose={() => setSelectedLead(null)} onOpenWhatsapp={(text) => openWhatsApp(selectedLead, text)} searchMode={searchMode} />}
+      
+      {selectedKillerLead && (
+          <KillerOfferModal 
+              lead={selectedKillerLead} 
+              onClose={() => setSelectedKillerLead(null)} 
+              onOpenWhatsapp={(text) => openWhatsApp(selectedKillerLead, text)} 
+          />
+      )}
     </div>
   );
 };

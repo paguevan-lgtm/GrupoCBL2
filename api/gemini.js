@@ -13,10 +13,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    const apiKey = process.env.API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
     
     if (!apiKey) {
-        throw new Error("API Key não configurada no servidor (process.env.API_KEY)");
+        throw new Error("API Key não configurada no servidor (process.env.GEMINI_API_KEY ou API_KEY)");
     }
     
     const ai = new GoogleGenAI({ apiKey: apiKey });

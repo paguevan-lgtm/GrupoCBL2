@@ -69,10 +69,16 @@ const KillerOfferModal: React.FC<KillerOfferModalProps> = ({ lead, onClose, onOp
             });
 
             const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.details || data.error || "Erro ao gerar estratégia");
+            }
+
             const cleanText = data.text.replace(/```json/g, '').replace(/```/g, '');
             setStrategy(JSON.parse(cleanText));
-        } catch (error) {
+        } catch (error: any) {
             console.error("Erro ao gerar oferta", error);
+            alert("Erro ao gerar oferta: " + error.message);
         } finally {
             setIsLoading(false);
         }

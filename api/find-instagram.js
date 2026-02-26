@@ -57,6 +57,12 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Error finding Instagram:', error);
-    return res.status(500).json({ error: 'Failed to search Instagram', details: error.message });
+    
+    let errorMessage = error.message;
+    if (errorMessage.includes("API key not valid")) {
+        errorMessage = "A chave da API do Gemini é inválida. Certifique-se de ter configurado a variável GEMINI_API_KEY corretamente na Vercel com uma chave do Google AI Studio.";
+    }
+    
+    return res.status(500).json({ error: 'Failed to search Instagram', details: errorMessage });
   }
 }

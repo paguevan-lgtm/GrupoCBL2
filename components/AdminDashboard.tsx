@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Logo } from './icons/Logo';
 import { SpinnerIcon } from './icons/SpinnerIcon';
 import { LocationIcon } from './icons/LocationIcon';
@@ -765,7 +766,16 @@ interface AdminDashboardProps {
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
-  const [activeTab, setActiveTab] = useState<'search' | 'contacted' | 'viewed' | 'excluded' | 'brainstorm' | 'marketing'>('search');
+  const routerLocation = useLocation();
+  const navigate = useNavigate();
+  
+  const pathParts = routerLocation.pathname.split('/');
+  const activeTab = pathParts[2] || 'search';
+
+  const setActiveTab = (tab: string) => {
+      navigate(`/dashboard/${tab}`);
+  };
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Search Configuration

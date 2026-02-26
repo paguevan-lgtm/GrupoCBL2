@@ -4,12 +4,10 @@ import TechGlobe from './TechGlobe';
 
 interface HeroSectionProps {
   onOpenModal: () => void;
-  onOpenImagineModal: () => void;
-  onOpenNeuroModal: () => void;
   startAnimation: boolean;
 }
 
-const HeroSection: React.FC<HeroSectionProps> = ({ onOpenModal, onOpenImagineModal, onOpenNeuroModal, startAnimation }) => {
+const HeroSection: React.FC<HeroSectionProps> = ({ onOpenModal, startAnimation }) => {
   const [animateText, setAnimateText] = useState(false);
 
   useEffect(() => {
@@ -23,16 +21,6 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onOpenModal, onOpenImagineMod
     e.preventDefault();
     onOpenModal();
   };
-
-  const handleOpenImagineModal = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    onOpenImagineModal();
-  };
-
-  const handleOpenNeuroModal = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault();
-    onOpenNeuroModal();
-  }
 
   return (
     <section 
@@ -134,40 +122,6 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onOpenModal, onOpenImagineMod
                 INICIAR PROJETO 
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
               </a>
-              <a href="#" onClick={handleOpenNeuroModal} className="w-full sm:w-auto bg-white/5 backdrop-blur-xl border border-white/10 text-white px-8 py-5 rounded-2xl font-black text-[11px] uppercase tracking-[0.3em] hover:bg-white hover:text-black transition-all active:scale-95 flex items-center justify-center gap-3 hover:shadow-lg hover:shadow-white/20 relative overflow-hidden">
-                <div className="absolute inset-0 bg-red-600/10 animate-pulse"></div>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-                <span className="relative z-10">Sales_Lab</span>
-              </a>
-            </div>
-            
-            {/* Command Prompt para Visualização */}
-            <div 
-              className={`mt-6 md:mt-4 transition-all duration-700 ease-out flex flex-col items-center gap-2 ${animateText ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
-              style={{ transitionDelay: '950ms' }}
-            >
-               {/* Linha Conectora mais curta */}
-               <div className="h-4 w-px bg-gradient-to-b from-white/10 to-transparent"></div>
-
-               <button 
-                 onClick={handleOpenImagineModal} 
-                 className="group relative flex items-center gap-4 pl-4 pr-6 py-2.5 rounded-full bg-[#0A0A0A] border border-white/10 hover:border-red-600/50 transition-all duration-500 hover:shadow-[0_0_30px_rgba(220,38,38,0.15)] active:scale-95"
-               >
-                  {/* Ícone Container */}
-                  <div className="relative flex items-center justify-center w-8 h-8 rounded-full bg-white/5 group-hover:bg-red-600 transition-colors duration-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  </div>
-
-                  <div className="flex flex-col items-start text-left">
-                    <span className="text-[8px] font-mono text-white/40 uppercase tracking-widest group-hover:text-red-500 transition-colors">Tem ideia visual?</span>
-                    <span className="text-[10px] md:text-xs font-black text-white uppercase tracking-[0.1em] md:tracking-[0.2em] group-hover:tracking-[0.15em] md:group-hover:tracking-[0.25em] transition-all">
-                       Visualize seu futuro site aqui
-                    </span>
-                  </div>
-               </button>
             </div>
           </div>
       </div>

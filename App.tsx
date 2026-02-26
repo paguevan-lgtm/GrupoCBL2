@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import Header from './components/Header';
 import HeroSection from './components/HeroSection';
 import AboutSection from './components/AboutSection';
@@ -9,79 +10,32 @@ import DifferentiatorsSection from './components/DifferentiatorsSection';
 import CtaSection from './components/CtaSection';
 import Footer from './components/Footer';
 import DiagnosticModal from './components/DiagnosticModal';
-import ImagineSiteModal from './components/ImagineSiteModal';
-import NeuroSalesModal from './components/NeuroSalesModal';
 import AdminLoginModal from './components/AdminLoginModal';
 import AdminDashboard from './components/AdminDashboard';
 import IntroAnimation from './components/IntroAnimation';
 import { Toast } from './components/Toast';
 import { ScrollProgress } from './components/ui/ScrollProgress';
 
-const App: React.FC = () => {
-  // Estados do Site Público
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isImagineModalOpen, setIsImagineModalOpen] = useState(false);
-  const [isNeuroModalOpen, setIsNeuroModalOpen] = useState(false);
-  const [showIntro, setShowIntro] = useState(true);
-  
-  // Estados Administrativos
-  const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
-  
-  // Toast State
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-
-  const showToast = (message: string, type: 'success' | 'error') => {
-    setToast({ message, type });
-  };
-
-  // Impede a rolagem durante a introdução E quando modais estão abertos
-  useEffect(() => {
-    if (showIntro || isModalOpen || isImagineModalOpen || isNeuroModalOpen || isAdminLoginOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-  }, [showIntro, isModalOpen, isImagineModalOpen, isNeuroModalOpen, isAdminLoginOpen]);
-
-  // Se o Admin estiver logado, renderiza APENAS o Dashboard (O site principal "some")
-  if (isAdminLoggedIn) {
-    return (
-      <>
-        {toast && (
-          <Toast 
-            message={toast.message} 
-            type={toast.type} 
-            onClose={() => setToast(null)} 
-          />
-        )}
-        <AdminDashboard onLogout={() => setIsAdminLoggedIn(false)} />
-      </>
-    );
-  }
-
-  // Renderização do Site Público
+const MainSite: React.FC<{
+  showIntro: boolean;
+  setShowIntro: (show: boolean) => void;
+  isModalOpen: boolean;
+  setIsModalOpen: (show: boolean) => void;
+  isAdminLoginOpen: boolean;
+  setIsAdminLoginOpen: (show: boolean) => void;
+  setIsAdminLoggedIn: (show: boolean) => void;
+  showToast: (msg: string, type: 'success' | 'error') => void;
+}> = ({ showIntro, setShowIntro, isModalOpen, setIsModalOpen, isAdminLoginOpen, setIsAdminLoginOpen, setIsAdminLoggedIn, showToast }) => {
+  const navigate = useNavigate();
   return (
     <div className="bg-[#1A1A1A] text-white antialiased selection:bg-red-600 selection:text-white">
-      {/* Componentes de UI Globais */}
       <ScrollProgress />
-      
       {showIntro && <IntroAnimation onFinished={() => setShowIntro(false)} />}
-      
-      {toast && (
-        <Toast 
-          message={toast.message} 
-          type={toast.type} 
-          onClose={() => setToast(null)} 
-        />
-      )}
       
       <Header onOpenModal={() => setIsModalOpen(true)} />
       <main>
         <HeroSection 
           onOpenModal={() => setIsModalOpen(true)} 
-          onOpenImagineModal={() => setIsImagineModalOpen(true)}
-          onOpenNeuroModal={() => setIsNeuroModalOpen(true)}
           startAnimation={!showIntro} 
         />
         <AboutSection />
@@ -91,7 +45,6 @@ const App: React.FC = () => {
         <CtaSection onOpenModal={() => setIsModalOpen(true)} />
       </main>
       
-      {/* Footer recebe a função para abrir o login admin */}
       <Footer onOpenAdmin={() => setIsAdminLoginOpen(true)} />
       
       <DiagnosticModal 
@@ -100,33 +53,78 @@ const App: React.FC = () => {
         onShowToast={showToast}
       />
       
-      <ImagineSiteModal 
-        isOpen={isImagineModalOpen} 
-        onClose={() => setIsImagineModalOpen(false)} 
-        onShowToast={showToast}
-      />
-
-      <NeuroSalesModal 
-        isOpen={isNeuroModalOpen}
-        onClose={() => setIsNeuroModalOpen(false)}
-        onOpenDiagnostic={() => {
-          setIsNeuroModalOpen(false);
-          setTimeout(() => setIsModalOpen(true), 300);
-        }}
-        onShowToast={showToast}
-      />
-
-      {/* Modal de Login Admin */}
       <AdminLoginModal 
         isOpen={isAdminLoginOpen}
         onClose={() => setIsAdminLoginOpen(false)}
         onLoginSuccess={() => {
             setIsAdminLoginOpen(false);
             setIsAdminLoggedIn(true);
+            localStorage.setItem('cbl_admin_logged_in', 'true');
+            navigate('/dashboard');
         }}
         onShowToast={showToast}
       />
     </div>
+  );
+};
+
+const App: React.FC = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showIntro, setShowIntro] = useState(true);
+  const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(() => {
+    return localStorage.getItem('cbl_admin_logged_in') === 'true';
+  });
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+  };
+
+  useEffect(() => {
+    if (showIntro || isModalOpen || isAdminLoginOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+  }, [showIntro, isModalOpen, isAdminLoginOpen]);
+
+  const handleLogout = () => {
+    setIsAdminLoggedIn(false);
+    localStorage.removeItem('cbl_admin_logged_in');
+  };
+
+  return (
+    <Router>
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
+      )}
+      <Routes>
+        <Route path="/" element={
+          <MainSite 
+            showIntro={showIntro} 
+            setShowIntro={setShowIntro}
+            isModalOpen={isModalOpen}
+            setIsModalOpen={setIsModalOpen}
+            isAdminLoginOpen={isAdminLoginOpen}
+            setIsAdminLoginOpen={setIsAdminLoginOpen}
+            setIsAdminLoggedIn={setIsAdminLoggedIn}
+            showToast={showToast}
+          />
+        } />
+        <Route path="/dashboard/*" element={
+          isAdminLoggedIn ? (
+            <AdminDashboard onLogout={handleLogout} />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        } />
+      </Routes>
+    </Router>
   );
 };
 

@@ -1,17 +1,25 @@
 
 export default async function handler(req, res) {
   const { ref } = req.query;
-  const apiKey = process.env.API_KEY; 
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.API_KEY; 
   
   if (!apiKey) {
     console.error("API Key missing");
-    return res.status(500).send('Server configuration error');
+    return res.status(500).send('Server configuration error: GOOGLE_MAPS_API_KEY missing');
   }
 
   if (!ref) return res.status(400).send('No reference provided');
 
   try {
-    const url = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${ref}&key=${apiKey}`;
+    let url = "";
+    // Check if it's the new API format (places/PLACE_ID/photos/PHOTO_REFERENCE)
+    if (typeof ref === 'string' && ref.startsWith('places/')) {
+        url = `https://places.googleapis.com/v1/${ref}/media?maxHeightPx=800&maxWidthPx=800&key=${apiKey}`;
+    } else {
+        // Fallback to legacy
+        url = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${ref}&key=${apiKey}`;
+    }
+    
     const response = await fetch(url);
     
     if (!response.ok) throw new Error('Failed to fetch image');

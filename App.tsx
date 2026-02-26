@@ -16,33 +16,23 @@ import IntroAnimation from './components/IntroAnimation';
 import { Toast } from './components/Toast';
 import { ScrollProgress } from './components/ui/ScrollProgress';
 
-const MainSite: React.FC<{
-  showIntro: boolean;
-  setShowIntro: (show: boolean) => void;
+const MainLayout: React.FC<{
   isModalOpen: boolean;
   setIsModalOpen: (show: boolean) => void;
   isAdminLoginOpen: boolean;
   setIsAdminLoginOpen: (show: boolean) => void;
   setIsAdminLoggedIn: (show: boolean) => void;
   showToast: (msg: string, type: 'success' | 'error') => void;
-}> = ({ showIntro, setShowIntro, isModalOpen, setIsModalOpen, isAdminLoginOpen, setIsAdminLoginOpen, setIsAdminLoggedIn, showToast }) => {
+  children: React.ReactNode;
+}> = ({ isModalOpen, setIsModalOpen, isAdminLoginOpen, setIsAdminLoginOpen, setIsAdminLoggedIn, showToast, children }) => {
   const navigate = useNavigate();
   return (
-    <div className="bg-[#1A1A1A] text-white antialiased selection:bg-red-600 selection:text-white">
+    <div className="bg-[#1A1A1A] text-white antialiased selection:bg-red-600 selection:text-white min-h-screen flex flex-col">
       <ScrollProgress />
-      {showIntro && <IntroAnimation onFinished={() => setShowIntro(false)} />}
-      
       <Header onOpenModal={() => setIsModalOpen(true)} />
-      <main>
-        <HeroSection 
-          onOpenModal={() => setIsModalOpen(true)} 
-          startAnimation={!showIntro} 
-        />
-        <AboutSection />
-        <MissionVisionValuesSection />
-        <ServicesSection />
-        <DifferentiatorsSection />
-        <CtaSection onOpenModal={() => setIsModalOpen(true)} />
+      
+      <main className="flex-grow pt-20 md:pt-24">
+        {children}
       </main>
       
       <Footer onOpenAdmin={() => setIsAdminLoginOpen(true)} />
@@ -103,18 +93,71 @@ const App: React.FC = () => {
           onClose={() => setToast(null)} 
         />
       )}
+      {showIntro && <IntroAnimation onFinished={() => setShowIntro(false)} />}
       <Routes>
         <Route path="/" element={
-          <MainSite 
-            showIntro={showIntro} 
-            setShowIntro={setShowIntro}
+          <MainLayout 
             isModalOpen={isModalOpen}
             setIsModalOpen={setIsModalOpen}
             isAdminLoginOpen={isAdminLoginOpen}
             setIsAdminLoginOpen={setIsAdminLoginOpen}
             setIsAdminLoggedIn={setIsAdminLoggedIn}
             showToast={showToast}
-          />
+          >
+            <HeroSection 
+              onOpenModal={() => setIsModalOpen(true)} 
+              startAnimation={!showIntro} 
+            />
+          </MainLayout>
+        } />
+        <Route path="/quem-somos" element={
+          <MainLayout 
+            isModalOpen={isModalOpen}
+            setIsModalOpen={setIsModalOpen}
+            isAdminLoginOpen={isAdminLoginOpen}
+            setIsAdminLoginOpen={setIsAdminLoginOpen}
+            setIsAdminLoggedIn={setIsAdminLoggedIn}
+            showToast={showToast}
+          >
+            <AboutSection />
+            <MissionVisionValuesSection />
+          </MainLayout>
+        } />
+        <Route path="/expertise" element={
+          <MainLayout 
+            isModalOpen={isModalOpen}
+            setIsModalOpen={setIsModalOpen}
+            isAdminLoginOpen={isAdminLoginOpen}
+            setIsAdminLoginOpen={setIsAdminLoginOpen}
+            setIsAdminLoggedIn={setIsAdminLoggedIn}
+            showToast={showToast}
+          >
+            <ServicesSection />
+          </MainLayout>
+        } />
+        <Route path="/diferenciais" element={
+          <MainLayout 
+            isModalOpen={isModalOpen}
+            setIsModalOpen={setIsModalOpen}
+            isAdminLoginOpen={isAdminLoginOpen}
+            setIsAdminLoginOpen={setIsAdminLoginOpen}
+            setIsAdminLoggedIn={setIsAdminLoggedIn}
+            showToast={showToast}
+          >
+            <DifferentiatorsSection />
+          </MainLayout>
+        } />
+        <Route path="/contato" element={
+          <MainLayout 
+            isModalOpen={isModalOpen}
+            setIsModalOpen={setIsModalOpen}
+            isAdminLoginOpen={isAdminLoginOpen}
+            setIsAdminLoginOpen={setIsAdminLoginOpen}
+            setIsAdminLoggedIn={setIsAdminLoggedIn}
+            showToast={showToast}
+          >
+            <CtaSection onOpenModal={() => setIsModalOpen(true)} />
+          </MainLayout>
         } />
         <Route path="/dashboard/*" element={
           isAdminLoggedIn ? (

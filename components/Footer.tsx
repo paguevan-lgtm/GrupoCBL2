@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Logo } from './icons/Logo';
 import { PhoneIcon } from './icons/PhoneIcon';
 import { LocationIcon } from './icons/LocationIcon';
@@ -11,6 +12,21 @@ interface FooterProps {
 }
 
 const Footer: React.FC<FooterProps> = ({ onOpenAdmin }) => {
+  const navigate = useNavigate();
+
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
+      e.preventDefault();
+      navigate(path);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const navLinks = [
+      { label: 'Quem Somos', path: '/quem-somos' },
+      { label: 'Expertise', path: '/expertise' },
+      { label: 'Diferenciais', path: '/diferenciais' },
+      { label: 'Contato', path: '/contato' }
+  ];
+
   return (
     <footer className="bg-black py-24 border-t border-white/5 relative overflow-hidden">
       {/* Background Element - Adjusted for mobile visibility */}
@@ -36,8 +52,15 @@ const Footer: React.FC<FooterProps> = ({ onOpenAdmin }) => {
             <div className="md:col-span-3 flex flex-col items-center md:items-start space-y-8">
                 <h4 className="font-black text-white text-[10px] tracking-[0.4em] uppercase border-b border-white/10 pb-4 w-full text-center md:text-left">Navegação</h4>
                 <nav className="flex flex-col items-center md:items-start space-y-4">
-                    {['Quem Somos', 'Expertise', 'Diferenciais', 'Contato'].map((item) => (
-                      <a key={item} href={`#${item.toLowerCase()}`} className="text-white/40 hover:text-white transition-colors text-sm font-bold uppercase tracking-widest">{item}</a>
+                    {navLinks.map((item) => (
+                      <a 
+                        key={item.label} 
+                        href={item.path} 
+                        onClick={(e) => handleNavClick(e, item.path)}
+                        className="text-white/40 hover:text-white transition-colors text-sm font-bold uppercase tracking-widest"
+                      >
+                        {item.label}
+                      </a>
                     ))}
                 </nav>
             </div>

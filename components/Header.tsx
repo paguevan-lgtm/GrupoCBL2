@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Logo } from './icons/Logo';
 
 const NavLink: React.FC<{ 
@@ -25,7 +26,9 @@ const Header: React.FC<{ onOpenModal: () => void }> = ({ onOpenModal }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isHidden, setIsHidden] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
-  const [activeSection, setActiveSection] = useState('');
+  
+  const location = useLocation();
+  const navigate = useNavigate();
 
   // Bloqueio de scroll quando o menu está aberto
   useEffect(() => {
@@ -50,19 +53,6 @@ const Header: React.FC<{ onOpenModal: () => void }> = ({ onOpenModal }) => {
         setIsHidden(false);
       }
       setLastScrollY(currentScrollY);
-
-      // Scroll Spy Logic
-      const sections = ['hero', 'about', 'services', 'differentiators', 'contact'];
-      for (const section of sections) {
-        const el = document.getElementById(section);
-        if (el) {
-          const rect = el.getBoundingClientRect();
-          if (rect.top <= 150 && rect.bottom >= 150) {
-            setActiveSection(`#${section}`);
-            break;
-          }
-        }
-      }
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -74,8 +64,8 @@ const Header: React.FC<{ onOpenModal: () => void }> = ({ onOpenModal }) => {
   const handleNavLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault();
     closeMenu();
-    document.querySelector(href)?.scrollIntoView({ behavior: 'smooth' });
-    setActiveSection(href);
+    navigate(href);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleContactClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -89,10 +79,10 @@ const Header: React.FC<{ onOpenModal: () => void }> = ({ onOpenModal }) => {
     ${isHidden ? '-translate-y-full' : 'translate-y-0'}`;
 
   const navLinks = [
-    { href: '#about', label: 'Quem Somos' },
-    { href: '#services', label: 'Expertise' },
-    { href: '#differentiators', label: 'Diferenciais' },
-    { href: '#contact', label: 'Contato' },
+    { href: '/quem-somos', label: 'Quem Somos' },
+    { href: '/expertise', label: 'Expertise' },
+    { href: '/diferenciais', label: 'Diferenciais' },
+    { href: '/contato', label: 'Contato' },
   ];
 
   return (
@@ -100,7 +90,7 @@ const Header: React.FC<{ onOpenModal: () => void }> = ({ onOpenModal }) => {
       <header className={headerClasses}>
         <div className="container mx-auto px-6">
           <div className="flex justify-between items-center">
-            <a href="#hero" className="transition-transform hover:scale-105 active:scale-95 group" onClick={(e) => handleNavLinkClick(e, '#hero')}>
+            <a href="/" className="transition-transform hover:scale-105 active:scale-95 group" onClick={(e) => handleNavLinkClick(e, '/')}>
               <Logo className="h-6 md:h-8 w-auto origin-left transform scale-90 md:scale-100 group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] transition-all" />
             </a>
             
@@ -109,7 +99,7 @@ const Header: React.FC<{ onOpenModal: () => void }> = ({ onOpenModal }) => {
                 <NavLink 
                   key={link.href}
                   href={link.href} 
-                  isActive={activeSection === link.href}
+                  isActive={location.pathname === link.href}
                   onClick={(e) => handleNavLinkClick(e, link.href)}
                 >
                   {link.label}
@@ -139,7 +129,7 @@ const Header: React.FC<{ onOpenModal: () => void }> = ({ onOpenModal }) => {
                key={link.href}
                href={link.href} 
                onClick={(e) => handleNavLinkClick(e, link.href)}
-               className={`text-2xl font-black uppercase tracking-tighter transition-all ${activeSection === link.href ? 'text-red-600 scale-110' : 'text-white/60 hover:text-white'}`}
+               className={`text-2xl font-black uppercase tracking-tighter transition-all ${location.pathname === link.href ? 'text-red-600 scale-110' : 'text-white/60 hover:text-white'}`}
              >
                 {link.label}
              </a>

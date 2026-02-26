@@ -18,13 +18,13 @@ async function startServer() {
   // 1. Places API Proxy
   app.post("/api/places", async (req, res) => {
     const { query, pagetoken } = req.body;
-    const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY; // Fallback, though Maps needs Maps Key
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.API_KEY; 
 
     if (!query && !pagetoken) {
       return res.status(400).json({ error: 'Query or pagetoken is required' });
     }
     if (!apiKey) {
-      return res.status(500).json({ error: 'Server configuration error: API Key missing' });
+      return res.status(500).json({ error: 'Server configuration error: GOOGLE_MAPS_API_KEY missing' });
     }
 
     try {
@@ -133,9 +133,9 @@ async function startServer() {
   // 3. Photo Proxy
   app.get("/api/photo", async (req, res) => {
     const { ref } = req.query;
-    const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.API_KEY;
     
-    if (!apiKey) return res.status(500).send('Server configuration error');
+    if (!apiKey) return res.status(500).send('Server configuration error: GOOGLE_MAPS_API_KEY missing');
     if (!ref) return res.status(400).send('No reference provided');
 
     try {

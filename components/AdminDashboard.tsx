@@ -1060,7 +1060,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
           if (!response.ok) {
               const errorData = await response.json().catch(() => ({}));
-              throw new Error(errorData.details || errorData.error || `Erro HTTP ${response.status}`);
+              const errorMessage = errorData.details || errorData.error || `Erro HTTP ${response.status}`;
+              if (errorMessage.includes('402') || errorMessage.includes('billing') || errorMessage.includes('API_KEY missing')) {
+                  throw new Error("GOOGLE_MAPS_BILLING_REQUIRED");
+              }
+              throw new Error(errorMessage);
           }
 
           const data = await response.json();
@@ -1135,7 +1139,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
     } catch (error: any) {
       console.error(error);
-      alert("Erro na busca: " + error.message);
+      if (error.message === "GOOGLE_MAPS_BILLING_REQUIRED") {
+          alert("A API do Google Maps requer faturamento ativo (Erro 402/403). O sistema mudou automaticamente para o modo 'Web Hunter' (IA) que usa a chave do Gemini.");
+          setUseWebHunter(true);
+          // Tentar buscar novamente automaticamente com Web Hunter
+          setTimeout(() => {
+              const searchBtn = document.getElementById('btn-search-leads');
+              if (searchBtn) searchBtn.click();
+          }, 500);
+      } else {
+          alert("Erro na busca: " + error.message);
+      }
     } finally {
       setIsLoading(false);
     }

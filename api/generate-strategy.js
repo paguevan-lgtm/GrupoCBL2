@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -19,7 +19,19 @@ export default async function handler(req, res) {
         model: "gemini-2.5-flash",
         contents: prompt,
         config: {
-            responseMimeType: "application/json"
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    hook: { type: Type.STRING, description: "Uma frase curta que chame atenção imediata" },
+                    pain_point: { type: Type.STRING, description: "A dor principal identificada" },
+                    solution_name: { type: Type.STRING, description: "Nome sexy do serviço" },
+                    price_anchor: { type: Type.STRING, description: "De R$ XXX por R$ YYY" },
+                    script: { type: Type.STRING, description: "O texto da mensagem para enviar no WhatsApp" },
+                    bonus: { type: Type.STRING, description: "Um bônus rápido para fechar agora" }
+                },
+                required: ["hook", "pain_point", "solution_name", "price_anchor", "script", "bonus"]
+            }
         }
     });
 

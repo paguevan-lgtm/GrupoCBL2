@@ -74,8 +74,20 @@ const KillerOfferModal: React.FC<KillerOfferModalProps> = ({ lead, onClose, onOp
                 throw new Error(data.details || data.error || "Erro ao gerar estratégia");
             }
 
-            const cleanText = data.text.replace(/```json/g, '').replace(/```/g, '');
-            setStrategy(JSON.parse(cleanText));
+            const cleanText = data.text.replace(/```json/g, '').replace(/```/g, '').trim();
+            
+            try {
+                setStrategy(JSON.parse(cleanText));
+            } catch (parseError) {
+                console.error("Erro ao fazer parse do JSON:", parseError, "Texto original:", cleanText);
+                // Fallback attempt to fix common JSON issues (like unescaped newlines in strings)
+                const fixedText = cleanText.replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t");
+                try {
+                    setStrategy(JSON.parse(fixedText));
+                } catch (fallbackError) {
+                    throw new Error("Falha ao interpretar a resposta da IA. Tente gerar novamente.");
+                }
+            }
         } catch (error: any) {
             console.error("Erro ao gerar oferta", error);
             alert("Erro ao gerar oferta: " + error.message);

@@ -52,7 +52,7 @@ const Footer: React.FC<FooterProps> = ({ onOpenAdmin }) => {
                         </div>
                         <div className="space-y-1 text-center md:text-left">
                             <span className="block font-black text-red-600 text-[9px] uppercase tracking-widest">WhatsApp Comercial</span>
-                            <span className="text-white text-xl font-black tracking-tight">(13) 99774-4720</span>
+                            <span className="text-white text-xl font-black tracking-tight">(13) 99603-3433</span>
                         </div>
                     </div>
                     <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6">

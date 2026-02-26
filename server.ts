@@ -144,11 +144,14 @@ async function startServer() {
       
       if (!response.ok) throw new Error('Failed to fetch image');
 
+      const contentType = response.headers.get('content-type');
+      if (contentType) {
+          res.setHeader('Content-Type', contentType);
+      }
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      
       const arrayBuffer = await response.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
-
-      res.setHeader('Content-Type', response.headers.get('content-type') || 'image/jpeg');
-      res.setHeader('Cache-Control', 'public, max-age=86400');
       res.send(buffer);
     } catch (error) {
       console.error(error);

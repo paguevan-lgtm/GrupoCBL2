@@ -1416,7 +1416,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                      <div className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-t from-[#0f0f0f] via-transparent to-transparent"></div>
                      
                      {lead.photos && lead.photos.length > 0 ? (
-                         <img src={`/api/photo?ref=${lead.photos[0].photo_reference}`} className="w-full h-full object-cover transition-all duration-700 opacity-60 group-hover:opacity-80" alt={lead.name} />
+                         <div className="w-full h-full relative">
+                             <img 
+                                src={`/api/photo?ref=${lead.photos[0].photo_reference}`} 
+                                className="w-full h-full object-cover transition-all duration-700 opacity-60 group-hover:opacity-80 absolute inset-0 z-0" 
+                                alt={lead.name}
+                                onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                                    if (fallback) fallback.style.display = 'flex';
+                                }}
+                             />
+                             <div className="w-full h-full bg-gradient-to-br from-[#1a1a1a] to-black items-center justify-center opacity-50 absolute inset-0 z-0" style={{ display: 'none' }}>
+                                 <Logo className="scale-75 opacity-20" />
+                             </div>
+                         </div>
                      ) : (
                          <div className="w-full h-full bg-gradient-to-br from-[#1a1a1a] to-black flex items-center justify-center opacity-50"><Logo className="scale-75 opacity-20" /></div>
                      )}

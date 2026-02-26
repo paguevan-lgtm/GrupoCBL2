@@ -39,7 +39,7 @@ const CtaSection: React.FC<{ onOpenModal: () => void }> = ({ onOpenModal }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10 border-t border-white/5 pt-12 md:pt-16 w-full max-w-3xl">
                     <div className="text-center md:text-left space-y-2">
                       <span className="block text-[9px] font-black text-white/30 uppercase tracking-[0.3em]">WhatsApp_Oficial_CBL</span>
-                      <a href="tel:+5513997744720" className="text-xl md:text-2xl font-black text-white italic tracking-tighter hover:text-red-600 transition-colors">(13) 99774-4720</a>
+                      <a href="tel:+5513996033433" className="text-xl md:text-2xl font-black text-white italic tracking-tighter hover:text-red-600 transition-colors">(13) 99603-3433</a>
                     </div>
                     <div className="text-center md:text-right space-y-2">
                       <span className="block text-[9px] font-black text-white/30 uppercase tracking-[0.3em]">Email_Estratégico</span>

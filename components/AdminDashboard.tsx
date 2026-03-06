@@ -13,6 +13,7 @@ import { BrainIcon } from './icons/BrainIcon';
 import { MegaphoneIcon } from './icons/MegaphoneIcon';
 import { MenuIcon } from './icons/MenuIcon';
 import { ArrowUpRightIcon } from './icons/ArrowUpRightIcon';
+import { Truck, MessageCircle } from 'lucide-react';
 import KillerOfferModal from './KillerOfferModal';
 
 interface AdminDashboardProps {
@@ -346,6 +347,163 @@ const MarketingCommand = () => {
                     </div>
                 )}
              </div>
+        </div>
+    );
+};
+
+// --- COMPONENTE: VAN SERVICE PANEL ---
+const VanServicePanel = ({ onOpenWhatsapp }: { onOpenWhatsapp: (lead: Lead, text: string) => void }) => {
+    const [location, setLocation] = useState('');
+    const [serviceType, setServiceType] = useState<'fretado' | 'eventos' | 'viagens'>('fretado');
+    const [isLoading, setIsLoading] = useState(false);
+    const [leads, setLeads] = useState<any[]>([]);
+    const [generatingScriptId, setGeneratingScriptId] = useState<string | null>(null);
+
+    const searchVanLeads = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!location) return;
+
+        setIsLoading(true);
+        setLeads([]);
+
+        try {
+            const response = await fetch('/api/van-hunter', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ location, serviceType })
+            });
+            const data = await response.json();
+            setLeads(data.results || []);
+        } catch (error) {
+            console.error(error);
+            alert("Erro ao buscar leads de van.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleGenerateVanScript = async (lead: any) => {
+        setGeneratingScriptId(lead.id);
+        try {
+            const currentHour = new Date().getHours();
+            let timeGreeting = "Olá";
+            if (currentHour >= 5 && currentHour < 12) timeGreeting = "Bom dia";
+            else if (currentHour >= 12 && currentHour < 18) timeGreeting = "Boa tarde";
+            else timeGreeting = "Boa noite";
+
+            const prompt = `
+                Atue como um dono de Van que oferece serviços de transporte de alta qualidade.
+                Gere uma mensagem de WhatsApp curta e persuasiva para a empresa "${lead.name}".
+                
+                CONTEXTO:
+                - Tipo de Serviço: ${serviceType === 'fretado' ? 'Fretamento para funcionários' : serviceType === 'eventos' ? 'Transporte para eventos/convidados' : 'Viagens e turismo'}
+                - Justificativa do Alvo: ${lead.ai_snippet}
+                
+                REGRAS:
+                1. Comece com "${timeGreeting}".
+                2. Seja direto: diga que tem uma Van disponível e quer saber se eles precisam desse serviço.
+                3. Mencione a justificativa de forma natural (ex: "Vi que vocês ficam em uma região mais afastada e pensei que o fretamento pode ajudar seus funcionários").
+                4. Pergunte quem é o responsável pela logística ou RH para conversar.
+                5. Use tom profissional mas amigável.
+                
+                Retorne APENAS o texto da mensagem.
+            `;
+
+            const response = await fetch('/api/gemini', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: { parts: [{ text: prompt }] },
+                    model: 'gemini-3-flash-preview',
+                    config: { responseMimeType: 'text/plain' }
+                })
+            });
+            const data = await response.json();
+            if (data.text) {
+                onOpenWhatsapp(lead, data.text.trim());
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Erro ao gerar script.");
+        } finally {
+            setGeneratingScriptId(null);
+        }
+    };
+
+    return (
+        <div className="h-full flex flex-col bg-[#050505] overflow-y-auto custom-scrollbar p-4 md:p-6 pb-24 md:pb-6">
+            <div className="max-w-5xl mx-auto w-full">
+                <div className="flex items-center gap-3 mb-8">
+                    <Truck className="w-8 h-8 text-red-600" />
+                    <div>
+                        <h2 className="text-2xl md:text-3xl font-black text-white uppercase italic tracking-tighter">Van & Fretamento</h2>
+                        <p className="text-white/40 text-[10px] font-mono uppercase tracking-widest">Prospecção Cirúrgica para sua Van</p>
+                    </div>
+                </div>
+
+                <div className="bg-[#0c0c0c] p-6 md:p-8 rounded-3xl border border-white/10 mb-8">
+                    <form onSubmit={searchVanLeads} className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest">Localização / Cidade</label>
+                            <input 
+                                type="text" 
+                                value={location} 
+                                onChange={e => setLocation(e.target.value)} 
+                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-red-600 outline-none" 
+                                placeholder="Ex: São Vicente, SP" 
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest">Foco da Prospecção</label>
+                            <select 
+                                value={serviceType} 
+                                onChange={e => setServiceType(e.target.value as any)}
+                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-red-600 outline-none appearance-none"
+                            >
+                                <option value="fretado">Fretamento (Funcionários)</option>
+                                <option value="eventos">Eventos & Festas</option>
+                                <option value="viagens">Viagens & Turismo</option>
+                            </select>
+                        </div>
+                        <button type="submit" disabled={isLoading} className="bg-red-600 text-white py-4 rounded-xl font-black uppercase text-xs tracking-[0.2em] hover:bg-red-700 transition-all flex items-center justify-center gap-2">
+                            {isLoading ? <SpinnerIcon /> : 'Caçar Clientes'}
+                        </button>
+                    </form>
+                </div>
+
+                {leads.length > 0 && (
+                    <div className="space-y-4 animate-in slide-in-from-bottom-10">
+                        <h3 className="text-xs font-black text-white/40 uppercase tracking-widest mb-4">Alvos Detectados ({leads.length})</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {leads.map((lead) => (
+                                <div key={lead.id} className="bg-[#0c0c0c] border border-white/5 p-5 rounded-2xl hover:border-red-600/30 transition-all group">
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div className="flex-1">
+                                            <span className="text-[8px] font-mono bg-red-600/10 text-red-500 border border-red-600/20 px-2 py-0.5 rounded uppercase tracking-widest mb-2 inline-block">{lead.vibe}</span>
+                                            <h4 className="text-lg font-black text-white uppercase italic tracking-tight leading-tight">{lead.name}</h4>
+                                        </div>
+                                        <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-white/20 group-hover:text-red-500 transition-colors">
+                                            <Truck size={20} />
+                                        </div>
+                                    </div>
+                                    <p className="text-white/50 text-xs mb-4 line-clamp-2">{lead.address}</p>
+                                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 mb-4">
+                                        <p className="text-[10px] text-white/70 leading-relaxed italic">"{lead.ai_snippet}"</p>
+                                    </div>
+                                    <button 
+                                        onClick={() => handleGenerateVanScript(lead)}
+                                        disabled={generatingScriptId === lead.id}
+                                        className="w-full bg-green-600 hover:bg-green-500 text-white py-3 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+                                    >
+                                        {generatingScriptId === lead.id ? <SpinnerIcon /> : <MessageCircle size={14} />}
+                                        Oferecer Van Agora
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
@@ -1587,6 +1745,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
              
              <NavButton tab="brainstorm" icon={<BrainIcon className="w-5 h-5" />} label={<span className="md:hidden lg:inline">War Room</span>} />
              <NavButton tab="marketing" icon={<MegaphoneIcon className="w-5 h-5" />} label={<span className="md:hidden lg:inline">Marketing</span>} />
+             <NavButton tab="van_service" icon={<Truck className="w-5 h-5" />} label={<span className="md:hidden lg:inline">Van & Fretado</span>} />
           </div>
 
           <div className="mt-auto px-4 md:px-2 lg:px-4">
@@ -1797,10 +1956,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                 </div>
             )}
             
-            {(activeTab === 'brainstorm' || activeTab === 'marketing') && (
+            {(activeTab === 'brainstorm' || activeTab === 'marketing' || activeTab === 'van_service') && (
                 <div className="flex-1 overflow-hidden h-full">
                     {activeTab === 'brainstorm' && <StrategicWarRoom />}
                     {activeTab === 'marketing' && <MarketingCommand />}
+                    {activeTab === 'van_service' && <VanServicePanel onOpenWhatsapp={openWhatsApp} />}
                 </div>
             )}
       </main>

@@ -16,43 +16,33 @@ export default async function handler(req, res) {
     const ai = new GoogleGenAI({ apiKey });
     
     let targetDescription = "";
-    if (serviceType === 'fretado') {
-        targetDescription = "empreiteiras de obras, principalmente que prestam serviço para a SABESP, construtoras e empresas de engenharia civil que precisam transportar equipes de operários para canteiros de obras";
+    if (serviceType === 'empreiteiras') {
+        targetDescription = "empreiteiras de obras civis, construtoras de infraestrutura e empresas de engenharia que prestam serviços para a SABESP na região da Baixada Santista. Foque em empresas que ganharam licitações ou que realizam manutenção de redes de água e esgoto, pois elas precisam transportar equipes de operários diariamente.";
+    } else if (serviceType === 'fretado') {
+        targetDescription = "empresas de médio/grande porte, indústrias, fábricas e centros logísticos que possuem muitos funcionários e podem precisar de transporte fretado.";
     } else if (serviceType === 'eventos') {
-        targetDescription = "casas de festas, organizadores de eventos, buffets e hotéis que realizam eventos e podem precisar de vans para transporte de convidados";
+        targetDescription = "casas de festas, organizadores de eventos, buffets e hotéis que realizam eventos e podem precisar de vans para transporte de convidados.";
     } else {
-        targetDescription = "agências de turismo, hotéis, empresas de eventos e grandes condomínios que precisam de transporte executivo ou viagens";
+        targetDescription = "agências de turismo, hotéis e empresas de viagens que precisam de transporte executivo ou turismo.";
     }
 
     const prompt = `
-      Atue como um Especialista em Inteligência Logística e Prospecção B2B.
+      Atue como um Especialista em Inteligência Logística e Prospecção B2B de ALTO NÍVEL.
       
-      TAREFA: Encontre 10 a 15 alvos cirúrgicos na região de "${location}" que se encaixam neste perfil: ${targetDescription}.
+      TAREFA: Encontre 10 a 15 alvos REAIS e ESPECÍFICOS na região de "${location}" para o perfil: ${targetDescription}.
       
-      REGRAS DE OURO PARA BUSCA:
-      1. Use o Google Search para encontrar empresas REAIS e ATIVAS.
-      2. Foque em empresas que tenham fluxo constante de pessoas ou necessidade de deslocamento em grupo.
-      3. BUSCA DE CONTATO PROFUNDA: Você deve tentar encontrar o número de CELULAR/WHATSAPP da empresa. Muitas vezes o número fixo não tem WhatsApp. Procure em sites, redes sociais ou descrições do Google Maps por números que comecem com (11) 9... ou similares.
-      4. Se encontrar apenas o fixo, tente encontrar um segundo número que pareça ser celular.
+      REGRAS CRÍTICAS PARA "EMPREITEIRAS SABESP":
+      1. NÃO retorne hotéis, pousadas ou agências de turismo. Isso é um erro grave.
+      2. Pesquise por "Empreiteiras Sabesp ${location}", "Empresas de saneamento ${location}", "Licitações Sabesp ${location}".
+      3. Tente identificar empresas como: "Engeform", "Sanevix", "Consórcio...", ou empresas locais de engenharia civil pesada.
+      4. BUSCA DE CONTATO PROFUNDA: Procure o número de celular/WhatsApp do setor de LOGÍSTICA, RH ou OPERAÇÕES. 
       
       DADOS NECESSÁRIOS:
-      - Nome, Endereço, Telefone (Priorize Celular/WhatsApp), Site.
-      - "Justificativa Sniper": Por que essa empresa é um alvo perfeito para uma van? (ex: "Empreiteira da Sabesp com obras em locais variados", "Construtora com canteiro de obras ativo").
+      - Nome da Empresa, Endereço, Telefone (Priorize Celular/WhatsApp), Site.
+      - "Justificativa Sniper": Por que essa empresa precisa de uma VAN hoje? (ex: "Realizando obra de saneamento no bairro X", "Ganhou licitação recente da Sabesp").
       
       SAÍDA OBRIGATÓRIA: JSON ARRAY.
-      Schema:
-      [
-        {
-          "name": "Nome da Empresa",
-          "address": "Endereço completo",
-          "phone": "Número de Celular/WhatsApp (obrigatório tentar achar o celular)",
-          "website": "URL ou null",
-          "justification": "Justificativa estratégica detalhada",
-          "vibe": "Tag (ex: Empreiteira Sabesp, Construtora, Eventos)"
-        }
-      ]
-      
-      Retorne APENAS o JSON. Sem markdown.
+      Retorne APENAS o JSON.
     `;
 
     const response = await ai.models.generateContent({

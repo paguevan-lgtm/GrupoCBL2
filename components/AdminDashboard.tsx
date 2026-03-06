@@ -474,13 +474,13 @@ const VanServicePanel = ({
                 <div className="bg-[#0c0c0c] p-6 md:p-8 rounded-3xl border border-white/10 mb-8">
                     <form onSubmit={searchVanLeads} className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest">Localização / Cidade</label>
+                            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest">Localização / Região</label>
                             <input 
                                 type="text" 
                                 value={location} 
                                 onChange={e => setLocation(e.target.value)} 
                                 className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-red-600 outline-none" 
-                                placeholder="Ex: São Vicente, SP" 
+                                placeholder="Ex: Baixada Santista, SP" 
                             />
                         </div>
                         <div className="space-y-2">
@@ -497,9 +497,14 @@ const VanServicePanel = ({
                             </select>
                         </div>
                         <button type="submit" disabled={isLoading} className="bg-red-600 text-white py-4 rounded-xl font-black uppercase text-xs tracking-[0.2em] hover:bg-red-700 transition-all flex items-center justify-center gap-2">
-                            {isLoading ? <SpinnerIcon /> : 'Caçar Clientes'}
+                            {isLoading ? <SpinnerIcon /> : 'Ativar Van Hunter'}
                         </button>
                     </form>
+                    {serviceType === 'empreiteiras' && (
+                        <p className="mt-4 text-[10px] text-white/30 font-mono uppercase tracking-widest text-center">
+                            Dica: Pesquise por "Baixada Santista" ou "Litoral Sul" para encontrar consórcios da Sabesp.
+                        </p>
+                    )}
                 </div>
 
                 {leads.length > 0 && (

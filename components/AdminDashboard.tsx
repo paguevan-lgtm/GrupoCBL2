@@ -392,6 +392,12 @@ const VanServicePanel = ({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ location, serviceType })
             });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.details || errorData.error || `Erro ${response.status}`);
+            }
+            
             const data = await response.json();
             let results: Lead[] = data.results || [];
 

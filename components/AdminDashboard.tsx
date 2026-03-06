@@ -352,16 +352,36 @@ const MarketingCommand = () => {
 };
 
 // --- COMPONENTE: VAN SERVICE PANEL ---
-const VanServicePanel = ({ onOpenWhatsapp }: { onOpenWhatsapp: (lead: Lead, text: string) => void }) => {
+const VanServicePanel = ({ 
+    onOpenWhatsapp, 
+    viewedLeads, 
+    setViewedLeads, 
+    contactedLeads, 
+    excludedLeads 
+}: { 
+    onOpenWhatsapp: (lead: Lead, text: string) => void,
+    viewedLeads: Lead[],
+    setViewedLeads: React.Dispatch<React.SetStateAction<Lead[]>>,
+    contactedLeads: Lead[],
+    excludedLeads: Lead[]
+}) => {
     const [location, setLocation] = useState('');
-    const [serviceType, setServiceType] = useState<'fretado' | 'eventos' | 'viagens'>('fretado');
+    const [serviceType, setServiceType] = useState<'fretado' | 'eventos' | 'viagens' | 'empreiteiras'>('empreiteiras');
     const [isLoading, setIsLoading] = useState(false);
-    const [leads, setLeads] = useState<any[]>([]);
+    const [leads, setLeads] = useState<Lead[]>([]);
     const [generatingScriptId, setGeneratingScriptId] = useState<string | null>(null);
 
     const searchVanLeads = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!location) return;
+
+        // Mover leads ATUAIS para Visualizados antes de nova busca
+        if (leads.length > 0) {
+            setViewedLeads(prev => {
+                const combined = [...prev, ...leads];
+                return Array.from(new Map(combined.map(item => [item.id, item])).values());
+            });
+        }
 
         setIsLoading(true);
         setLeads([]);
@@ -373,7 +393,17 @@ const VanServicePanel = ({ onOpenWhatsapp }: { onOpenWhatsapp: (lead: Lead, text
                 body: JSON.stringify({ location, serviceType })
             });
             const data = await response.json();
-            setLeads(data.results || []);
+            let results: Lead[] = data.results || [];
+
+            // Filtragem CRM: Não mostrar o que já foi visto, contatado ou excluído
+            results = results.filter(lead => {
+                const isContacted = contactedLeads.some(cl => cl.id === lead.id);
+                const isViewed = viewedLeads.some(vl => vl.id === lead.id);
+                const isExcluded = excludedLeads.some(el => el.id === lead.id);
+                return !isContacted && !isViewed && !isExcluded;
+            });
+
+            setLeads(results);
         } catch (error) {
             console.error(error);
             alert("Erro ao buscar leads de van.");
@@ -382,7 +412,7 @@ const VanServicePanel = ({ onOpenWhatsapp }: { onOpenWhatsapp: (lead: Lead, text
         }
     };
 
-    const handleGenerateVanScript = async (lead: any) => {
+    const handleGenerateVanScript = async (lead: Lead) => {
         setGeneratingScriptId(lead.id);
         try {
             const currentHour = new Date().getHours();
@@ -396,13 +426,13 @@ const VanServicePanel = ({ onOpenWhatsapp }: { onOpenWhatsapp: (lead: Lead, text
                 Gere uma mensagem de WhatsApp curta e persuasiva para a empresa "${lead.name}".
                 
                 CONTEXTO:
-                - Tipo de Serviço: ${serviceType === 'fretado' ? 'Fretamento para funcionários' : serviceType === 'eventos' ? 'Transporte para eventos/convidados' : 'Viagens e turismo'}
+                - Tipo de Serviço: ${serviceType === 'fretado' ? 'Fretamento para funcionários' : serviceType === 'eventos' ? 'Transporte para eventos/convidados' : serviceType === 'empreiteiras' ? 'Transporte de operários para obras (Sabesp/Construção)' : 'Viagens e turismo'}
                 - Justificativa do Alvo: ${lead.ai_snippet}
                 
                 REGRAS:
                 1. Comece com "${timeGreeting}".
-                2. Seja direto: diga que tem uma Van disponível e quer saber se eles precisam desse serviço.
-                3. Mencione a justificativa de forma natural (ex: "Vi que vocês ficam em uma região mais afastada e pensei que o fretamento pode ajudar seus funcionários").
+                2. Seja direto: diga que tem uma Van disponível e quer saber se eles precisam desse serviço para levar a equipe para as obras.
+                3. Mencione a justificativa de forma natural (ex: "Vi que vocês estão com obras na região e pensei que o fretamento pode ajudar no deslocamento da sua equipe").
                 4. Pergunte quem é o responsável pela logística ou RH para conversar.
                 5. Use tom profissional mas amigável.
                 
@@ -460,7 +490,8 @@ const VanServicePanel = ({ onOpenWhatsapp }: { onOpenWhatsapp: (lead: Lead, text
                                 onChange={e => setServiceType(e.target.value as any)}
                                 className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-red-600 outline-none appearance-none"
                             >
-                                <option value="fretado">Fretamento (Funcionários)</option>
+                                <option value="empreiteiras">Empreiteiras (Sabesp/Obras)</option>
+                                <option value="fretado">Fretamento (Empresas)</option>
                                 <option value="eventos">Eventos & Festas</option>
                                 <option value="viagens">Viagens & Turismo</option>
                             </select>
@@ -1960,7 +1991,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                 <div className="flex-1 overflow-hidden h-full">
                     {activeTab === 'brainstorm' && <StrategicWarRoom />}
                     {activeTab === 'marketing' && <MarketingCommand />}
-                    {activeTab === 'van_service' && <VanServicePanel onOpenWhatsapp={openWhatsApp} />}
+                    {activeTab === 'van_service' && (
+                        <VanServicePanel 
+                            onOpenWhatsapp={openWhatsApp} 
+                            viewedLeads={viewedLeads}
+                            setViewedLeads={setViewedLeads}
+                            contactedLeads={contactedLeads}
+                            excludedLeads={excludedLeads}
+                        />
+                    )}
                 </div>
             )}
       </main>

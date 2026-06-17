@@ -13,8 +13,9 @@ import { BrainIcon } from './icons/BrainIcon';
 import { MegaphoneIcon } from './icons/MegaphoneIcon';
 import { MenuIcon } from './icons/MenuIcon';
 import { ArrowUpRightIcon } from './icons/ArrowUpRightIcon';
-import { Truck, MessageCircle } from 'lucide-react';
+import { Truck, MessageCircle, ShoppingBag } from 'lucide-react';
 import KillerOfferModal from './KillerOfferModal';
+import EcommercePanel from './EcommercePanel';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -1788,6 +1789,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
              <NavButton tab="brainstorm" icon={<BrainIcon className="w-5 h-5" />} label={<span className="md:hidden lg:inline">War Room</span>} />
              <NavButton tab="marketing" icon={<MegaphoneIcon className="w-5 h-5" />} label={<span className="md:hidden lg:inline">Marketing</span>} />
              <NavButton tab="van_service" icon={<Truck className="w-5 h-5" />} label={<span className="md:hidden lg:inline">Van & Fretado</span>} />
+             <NavButton tab="ecommerce" icon={<ShoppingBag className="w-5 h-5" />} label={<span className="md:hidden lg:inline">Ecommerce</span>} />
           </div>
 
           <div className="mt-auto px-4 md:px-2 lg:px-4">
@@ -1998,10 +2000,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                 </div>
             )}
             
-            {(activeTab === 'brainstorm' || activeTab === 'marketing' || activeTab === 'van_service') && (
+            {(activeTab === 'brainstorm' || activeTab === 'marketing' || activeTab === 'van_service' || activeTab === 'ecommerce') && (
                 <div className="flex-1 overflow-hidden h-full">
                     {activeTab === 'brainstorm' && <StrategicWarRoom />}
                     {activeTab === 'marketing' && <MarketingCommand />}
+                    {activeTab === 'ecommerce' && <EcommercePanel />}
                     {activeTab === 'van_service' && (
                         <VanServicePanel 
                             onOpenWhatsapp={openWhatsApp} 

@@ -284,6 +284,100 @@ async function startServer() {
       }
   });
 
+      const DEFAULT_MARKETPLACES = [
+      { id: 'ml_classico', name: 'Mercado Livre (Clássico)', feePercent: 11.5, fixedFee: 6, threshold: 79, rulesDescription: 'Taxa base para categorias gerais.', brandColor: 'text-yellow-400', bgColor: 'bg-yellow-400/10', borderColor: 'border-yellow-400/20' },
+      { id: 'ml_premium', name: 'Mercado Livre (Premium)', feePercent: 16.5, fixedFee: 6, threshold: 79, rulesDescription: 'Exposição máxima no ML.', brandColor: 'text-yellow-500', bgColor: 'bg-yellow-500/10', borderColor: 'border-yellow-500/20' },
+      { id: 'shopee', name: 'Shopee (Padrão)', feePercent: 14, fixedFee: 3, threshold: 0, rulesDescription: 'Taxa padrão sem programa de frete grátis.', brandColor: 'text-orange-500', bgColor: 'bg-orange-500/10', borderColor: 'border-orange-500/20' },
+      { id: 'shopee_frete', name: 'Shopee (Frete Grátis)', feePercent: 20, fixedFee: 3, threshold: 0, rulesDescription: 'Inclui 6% do programa Frete Grátis Extra.', brandColor: 'text-orange-500', bgColor: 'bg-orange-600/10', borderColor: 'border-orange-600/20' },
+      { id: 'amazon', name: 'Amazon Brasil', feePercent: 15, fixedFee: 0, threshold: 0, rulesDescription: 'Taxa média. Varia de 8% a 15% por categoria.', brandColor: 'text-blue-400', bgColor: 'bg-blue-400/10', borderColor: 'border-blue-400/20' },
+      { id: 'magalu', name: 'Magalu', feePercent: 16, fixedFee: 3, threshold: 0, rulesDescription: 'Taxa base + custo fixo transacional.', brandColor: 'text-blue-600', bgColor: 'bg-blue-600/10', borderColor: 'border-blue-600/20' },
+      { id: 'b2w', name: 'Americanas (B2W)', feePercent: 16, fixedFee: 0, threshold: 0, rulesDescription: 'Taxa padrão aplicável à maioria das categorias.', brandColor: 'text-red-500', bgColor: 'bg-red-500/10', borderColor: 'border-red-500/20' },
+      { id: 'tiktok', name: 'TikTok Shop', feePercent: 12, fixedFee: 3, threshold: 0, rulesDescription: 'Taxa inicial + tarifa fixa por pedido.', brandColor: 'text-pink-500', bgColor: 'bg-pink-500/10', borderColor: 'border-pink-500/20' },
+      { id: 'shein', name: 'Shein Marketplace', feePercent: 12, fixedFee: 0, threshold: 0, rulesDescription: 'Comissão base para vendedores nacionais.', brandColor: 'text-slate-900', bgColor: 'bg-slate-800/10', borderColor: 'border-slate-800/20' },
+      { id: 'aliexpress', name: 'AliExpress Brasil', feePercent: 8, fixedFee: 0, threshold: 0, rulesDescription: 'Vendedores locais BR. Taxas menores.', brandColor: 'text-red-600', bgColor: 'bg-red-600/10', borderColor: 'border-red-600/20' },
+      { id: 'casasbahia', name: 'Casas Bahia', feePercent: 16, fixedFee: 0, threshold: 0, rulesDescription: 'Taxa comumente aplicada a eletrônicos/móveis.', brandColor: 'text-blue-500', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/20' }
+    ];
+
+  // 6. Marketplaces Dynamic AI Rates (Ecommerce Hub)
+  app.post("/api/marketplaces-ai", async (req, res) => {
+    try {
+      const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: 'API Key not configured', fallback: DEFAULT_MARKETPLACES });
+      }
+
+      const { category, price } = req.body;
+
+      const ai = new GoogleGenAI({ apiKey });
+      
+      const prompt = `
+        Atue como um especialista em Marketplaces Brasileiros (Mercado Livre, Shopee, Amazon Brasil, Magalu, TikTok Shop, Shein, AliExpress, Casas Bahia, Americanas).
+        Eu preciso calcular as taxas exatas para um produto vendido hoje.
+        
+        Categoria do produto: "${category || 'Geral'}"
+        Preço de Venda: R$ ${price || '100'}
+
+        Analise a política de taxas de ${new Date().getFullYear()} para cada um dos seguintes marketplaces e retorne as opções em formato JSON:
+        - Mercado Livre (Clássico e Premium)
+        - Shopee (Padrão e Frete Grátis)
+        - Amazon Brasil
+        - Magalu
+        - TikTok Shop
+        - Shein Marketplace
+        - AliExpress Brasil
+        - Casas Bahia
+        - Americanas Marketplace
+
+        Para cada um, identifique:
+        - feePercent: A porcentagem de comissão para a categoria informada.
+        - fixedFee: A tarifa fixa (se houver, ex: R$ 6 no ML abaixo de R$ 79, R$ 3 na Shopee, etc). Considere a regra de threshold.
+        - threshold: O valor limite para a cobrança da taxa fixa (ex: 79 no ML). Retorne 0 se a taxa fixa for cobrada sempre.
+        - rulesDescription: Uma breve explicação de 1 frase do porquê dessa taxa (baseado na categoria e valor).
+        
+        RETORNE APENAS UM ARRAY JSON VÁLIDO DE OBJETOS com os campos: 
+        id, name, feePercent (number), fixedFee (number), threshold (number), rulesDescription (string), brandColor, bgColor, borderColor.
+        
+        Use as cores adequadas para cada marca (ex: text-yellow-400 para ML, text-orange-500 para Shopee, text-pink-500 para TikTok).
+        
+        JSON LIMIT: Responda APENAS com o JSON, sem formatação markdown, sem \`\`\`json.
+      `;
+
+      let response;
+      try {
+        response = await ai.models.generateContent({
+          model: 'gemini-3.5-flash',
+          contents: { parts: [{ text: prompt }] }
+        });
+      } catch (aiError) {
+        console.error('AI generation failed, returning fallback:', aiError.message);
+        return res.status(200).json(DEFAULT_MARKETPLACES);
+      }
+
+      const text = response.text ? response.text.trim() : '[]';
+      let results = [];
+      try {
+          const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+          const match = cleanText.match(/\[[\s\S]*\]/);
+          results = JSON.parse(match ? match[0] : cleanText);
+          if (!Array.isArray(results) || results.length === 0) {
+              return res.status(200).json(DEFAULT_MARKETPLACES);
+          }
+      } catch (e) {
+          console.error('Failed to parse AI JSON:', text);
+          results = DEFAULT_MARKETPLACES;
+      }
+
+      return res.status(200).json(results);
+    } catch (error) {
+      console.error('Error fetching marketplace rates from AI:', error);
+      return res.status(200).json(DEFAULT_MARKETPLACES); // Always return fallback
+    }
+  });
+
+  app.get("/api/marketplaces", (req, res) => {
+    return res.status(200).json(DEFAULT_MARKETPLACES);
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
